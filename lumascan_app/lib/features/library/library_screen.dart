@@ -14,13 +14,14 @@ import '../../ui/state_views.dart';
 import 'document_tile.dart';
 import 'library_actions.dart';
 import 'library_controller.dart';
+import 'library_organize.dart';
 import 'library_query_controller.dart';
 import 'library_query_sheets.dart';
 
 /// Library tab: every saved document as a list or a grid (the choice is
 /// remembered), with search by name, sort and filters (US-02.2, US-02.4).
-/// Long press selects several documents to share or delete. Folders and
-/// tags come with B3.
+/// Folder chips browse one folder at a time. Long press selects several
+/// documents to share, delete, move or tag.
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
 
@@ -61,6 +62,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     switch (action) {
       case DocumentMenuAction.rename:
         renameDocument(context, ref, doc);
+      case DocumentMenuAction.move:
+        moveToFolderSheet(context, ref, [doc]);
+      case DocumentMenuAction.tags:
+        editTagsSheet(context, ref, [doc]);
       case DocumentMenuAction.share:
         shareDocuments(context, [doc]);
       case DocumentMenuAction.delete:
@@ -74,6 +79,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final all = ref.watch(visibleDocumentsProvider);
     final docs = ref.watch(filteredDocumentsProvider);
     final query = ref.watch(libraryQueryProvider);
+    final folder = library.value?.folderById(query.folderId);
     final view = ref.watch(uiPrefsProvider.select((p) => p.libraryView));
     // Drop selections of documents that were deleted or filtered out.
     _selected.retainAll({for (final d in docs) d.id});
@@ -104,9 +110,19 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           AsyncValue(hasValue: true) => Column(
             children: [
               _searchBar(query),
+              _folderBar(query),
               if (query.isSorted || query.isFiltered) _activeChips(query),
               Expanded(
-                child: docs.isEmpty
+                child: docs.isEmpty && folder != null && !query.isSearching && !query.isFiltered
+                    ? EmptyState(
+                        icon: Icons.folder_open_outlined,
+                        title: '${folder.name} is empty',
+                        message: 'Use Move to folder on a document to add it here.',
+                        actionLabel: 'Show all documents',
+                        actionIcon: Icons.folder_copy_outlined,
+                        onAction: () => ref.read(libraryQueryProvider.notifier).openFolder(null),
+                      )
+                    : docs.isEmpty
                     ? EmptyState(
                         icon: Icons.search_off,
                         title: 'No matches',
@@ -134,6 +150,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     return AppBar(
       title: const Text('Library'),
       actions: [
+        IconButton(
+          tooltip: 'Folders and tags',
+          icon: const Icon(Icons.label_outline),
+          onPressed: () =>
+              Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ManageLabelsScreen())),
+        ),
         IconButton(
           tooltip: grid ? 'Show as list' : 'Show as grid',
           icon: Icon(grid ? Icons.view_list_outlined : Icons.grid_view_outlined),
@@ -174,15 +196,36 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             deleteWithUndo(context, ref, docs);
           },
         ),
+        PopupMenuButton<int>(
+          tooltip: 'More actions',
+          onSelected: (v) {
+            final docs = _selectedDocs(ref.read(filteredDocumentsProvider));
+            _clearSelection();
+            v == 0 ? moveToFolderSheet(context, ref, docs) : editTagsSheet(context, ref, docs);
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(
+              value: 0,
+              child: ListTile(leading: Icon(Icons.drive_file_move_outlined), title: Text('Move to folder')),
+            ),
+            PopupMenuItem(
+              value: 1,
+              child: ListTile(leading: Icon(Icons.label_outline), title: Text('Tags')),
+            ),
+          ],
+        ),
       ],
     );
   }
+
+  String? _labels(SavedDocument doc) => documentLabels(doc, ref.read(libraryProvider).value ?? const LibraryIndex());
 
   void _resetAll() {
     _search.clear();
     ref.read(libraryQueryProvider.notifier)
       ..search('')
-      ..resetSortAndFilters();
+      ..resetSortAndFilters()
+      ..openFolder(null);
   }
 
   Widget _searchBar(LibraryQuery query) {
@@ -227,6 +270,43 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     );
   }
 
+  /// "All" plus one chip per folder; picking one browses that folder.
+  Widget _folderBar(LibraryQuery query) {
+    final index = ref.watch(libraryProvider).value ?? const LibraryIndex();
+    final current = index.folderById(query.folderId)?.id;
+    final q = ref.read(libraryQueryProvider.notifier);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: Space.page),
+      child: Row(
+        children: [
+          ChoiceChip(
+            label: const Text('All'),
+            selected: current == null,
+            onSelected: (_) => q.openFolder(null),
+          ),
+          for (final f in index.folders) ...[
+            const SizedBox(width: Space.sm),
+            ChoiceChip(
+              label: Text(f.name),
+              selected: current == f.id,
+              onSelected: (_) => q.openFolder(current == f.id ? null : f.id),
+            ),
+          ],
+          const SizedBox(width: Space.sm),
+          ActionChip(
+            avatar: const Icon(Icons.create_new_folder_outlined, size: 18),
+            label: const Text('New folder'),
+            onPressed: () async {
+              final folder = await createFolderFlow(context, ref);
+              if (folder != null) q.openFolder(folder.id);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Active sort and filters as removable chips, with one Reset.
   Widget _activeChips(LibraryQuery query) {
     final q = ref.read(libraryQueryProvider.notifier);
@@ -259,6 +339,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               onDeleted: q.clearTypes,
               deleteButtonTooltipMessage: 'Remove type filter',
             ),
+          if (query.tags.isNotEmpty)
+            InputChip(
+              avatar: const Icon(Icons.label_outline, size: 18),
+              label: Text(query.tags.join(', ')),
+              onPressed: () => showFilterSheet(context),
+              onDeleted: q.clearTags,
+              deleteButtonTooltipMessage: 'Remove tag filter',
+            ),
           if (query.date != DateFilter.any)
             InputChip(
               avatar: const Icon(Icons.event, size: 18),
@@ -285,6 +373,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       return DocumentRow(
         key: ValueKey(doc.id),
         document: doc,
+        labels: _labels(doc),
         selecting: _selecting,
         selected: _selected.contains(doc.id),
         onTap: () => _onTap(doc),
@@ -315,6 +404,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           return DocumentGridCard(
             key: ValueKey(doc.id),
             document: doc,
+            labels: _labels(doc),
             selecting: _selecting,
             selected: _selected.contains(doc.id),
             onTap: () => _onTap(doc),

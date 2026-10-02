@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../app/theme.dart';
 import '../../domain/library.dart';
 
-enum DocumentMenuAction { rename, share, delete }
+enum DocumentMenuAction { rename, move, tags, share, delete }
 
 /// First-page thumbnail on a white page, or a PDF icon when there is none.
 class DocumentThumbnail extends StatelessWidget {
@@ -51,14 +51,43 @@ class DocumentStatus extends StatelessWidget {
   }
 }
 
+/// Folder and tags under a document's name, with an icon.
+class DocumentLabels extends StatelessWidget {
+  const DocumentLabels(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = LumaColors.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.label_outline, size: 14, color: c.muted),
+        const SizedBox(width: Space.xs),
+        Flexible(
+          child: Text(text, style: Theme.of(context).textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+      ],
+    );
+  }
+}
+
+/// "Bills · tax, 2026": the folder name, then the tags.
+String? documentLabels(SavedDocument doc, LibraryIndex index) {
+  final parts = [?index.folderById(doc.folderId)?.name, if (doc.tags.isNotEmpty) doc.tags.join(', ')];
+  return parts.isEmpty ? null : parts.join(' · ');
+}
+
 String pageCountLabel(int n) => '$n page${n == 1 ? '' : 's'}';
 
 /// Shared behaviour for a document in a list or grid: tap opens it (or
 /// toggles it while selecting), long press starts selecting, and the
-/// overflow menu offers rename, share and delete.
+/// overflow menu offers rename, move, tags, share and delete.
 class _DocumentInteraction {
   const _DocumentInteraction({
     required this.document,
+    required this.labels,
     required this.selecting,
     required this.selected,
     required this.onTap,
@@ -67,6 +96,7 @@ class _DocumentInteraction {
   });
 
   final SavedDocument document;
+  final String? labels;
   final bool selecting;
   final bool selected;
   final VoidCallback onTap;
@@ -75,7 +105,7 @@ class _DocumentInteraction {
 
   String get semanticsLabel =>
       '${document.name}, ${formatModified(document.modifiedAt, DateTime.now())}, '
-      '${pageCountLabel(document.pageCount)}, on device';
+      '${pageCountLabel(document.pageCount)}, on device${labels == null ? '' : ', $labels'}';
 
   Widget trailing(BuildContext context) {
     if (selecting) {
@@ -90,6 +120,14 @@ class _DocumentInteraction {
         PopupMenuItem(
           value: DocumentMenuAction.rename,
           child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Rename')),
+        ),
+        PopupMenuItem(
+          value: DocumentMenuAction.move,
+          child: ListTile(leading: Icon(Icons.drive_file_move_outlined), title: Text('Move to folder')),
+        ),
+        PopupMenuItem(
+          value: DocumentMenuAction.tags,
+          child: ListTile(leading: Icon(Icons.label_outline), title: Text('Tags')),
         ),
         PopupMenuItem(
           value: DocumentMenuAction.share,
@@ -136,9 +174,13 @@ class DocumentRow extends StatelessWidget {
     required this.onMenu,
     this.selecting = false,
     this.selected = false,
+    this.labels,
   });
 
   final SavedDocument document;
+
+  /// Folder and tags, such as "Bills · tax, 2026", or null for none.
+  final String? labels;
   final bool selecting;
   final bool selected;
   final VoidCallback onTap;
@@ -149,6 +191,7 @@ class DocumentRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final i = _DocumentInteraction(
       document: document,
+      labels: labels,
       selecting: selecting,
       selected: selected,
       onTap: onTap,
@@ -180,6 +223,7 @@ class DocumentRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     const DocumentStatus(),
+                    if (labels != null) ...[const SizedBox(height: 2), DocumentLabels(labels!)],
                   ],
                 ),
               ),
@@ -202,9 +246,13 @@ class DocumentGridCard extends StatelessWidget {
     required this.onMenu,
     this.selecting = false,
     this.selected = false,
+    this.labels,
   });
 
   final SavedDocument document;
+
+  /// Folder and tags, such as "Bills · tax, 2026", or null for none.
+  final String? labels;
   final bool selecting;
   final bool selected;
   final VoidCallback onTap;
@@ -218,6 +266,7 @@ class DocumentGridCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final i = _DocumentInteraction(
       document: document,
+      labels: labels,
       selecting: selecting,
       selected: selected,
       onTap: onTap,

@@ -126,13 +126,32 @@ class LibraryFolder {
 /// Everything the library index file holds.
 @immutable
 class LibraryIndex {
-  const LibraryIndex({this.documents = const [], this.folders = const []});
+  const LibraryIndex({this.documents = const [], this.folders = const [], this.tags = const []});
 
   static const version = 1;
 
   /// Newest first by [SavedDocument.modifiedAt].
   final List<SavedDocument> documents;
   final List<LibraryFolder> folders;
+
+  /// Tags created by the user, including ones no document uses yet.
+  final List<String> tags;
+
+  /// Every tag, from [tags] and from documents, sorted by name.
+  List<String> get allTags {
+    final seen = <String, String>{};
+    for (final t in [...tags, for (final d in documents) ...d.tags]) {
+      seen.putIfAbsent(t.toLowerCase(), () => t);
+    }
+    return seen.values.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  }
+
+  LibraryFolder? folderById(String? id) {
+    for (final f in folders) {
+      if (f.id == id) return f;
+    }
+    return null;
+  }
 
   SavedDocument? byId(String id) {
     for (final d in documents) {
@@ -141,15 +160,22 @@ class LibraryIndex {
     return null;
   }
 
-  LibraryIndex copyWith({List<SavedDocument>? documents, List<LibraryFolder>? folders}) {
+  LibraryIndex copyWith({List<SavedDocument>? documents, List<LibraryFolder>? folders, List<String>? tags}) {
     final docs = [...(documents ?? this.documents)]..sort((a, b) => b.modifiedAt.compareTo(a.modifiedAt));
-    return LibraryIndex(documents: List.unmodifiable(docs), folders: List.unmodifiable(folders ?? this.folders));
+    final sortedFolders = [...(folders ?? this.folders)]
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return LibraryIndex(
+      documents: List.unmodifiable(docs),
+      folders: List.unmodifiable(sortedFolders),
+      tags: List.unmodifiable(tags ?? this.tags),
+    );
   }
 
   Map<String, Object?> toJson(String root) => {
     'version': version,
     'documents': [for (final d in documents) d.toJson(root)],
     'folders': [for (final f in folders) f.toJson()],
+    if (tags.isNotEmpty) 'tags': tags,
   };
 
   static LibraryIndex fromJson(Map<String, Object?> json, String root) => const LibraryIndex().copyWith(
@@ -157,5 +183,25 @@ class LibraryIndex {
       for (final d in (json['documents'] as List?) ?? const []) SavedDocument.fromJson((d as Map).cast(), root),
     ],
     folders: [for (final f in (json['folders'] as List?) ?? const []) LibraryFolder.fromJson((f as Map).cast())],
+    tags: [for (final t in (json['tags'] as List?) ?? const []) t as String],
   );
+}
+
+/// Characters that file systems or share targets reject in names.
+const _badNameChars = r'/\:*?"<>|';
+
+/// Checks a folder or tag name as the user types it. Returns null when it is
+/// fine, otherwise a short message. [existing] are the other names in use;
+/// [current] is the name being renamed, which may be kept.
+String? validateLabelName(String name, Iterable<String> existing, {String? current, int maxLength = 40}) {
+  final n = name.trim();
+  if (n.isEmpty) return 'Enter a name';
+  if (n.length > maxLength) return 'Use $maxLength characters or fewer';
+  for (final ch in _badNameChars.split('')) {
+    if (n.contains(ch)) return 'Names can\'t contain $ch';
+  }
+  final lower = n.toLowerCase();
+  if (current != null && current.toLowerCase() == lower) return null;
+  if (existing.any((e) => e.toLowerCase() == lower)) return 'That name is already used';
+  return null;
 }

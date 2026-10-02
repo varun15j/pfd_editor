@@ -100,10 +100,89 @@ class LibraryController extends AsyncNotifier<LibraryIndex> {
   }
 
   /// Moves a document into [folderId], or to the library root when null.
-  Future<void> moveToFolder(String id, String? folderId) => _edit(id, (d) => d.copyWith(folderId: () => folderId));
+  Future<void> moveToFolder(String id, String? folderId) => moveManyToFolder([id], folderId);
 
-  Future<void> setTags(String id, List<String> tags) =>
-      _edit(id, (d) => d.copyWith(tags: List.unmodifiable({for (final t in tags) t.trim()}..remove(''))));
+  /// Moves documents into [folderId], or to the library root when null.
+  /// Organising does not count as a change, so dates and order stay put.
+  Future<void> moveManyToFolder(Iterable<String> ids, String? folderId) {
+    final set = ids.toSet();
+    return _update(
+      (index) => index.copyWith(
+        documents: [for (final d in index.documents) set.contains(d.id) ? d.copyWith(folderId: () => folderId) : d],
+      ),
+    );
+  }
+
+  Future<void> setTags(String id, List<String> tags) => updateTags([id], add: tags.toSet(), replace: true);
+
+  /// Adds [add] and removes [remove] on every document in [ids]; with
+  /// [replace], each document's tags become exactly [add]. Tags match
+  /// without regard to case, and new ones join the tag list.
+  Future<void> updateTags(
+    Iterable<String> ids, {
+    Set<String> add = const {},
+    Set<String> remove = const {},
+    bool replace = false,
+  }) {
+    final set = ids.toSet();
+    final adding = {for (final t in add) t.trim()}..remove('');
+    final removing = {for (final t in remove) t.trim().toLowerCase()};
+    List<String> apply(List<String> tags) {
+      final out = <String>[];
+      for (final t in [if (!replace) ...tags, ...adding]) {
+        final lower = t.toLowerCase();
+        if (removing.contains(lower) || out.any((o) => o.toLowerCase() == lower)) continue;
+        out.add(t);
+      }
+      return List.unmodifiable(out);
+    }
+
+    return _update(
+      (index) => index.copyWith(
+        tags: _withTags(index, adding),
+        documents: [for (final d in index.documents) set.contains(d.id) ? d.copyWith(tags: apply(d.tags)) : d],
+      ),
+    );
+  }
+
+  Future<void> createTag(String name) => _update((index) => index.copyWith(tags: _withTags(index, {name.trim()})));
+
+  /// Renames a tag everywhere it is used.
+  Future<void> renameTag(String from, String to) {
+    final lower = from.toLowerCase();
+    final name = to.trim();
+    List<String> swap(List<String> tags) => [for (final t in tags) t.toLowerCase() == lower ? name : t];
+    return _update(
+      (index) => index.copyWith(
+        tags: swap(index.tags),
+        documents: [
+          for (final d in index.documents)
+            d.tags.any((t) => t.toLowerCase() == lower) ? d.copyWith(tags: swap(d.tags)) : d,
+        ],
+      ),
+    );
+  }
+
+  /// Removes a tag from the list and from every document; documents stay.
+  Future<void> deleteTag(String name) {
+    final lower = name.toLowerCase();
+    List<String> drop(List<String> tags) => [
+      for (final t in tags)
+        if (t.toLowerCase() != lower) t,
+    ];
+    return _update(
+      (index) => index.copyWith(
+        tags: drop(index.tags),
+        documents: [for (final d in index.documents) d.copyWith(tags: drop(d.tags))],
+      ),
+    );
+  }
+
+  static List<String> _withTags(LibraryIndex index, Set<String> add) => [
+    ...index.tags,
+    for (final t in add)
+      if (t.isNotEmpty && !index.allTags.any((e) => e.toLowerCase() == t.toLowerCase())) t,
+  ];
 
   Future<LibraryFolder> createFolder(String name) async {
     final folder = LibraryFolder(id: ref.read(pageStoreProvider).newId(), name: name.trim());
