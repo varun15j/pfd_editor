@@ -10,6 +10,7 @@ import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/scanner_service.dart';
 import 'package:lumascan/export/pdf_exporter.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
+import 'package:path/path.dart' as path;
 
 class FakeScanner implements ScannerService {
   FakeScanner(this.next);
@@ -59,7 +60,7 @@ void main() {
     expect(state().pages, hasLength(3));
     expect(state().busy, isFalse);
     for (final p in state().pages) {
-      expect(p.originalPath, startsWith('${tmp.path}/pages/'));
+      expect(p.originalPath, startsWith('${path.join(tmp.path, 'pages')}${path.separator}'));
       expect(File(p.originalPath).existsSync(), isTrue);
     }
     expect(scanner.cleanUps, 1);
