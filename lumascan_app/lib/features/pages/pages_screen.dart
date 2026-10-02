@@ -8,17 +8,26 @@ import '../crop/crop_screen.dart';
 import '../export/export_sheet.dart';
 import '../filters/filter_screen.dart';
 import '../pdf_editor/open_pdf.dart';
+import 'page_gallery.dart';
 import 'page_image.dart';
 import 'scan_actions.dart';
 import 'scan_controller.dart';
 
 /// Draft review screen (S08 Pages): every captured page, in order, with
 /// crop, rotate, filter and delete actions, plus add-more and export.
-class PagesScreen extends ConsumerWidget {
+/// Pages show as a list or as a gallery grid; the app bar toggles between them.
+class PagesScreen extends ConsumerStatefulWidget {
   const PagesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PagesScreen> createState() => _PagesScreenState();
+}
+
+class _PagesScreenState extends ConsumerState<PagesScreen> {
+  bool _gallery = false;
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(scanControllerProvider);
     final controller = ref.read(scanControllerProvider.notifier);
     final pages = state.pages;
@@ -27,6 +36,12 @@ class PagesScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(pages.isEmpty ? 'LumaScan' : '${pages.length} page${pages.length == 1 ? '' : 's'}'),
         actions: [
+          if (pages.isNotEmpty)
+            IconButton(
+              tooltip: _gallery ? 'List view' : 'Gallery view',
+              icon: Icon(_gallery ? Icons.view_list_outlined : Icons.grid_view_outlined),
+              onPressed: () => setState(() => _gallery = !_gallery),
+            ),
           if (state.canUndo)
             IconButton(tooltip: 'Undo', icon: const Icon(Icons.undo), onPressed: controller.undo),
           if (pages.isNotEmpty)
@@ -39,6 +54,8 @@ class PagesScreen extends ConsumerWidget {
       ),
       body: pages.isEmpty
           ? _EmptyState(busy: state.busy, onScan: (s) => _scan(context, ref, s))
+          : _gallery
+          ? PageGallery(pages: pages)
           : ReorderableListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
               itemCount: pages.length,
