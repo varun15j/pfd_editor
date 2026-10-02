@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../app/theme.dart';
 import '../../domain/models.dart';
 import '../../imaging/page_renderer.dart';
 import '../pages/scan_controller.dart';
@@ -52,9 +53,9 @@ class _CropScreenState extends ConsumerState<CropScreen> {
   Widget build(BuildContext context) {
     final valid = _quad.isValid();
     return Scaffold(
-      backgroundColor: const Color(0xFF142522),
+      backgroundColor: LumaColors.dark.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF142522),
+        backgroundColor: LumaColors.dark.background,
         foregroundColor: Colors.white,
         title: const Text('Crop'),
         actions: [
@@ -113,7 +114,7 @@ class _CropScreenState extends ConsumerState<CropScreen> {
                                     width: _activeHandle == i ? 22 : 16,
                                     height: _activeHandle == i ? 22 : 16,
                                     decoration: BoxDecoration(
-                                      color: _activeHandle == i ? const Color(0xFFE6AD54) : const Color(0xFF086B61),
+                                      color: _activeHandle == i ? LumaColors.dark.warning : LumaColors.dark.accent,
                                       shape: BoxShape.circle,
                                       border: Border.all(color: Colors.white, width: 3),
                                     ),

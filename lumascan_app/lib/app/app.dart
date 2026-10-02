@@ -1,33 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../features/pages/pages_screen.dart';
+import 'preferences.dart';
+import 'shell.dart';
+import 'theme.dart';
 
-/// Colours follow the LumaScan screen design (design/styles.css).
-class LumaScanApp extends StatelessWidget {
+class LumaScanApp extends ConsumerWidget {
   const LumaScanApp({super.key});
 
-  static const teal = Color(0xFF086B61);
-  static const paper = Color(0xFFF5F7F4);
-  static const ink = Color(0xFF172D2A);
-
   @override
-  Widget build(BuildContext context) {
-    final scheme = ColorScheme.fromSeed(seedColor: teal, primary: teal, surface: paper, onSurface: ink);
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       title: 'LumaScan',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: scheme,
-        scaffoldBackgroundColor: paper,
-        appBarTheme: const AppBarTheme(backgroundColor: paper, foregroundColor: ink, elevation: 0),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(48, 48),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
-          ),
-        ),
-      ),
-      home: const PagesScreen(),
+      theme: buildLumaTheme(Brightness.light),
+      darkTheme: buildLumaTheme(Brightness.dark),
+      themeMode: ref.watch(themeModeProvider),
+      home: const AppShell(),
     );
   }
 }
