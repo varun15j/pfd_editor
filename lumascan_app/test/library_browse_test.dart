@@ -182,7 +182,7 @@ void main() {
       await menu(tester, 'Lease', 'Rename');
       expect(find.text('Rename'), findsOneWidget);
       expect(find.widgetWithText(TextField, 'Lease'), findsOneWidget);
-      await tester.enterText(find.byType(TextField), '   ');
+      await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), '   ');
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
       expect(find.text('Enter a name'), findsOneWidget);
