@@ -11,6 +11,7 @@ This repository currently contains a specification and interactive screen protot
 - [Screen specifications and navigation](docs/screen-design.md)
 - [Document and PDF effects catalog](docs/document.md)
 - [Image filter catalog](docs/image%20filters.md)
+- [Scanning flow implementation](docs/scanning-flow.md) — Flutter code for capture, crop, filters and PDF export, with run and permission setup.
 - [Engineering skill inventory](skills.md) — prefixed skills derived from HLD, LLD, algorithms, UX and verification documents.
 - [PNG screen-design board](design/lumascan-screen-design.png) — six high-fidelity screens at 1536×1024.
 - [Interactive screen prototype](design/index.html) — open directly in a browser; no installation or internet needed.
