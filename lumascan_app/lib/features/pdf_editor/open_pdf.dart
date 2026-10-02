@@ -15,7 +15,6 @@ import 'pdf_editor_screen.dart';
 /// shows the editor. Password-protected files ask for the password.
 Future<void> pickAndEditPdf(BuildContext context, WidgetRef ref) async {
   final messenger = ScaffoldMessenger.of(context);
-  final navigator = Navigator.of(context);
 
   final PlatformFile? picked;
   try {
@@ -37,6 +36,14 @@ Future<void> pickAndEditPdf(BuildContext context, WidgetRef ref) async {
     return;
   }
   if (!context.mounted) return;
+  await openPdfInEditor(context, ref, path: path, name: picked.name);
+}
+
+/// Opens a PDF that is already in app storage, such as a saved library
+/// document, and shows the editor. Edits are always saved as a new file.
+Future<void> openPdfInEditor(BuildContext context, WidgetRef ref, {required String path, required String name}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final navigator = Navigator.of(context);
 
   String? password;
   var attempts = 0;
@@ -69,7 +76,7 @@ Future<void> pickAndEditPdf(BuildContext context, WidgetRef ref) async {
       .read(pdfEditControllerProvider.notifier)
       .open(
         path: path,
-        name: picked.name,
+        name: name,
         password: password,
         pageSizes: [for (final page in document.pages) (page.width, page.height)],
       );
