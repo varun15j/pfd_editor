@@ -34,6 +34,16 @@ flutter pub get
 flutter test          # 26 unit and widget tests
 flutter run           # with a phone connected or an emulator running
 ```
+## if build fails
+```bash
+cd android
+.\gradlew.bat --stop
+cd ..
+flutter clean
+flutter pub get
+flutter run -d emulator-5554
+
+```
 
 Use a real phone. The ML Kit scanner needs Google Play services, and the iOS document camera does not run in the Simulator (the Simulator can still use Import from photos).
 
