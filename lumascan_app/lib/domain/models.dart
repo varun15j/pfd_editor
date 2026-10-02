@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as path;
 
 /// Document filter presets. Ids follow docs/document.md so recipes stay
 /// compatible when more presets are added later.
@@ -27,6 +28,13 @@ class NormPoint {
   final double y;
 
   NormPoint clamp() => NormPoint(x.clamp(0.0, 1.0), y.clamp(0.0, 1.0));
+
+  List<double> toJson() => [x, y];
+
+  static NormPoint fromJson(Object? json) {
+    final list = json! as List;
+    return NormPoint((list[0] as num).toDouble(), (list[1] as num).toDouble());
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -59,6 +67,13 @@ class CropQuad {
   List<NormPoint> get points => [tl, tr, br, bl];
 
   bool get isFull => this == full;
+
+  List<List<double>> toJson() => [for (final p in points) p.toJson()];
+
+  static CropQuad fromJson(Object? json) {
+    final pts = [for (final p in json! as List) NormPoint.fromJson(p)];
+    return CropQuad(pts[0], pts[1], pts[2], pts[3]);
+  }
 
   CropQuad withPoint(int index, NormPoint p) {
     final pts = [...points];
@@ -128,6 +143,18 @@ class EditRecipe {
         filter: filter ?? this.filter,
       );
 
+  Map<String, Object?> toJson() => {
+        if (!crop.isFull) 'crop': crop.toJson(),
+        'quarterTurns': quarterTurns,
+        'filter': filter.id,
+      };
+
+  static EditRecipe fromJson(Map<String, Object?> json) => EditRecipe(
+        crop: json['crop'] == null ? CropQuad.full : CropQuad.fromJson(json['crop']),
+        quarterTurns: ((json['quarterTurns'] as num?)?.toInt() ?? 0) % 4,
+        filter: DocumentFilter.fromId(json['filter'] as String? ?? DocumentFilter.original.id),
+      );
+
   /// Stable key used to cache rendered derivatives.
   String get cacheKey {
     final q = crop.points.map((p) => '${p.x.toStringAsFixed(4)},${p.y.toStringAsFixed(4)}').join(';');
@@ -161,6 +188,17 @@ class ScanPage {
 
   ScanPage copyWith({EditRecipe? recipe}) =>
       ScanPage(id: id, originalPath: originalPath, recipe: recipe ?? this.recipe);
+
+  /// [originalPath] is stored by file name only, because the app's private
+  /// folder can move between launches (iOS changes it on every update).
+  /// [fromJson] resolves it against the current originals folder.
+  Map<String, Object?> toJson() => {'id': id, 'file': path.basename(originalPath), 'recipe': recipe.toJson()};
+
+  static ScanPage fromJson(Map<String, Object?> json, {required String originalsDir}) => ScanPage(
+        id: json['id']! as String,
+        originalPath: path.join(originalsDir, json['file']! as String),
+        recipe: EditRecipe.fromJson((json['recipe'] as Map?)?.cast<String, Object?>() ?? const {}),
+      );
 }
 
 enum PdfPageSize {

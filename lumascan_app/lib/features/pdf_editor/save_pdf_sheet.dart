@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../domain/models.dart';
 import '../../pdf_edit/pdf_edit_controller.dart';
 import '../../pdf_edit/pdf_saver.dart';
+import '../library/library_controller.dart';
 
 Future<void> showSavePdfSheet(BuildContext context) => showModalBottomSheet<void>(
   context: context,
@@ -46,6 +47,7 @@ class _SavePdfSheetState extends ConsumerState<SavePdfSheet> {
 
   Future<void> _save() async {
     final state = ref.read(pdfEditControllerProvider);
+    final library = ref.read(libraryProvider.notifier);
     setState(() {
       _progress = 0;
       _error = null;
@@ -65,8 +67,11 @@ class _SavePdfSheetState extends ConsumerState<SavePdfSheet> {
           );
       ref.read(pdfEditControllerProvider.notifier).markSaved();
       if (mounted) setState(() => _result = file);
+      await library.addPdf(file, pageCount: state.pages.length);
     } catch (e) {
-      if (mounted) {
+      if (mounted && _result != null) {
+        setState(() => _error = 'Saved, but it could not be added to your Library. ($e)');
+      } else if (mounted) {
         setState(() {
           _progress = null;
           _error = 'Saving failed. Your edits are still here. ($e)';
@@ -107,6 +112,10 @@ class _SavePdfSheetState extends ConsumerState<SavePdfSheet> {
                 '${p.basename(result.path)} · $pageCount page${pageCount == 1 ? '' : 's'} · '
                 '${(result.lengthSync() / 1024 / 1024).toStringAsFixed(1)} MB',
               ),
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              ],
               const SizedBox(height: 16),
               Builder(
                 builder: (buttonContext) => FilledButton.icon(

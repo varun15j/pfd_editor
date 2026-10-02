@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/cunning_scanner_service.dart';
+import '../data/library_store.dart';
 import '../data/page_store.dart';
 import '../domain/scanner_service.dart';
 import '../export/pdf_exporter.dart';
@@ -19,3 +20,7 @@ final renderServiceProvider = Provider<RenderService>(
 final pdfExporterProvider = Provider<PdfExporter>(
   (ref) => PdfExporter(ref.watch(pageStoreProvider)),
 );
+
+final libraryStoreProvider = Provider<LibraryStore>((ref) => LibraryStore(ref.watch(pageStoreProvider)));
+
+final draftStoreProvider = Provider<DraftStore>((ref) => DraftStore(ref.watch(pageStoreProvider)));

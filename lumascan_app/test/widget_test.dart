@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -6,8 +7,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/app/app.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/app/theme.dart';
+import 'package:lumascan/data/library_store.dart';
+import 'package:lumascan/domain/library.dart';
+import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/scanner_service.dart';
 import 'package:lumascan/ui/state_views.dart';
+
+import 'support/memory_stores.dart';
 
 class _BlockedScanner implements ScannerService {
   @override
@@ -18,13 +24,33 @@ class _BlockedScanner implements ScannerService {
   Future<void> cleanUp() async {}
 }
 
-Future<void> pumpApp(WidgetTester tester, {List overrides = const [], double textScale = 1}) async {
+class _BrokenLibraryStore extends MemoryLibraryStore {
+  @override
+  Future<LibraryIndex> load() async => throw const FileSystemException('disk unavailable');
+}
+
+Future<void> pumpApp(
+  WidgetTester tester, {
+  List overrides = const [],
+  double textScale = 1,
+  LibraryStore? library,
+  DraftStore? draft,
+}) async {
   tester.view.physicalSize = const Size(1080, 2340);
   tester.view.devicePixelRatio = 2.6;
   tester.platformDispatcher.textScaleFactorTestValue = textScale;
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-  await tester.pumpWidget(ProviderScope(overrides: [...overrides], child: const LumaScanApp()));
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        libraryStoreProvider.overrideWithValue(library ?? MemoryLibraryStore()),
+        draftStoreProvider.overrideWithValue(draft ?? MemoryDraftStore()),
+        ...overrides,
+      ],
+      child: const LumaScanApp(),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -122,6 +148,54 @@ void main() {
       for (final label in ['Home', 'Library', 'Tools', 'Settings', 'Scan', 'Import', 'Edit PDF']) {
         expect(tester.getSize(find.bySemanticsLabel(label)).height, greaterThanOrEqualTo(minTapTarget), reason: label);
       }
+    });
+  });
+
+  group('library and draft', () {
+    final doc = SavedDocument(
+      id: 'd1',
+      name: 'Rental agreement',
+      pdfPath: '/nowhere/exports/Rental agreement.pdf',
+      pageCount: 3,
+      type: ScanType.document,
+      createdAt: DateTime(2026, 3, 7),
+      modifiedAt: DateTime(2026, 3, 7),
+    );
+    final library = const LibraryIndex().copyWith(documents: [doc]);
+
+    testWidgets('library lists saved documents with name, date and page count', (tester) async {
+      await pumpApp(tester, library: MemoryLibraryStore(library));
+      await tester.tap(find.bySemanticsLabel('Library'));
+      await tester.pumpAndSettle();
+      expect(find.text('No saved documents yet'), findsNothing);
+      expect(find.text('Rental agreement'), findsWidgets);
+      expect(find.text('7 Mar 2026 · 3 pages'), findsWidgets);
+    });
+
+    testWidgets('home shows recent documents instead of the empty hint', (tester) async {
+      await pumpApp(tester, library: MemoryLibraryStore(library));
+      expect(find.text('Rental agreement'), findsOneWidget);
+      expect(find.text('Your scans will show up here.'), findsNothing);
+    });
+
+    testWidgets('a draft saved before the app was killed is offered on home', (tester) async {
+      await pumpApp(
+        tester,
+        draft: MemoryDraftStore(const [
+          ScanPage(id: 'a', originalPath: '/nowhere/a.jpg'),
+          ScanPage(id: 'b', originalPath: '/nowhere/b.jpg'),
+        ]),
+      );
+      expect(find.text('Continue draft'), findsOneWidget);
+      expect(find.text('2 pages not saved yet'), findsOneWidget);
+    });
+
+    testWidgets('a library that fails to load offers a retry', (tester) async {
+      await pumpApp(tester, library: _BrokenLibraryStore());
+      await tester.tap(find.bySemanticsLabel('Library'));
+      await tester.pumpAndSettle();
+      expect(find.text('Library could not be opened'), findsOneWidget);
+      expect(find.text('Try again'), findsOneWidget);
     });
   });
 
