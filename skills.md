@@ -4,7 +4,7 @@ Version 1.0 · 2 October 2026
 
 This is the engineering skill inventory required to build LumaScan. It is not a Codex `SKILL.md` package. The list consolidates the project's high-level requirements and architecture, [low-level design](docs/low-level-design.md), [document/PDF algorithms](docs/document.md), [image-filter algorithms](docs/image%20filters.md), and [screen design](docs/screen-design.md).
 
-There is no separate HLD file in the repository at this time. The **HLD** skills below are derived from `README.md`, `docs/requirements.md`, and the architecture decisions in `docs/low-level-design.md`.
+The **HLD** skills below are derived from [docs/high-level-design.md](docs/high-level-design.md), `README.md`, `docs/requirements.md`, and the architecture decisions in `docs/low-level-design.md`.
 
 ## Prefix convention
 
