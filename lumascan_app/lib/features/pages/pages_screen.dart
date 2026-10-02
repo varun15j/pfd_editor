@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:permission_handler/permission_handler.dart';
 
-import '../../app/app.dart';
+import '../../app/theme.dart';
 import '../../domain/models.dart';
 import '../../domain/scanner_service.dart';
 import '../crop/crop_screen.dart';
@@ -10,6 +9,7 @@ import '../export/export_sheet.dart';
 import '../filters/filter_screen.dart';
 import '../pdf_editor/open_pdf.dart';
 import 'page_image.dart';
+import 'scan_actions.dart';
 import 'scan_controller.dart';
 
 /// Draft review screen (S08 Pages): every captured page, in order, with
@@ -80,49 +80,7 @@ class PagesScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _scan(BuildContext context, WidgetRef ref, ScanSource source) async {
-    final outcome = await ref.read(scanControllerProvider.notifier).scan(source);
-    if (!context.mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    switch (outcome) {
-      case ScanAdded(:final count):
-        messenger.showSnackBar(SnackBar(content: Text('Added $count page${count == 1 ? '' : 's'}')));
-      case ScanCancelled():
-        break;
-      case ScanFailed(:final message):
-        messenger.showSnackBar(SnackBar(content: Text('Scan failed: $message')));
-      case ScanPermissionBlocked(:final permanently):
-        await showDialog<void>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Camera access needed'),
-            content: Text(permanently
-                ? 'Camera access is turned off for LumaScan. Turn it on in Settings to scan documents. '
-                    'You can still import pages from your photos.'
-                : 'LumaScan needs the camera to scan documents. Pages stay on this device.'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Not now')),
-              if (permanently)
-                FilledButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    openAppSettings();
-                  },
-                  child: const Text('Open Settings'),
-                )
-              else
-                FilledButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _scan(context, ref, source);
-                  },
-                  child: const Text('Try again'),
-                ),
-            ],
-          ),
-        );
-    }
-  }
+  Future<void> _scan(BuildContext context, WidgetRef ref, ScanSource source) => runScan(context, ref, source);
 
   Future<void> _confirmDiscard(BuildContext context, WidgetRef ref) async {
     final ok = await showDialog<bool>(
@@ -161,13 +119,13 @@ class _EmptyState extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         Material(
-          color: LumaScanApp.teal,
+          color: LumaColors.of(context).accent,
           borderRadius: BorderRadius.circular(21),
           child: InkWell(
             borderRadius: BorderRadius.circular(21),
             onTap: busy ? null : () => onScan(ScanSource.camera),
-            child: const Padding(
-              padding: EdgeInsets.all(22),
+            child: Padding(
+              padding: const EdgeInsets.all(22),
               child: Row(
                 children: [
                   Expanded(
@@ -175,14 +133,15 @@ class _EmptyState extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Scan with camera',
-                            style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w600)),
-                        SizedBox(height: 6),
+                            style: TextStyle(
+                                color: LumaColors.of(context).onAccent, fontSize: 21, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 6),
                         Text('Auto edge detection and multi-page capture',
-                            style: TextStyle(color: Color(0xFFCEE5DC), fontSize: 12)),
+                            style: TextStyle(color: LumaColors.of(context).onAccent, fontSize: 12)),
                       ],
                     ),
                   ),
-                  Icon(Icons.document_scanner_outlined, color: Colors.white, size: 40),
+                  Icon(Icons.document_scanner_outlined, color: LumaColors.of(context).onAccent, size: 40),
                 ],
               ),
             ),
@@ -220,13 +179,8 @@ class _PageCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(scanControllerProvider.notifier);
     return Card(
-      elevation: 0,
-      color: Colors.white,
       margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: Color(0xFFDFE6E0)),
-      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () => Navigator.of(context).push(

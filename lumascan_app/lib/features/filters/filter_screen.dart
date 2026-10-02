@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/theme.dart';
 import '../../domain/models.dart';
 import '../../imaging/render_service.dart';
 import '../crop/crop_screen.dart';
@@ -63,7 +64,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
               child: Container(
                 margin: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD9DFD4),
+                  color: LumaColors.of(context).surfaceRaised,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 padding: const EdgeInsets.all(16),
@@ -160,7 +161,7 @@ class _FilterChoice extends StatelessWidget {
                 width: 70,
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: selected ? const Color(0xFFD9E8DA) : const Color(0xFFE5E9DE),
+                  color: selected ? LumaColors.of(context).accentSoft : LumaColors.of(context).surfaceRaised,
                   border: Border.all(color: selected ? teal : Colors.transparent, width: 2),
                   borderRadius: BorderRadius.circular(10),
                 ),
