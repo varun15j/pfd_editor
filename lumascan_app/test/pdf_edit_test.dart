@@ -12,6 +12,7 @@ import 'package:lumascan/pdf_edit/annotations.dart';
 import 'package:lumascan/pdf_edit/pdf_edit_controller.dart';
 import 'package:lumascan/pdf_edit/pdf_flattener.dart';
 import 'package:lumascan/pdf_edit/pdf_saver.dart';
+import 'package:path/path.dart' as path;
 
 /// Renders source page N as a flat colour so tests can tell pages apart.
 class FakeRasterizer implements PdfRasterizer {
@@ -200,7 +201,7 @@ void main() {
           );
 
       expect(rasterizer.requests.single, [3, 1]);
-      expect(file.path, endsWith('exports/Lease_edited.pdf'));
+      expect(file.path, endsWith(path.join('exports', 'Lease_edited.pdf')));
       expect(progress.last, 1.0);
       final bytes = file.readAsBytesSync();
       expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
