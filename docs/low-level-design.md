@@ -1,8 +1,10 @@
 # LumaScan: low-level design
 
-Version 1.0 · 2 October 2026 · Design specification, not compiled implementation
+Version 1.1 · 2 October 2026 · Design specification, not compiled implementation
 
-Related: [requirements](requirements.md), [screen design](screen-design.md).
+Related: [high-level design](high-level-design.md), [requirements](requirements.md), [screen design](screen-design.md).
+
+Changes in 1.1: package choices added as ADR-010 to ADR-014; scanner adapter allows an OS scanner for the MVP; Riverpod state conventions; PDF engine candidates named; implementation sequence replaced by gated milestones (section 16).
 
 ## 1. Architecture decisions
 
@@ -17,8 +19,15 @@ Related: [requirements](requirements.md), [screen design](screen-design.md).
 | ADR-007 | Capability-driven services | PDF, OCR, camera and device features differ across platforms |
 | ADR-008 | Custom scanning surface | Consistent document/photo/ID/video modes and controls; optional native quick scan can be added independently |
 | ADR-009 | PDF engine behind adapter | R1 scan PDF creation is feasible independently of advanced imported PDF editing |
+| ADR-010 | `ScannerService` interface; MVP adapter wraps cunning_document_scanner (ML Kit on Android, Vision on iOS) | Working scan on both platforms before the custom surface exists; ADR-008 surface replaces the adapter at milestone M7. Pending owner confirmation |
+| ADR-011 | Scan PDFs written in Dart with the `pdf` package | Full control of paper size, margins, quality presets and invisible OCR text; no vendor dependency for R1 |
+| ADR-012 | pdfrx for viewing, thumbnails, text search and page assembly | MIT, PDFium based, both platforms; evaluate pdfrx_coregraphics on iOS for app size |
+| ADR-013 | Annotations as an app-owned overlay, flattened at export | Editable until export, one coordinate model for view and output; signature pad via `signature` package |
+| ADR-014 | Imported-PDF write engine chosen by spike: syncfusion_flutter_pdf vs pdf_manipulator | Only needed for R1.1; Syncfusion license eligibility must be confirmed before adoption |
 
-Proposed Dart libraries: Riverpod for application state, go_router for navigation, Drift/SQLite for document metadata, Pigeon for platform contracts. Pin versions after a compatibility spike. Native jobs use their own ledger database to avoid concurrent access through unrelated database stacks.
+Proposed Dart libraries (latest versions on pub.dev, 2 October 2026): flutter_riverpod 3.4.3 for application state, go_router 18.0.2 for navigation, drift 2.35.1 for document metadata, pigeon 29.0.6 for platform contracts, cunning_document_scanner 3.0.3, pdf 3.13.1, pdfrx 2.6.5, signature 6.4.0, google_mlkit_text_recognition 0.17.1. Pin exact versions after a compatibility spike.
+
+Riverpod conventions: services are plain `Provider`s overridable in tests; each screen has an `AsyncNotifier` with a sealed state (loading/ready/empty/error); database lists are `StreamProvider`s over Drift watch queries; undo stacks live in the editing controller; export and OCR progress arrive through a `StreamProvider` fed by the job layer. Native jobs use their own ledger database to avoid concurrent access through unrelated database stacks.
 
 ```mermaid
 flowchart TD
@@ -238,7 +247,7 @@ R1.1 imported PDFs use a `PdfAdapter` capability matrix: read, render, merge, sp
 
 Annotations are anchored to canonical corrected geometry. After a crop change, reproject using transforms when reliable or require review. Use separate point/rect data for ink, text, highlight and signature, then flatten at export. A drawn signature is not cryptographic signing; black fill is not secure redaction.
 
-Evaluate PDF engines using licensing, offline use, Flutter/native integration, script/font embedding, file size, crash isolation, encryption and fidelity test corpus. No vendor or pricing is assumed in this design.
+Evaluate PDF engines using licensing, offline use, Flutter/native integration, script/font embedding, file size, crash isolation, encryption and fidelity test corpus. R1 needs no third-party write engine (ADR-011, ADR-013). R1.1 candidates are syncfusion_flutter_pdf (mature: annotations, forms, encryption, digital signatures; commercial license with a conditional free community tier) and pdf_manipulator (MIT, Rust engine, young). pdfrx or pdf_combiner covers merge and page reorder.
 
 ## 12. Jobs, recovery and exports
 
@@ -294,6 +303,18 @@ Each asynchronous screen uses explicit idle/loading/ready/empty/error states, ne
 | UX | Permission denial, empty states, screen reader, 200% text, small phone, keyboard overlap |
 | End-to-end | 1/10/50 page export, rapid taps, low storage, process death at every commit boundary |
 
-Suggested implementation sequence: platform capability spike → repository/asset transactions → camera/custom crop → recipe renderer → page library/export → ID layout → OCR/searchable PDF → annotation → imported PDF SDK spike → video scanning → photo-to-video → later 3D research.
+Implementation milestones (build order, each gated on a real Android phone and iPhone):
+
+| Milestone | Scope | Gate |
+|---|---|---|
+| M0 Foundations | Drift schema, asset store, router, CI, fake `ScannerService` | App boots, unit tests green |
+| M1 Scan to PDF | OS scanner adapter, gallery import, library list, PDF export and share | 10-page document exported on both platforms |
+| M2 Edit pages | Crop, rotate, four document filters, reorder/delete/duplicate, undo | Originals recoverable after every edit |
+| M3 Annotate | Pen, highlighter, text box, signature, flattened export | Marks align in two PDF readers |
+| M4 MVP polish | Trash/restore, search, settings, error states, accessibility | Beta build to testers |
+| M5 OCR | ML Kit / Vision OCR, searchable PDF | OCR-03 passes in two readers |
+| M6 PDF tools | Imported PDF merge/split/rotate/stamp after engine spike | PDF corpus fidelity tests pass |
+| M7 Custom camera | ADR-008 native surface, quality guidance, ID front/back | Capture corpus passes; replaces MVP adapter |
+| R2+ | Video scanning, photo-to-video, later 3D research | As in requirements |
 
 Definition of ready for implementation: accept product scope, choose reference devices and PDF adapter, confirm minimum OS and OCR scripts. These are design gates, not blockers to reviewing this specification. Definition of done for each release: implemented acceptance criteria, real-device verification, no lost committed pages, and documented unsupported capabilities.

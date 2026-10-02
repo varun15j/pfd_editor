@@ -1,0 +1,503 @@
+<title>LumaScan Premium Screens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a light-table board. Six phones on a soft ground, each with a short "what changed" caption; tokens double as the app's own design system. */
+:root {
+  --ground: #E9EEEC;
+  --ground-2: #DFE6E3;
+  --surface: #FFFFFF;
+  --surface-2: #F4F7F6;
+  --ink: #0F1D1A;
+  --muted: #5A6B66;
+  --faint: #93A39E;
+  --line: #DAE2DF;
+  --accent: #0A6B5D;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #DCEEE9;
+  --glow: #49E0C0;
+  --warn: #C9821C;
+  --warn-soft: #FBEFD9;
+  --bezel: #121A19;
+  --cam: #0B1110;
+  --cam-2: #1A2422;
+  --paper: #FBFAF7;
+  --shadow: 0 1px 2px rgba(15,29,26,.06), 0 12px 32px -12px rgba(15,29,26,.22);
+  --display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body: "Figtree", "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0A1110; --ground-2: #101a18; --surface: #131E1C; --surface-2: #182523; --ink: #E7F0ED; --muted: #93A6A0; --faint: #61736e; --line: #23332F;
+    --accent: #3FC6A9; --accent-ink: #062520; --accent-soft: #15312B; --warn: #E6A84A; --warn-soft: #33281a; --bezel: #050909; --paper: #EDECE7;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 16px 40px -16px rgba(0,0,0,.7); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0A1110; --ground-2: #101a18; --surface: #131E1C; --surface-2: #182523; --ink: #E7F0ED; --muted: #93A6A0; --faint: #61736e; --line: #23332F;
+  --accent: #3FC6A9; --accent-ink: #062520; --accent-soft: #15312B; --warn: #E6A84A; --warn-soft: #33281a; --bezel: #050909; --paper: #EDECE7;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 16px 40px -16px rgba(0,0,0,.7); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 64px; }
+header.top { display: grid; gap: 10px; margin-bottom: 36px; }
+.eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(34px, 5vw, 54px); line-height: 1.02; letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+h1 .lm { color: var(--accent); }
+.lede { max-width: 62ch; color: var(--muted); margin: 0; font-size: 16px; }
+.board { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 48px 28px; justify-items: center; }
+figure.screen { margin: 0; display: grid; gap: 14px; width: 300px; max-width: 100%; }
+figcaption { display: grid; gap: 4px; padding-inline: 6px; }
+figcaption b { font-family: var(--display); font-size: 17px; font-weight: 600; }
+figcaption span { color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+
+/* Phone */
+.phone { width: 300px; max-width: 100%; aspect-ratio: 300/628; background: var(--bezel); border-radius: 46px; padding: 9px; box-shadow: var(--shadow); position: relative; }
+.scr { position: relative; height: 100%; border-radius: 38px; overflow: hidden; background: var(--surface-2); display: flex; flex-direction: column; font-size: 12.5px; }
+.scr.cam { background: var(--cam); color: #EAF3F0; }
+.sb { display: flex; justify-content: space-between; align-items: center; padding: 12px 22px 4px; font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums; }
+.sb i { display: inline-flex; gap: 4px; align-items: center; }
+.sb i::before { content: ""; width: 15px; height: 9px; border-radius: 2px; background: currentColor; opacity: .85; }
+.sb i::after { content: ""; width: 20px; height: 10px; border-radius: 3px; border: 1.5px solid currentColor; opacity: .85; }
+.island { position: absolute; top: 9px; left: 50%; transform: translateX(-50%); width: 84px; height: 24px; background: #000; border-radius: 14px; }
+.body { flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 8px 16px 0; min-height: 0; overflow: hidden; }
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 16px 4px; }
+.nav h3 { margin: 0; font-family: var(--display); font-size: 16px; font-weight: 600; }
+.ib { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); color: var(--ink); flex: none; }
+.ib svg, .ico svg { width: 17px; height: 17px; }
+svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.btn { display: flex; align-items: center; justify-content: center; gap: 8px; height: 46px; border-radius: 16px; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 14px; }
+.btn small { font-weight: 500; opacity: .75; font-size: 12px; }
+.dock { padding: 12px 16px 22px; display: grid; gap: 10px; }
+.homebar { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 104px; height: 4px; border-radius: 3px; background: var(--ink); opacity: .35; }
+.cam .homebar { background: #fff; }
+.label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* Mini document */
+.doc { background: var(--paper); border-radius: 4px; padding: 10% 11%; display: grid; align-content: start; gap: 5px; color: #24302d; }
+.doc .t { height: 6px; width: 70%; background: #24302d; border-radius: 2px; }
+.doc .s { height: 3px; width: 46%; background: #8c9894; border-radius: 2px; margin-bottom: 5px; }
+.doc .h { height: 4px; width: 34%; background: #3b4744; border-radius: 2px; margin-top: 5px; }
+.doc .l { height: 2.5px; background: #b9c2bf; border-radius: 2px; }
+.doc .l:nth-child(3n) { width: 88%; } .doc .l:nth-child(4n) { width: 76%; }
+
+/* 1 Library */
+.hello { display: flex; justify-content: space-between; align-items: end; padding: 6px 16px 2px; }
+.hello p { margin: 0; color: var(--muted); font-size: 12px; }
+.hello h2 { margin: 0; font-family: var(--display); font-size: 24px; letter-spacing: -.01em; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+.search { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: 13px; background: var(--surface); border: 1px solid var(--line); color: var(--faint); }
+.search svg { width: 15px; height: 15px; }
+.hero { position: relative; border-radius: 22px; padding: 16px; background: var(--accent); color: var(--accent-ink); display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; overflow: hidden; }
+.hero b { font-family: var(--display); font-size: 19px; font-weight: 600; }
+.hero span { font-size: 11.5px; opacity: .8; grid-column: 1; }
+.hero .ring { grid-row: 1 / span 2; grid-column: 2; width: 52px; height: 52px; border-radius: 50%; border: 2px solid currentColor; display: grid; place-items: center; opacity: .95; }
+.hero .ring::after { content: ""; width: 38px; height: 38px; border-radius: 50%; background: currentColor; opacity: .9; }
+.hero::before { content: ""; position: absolute; right: -40px; top: -60px; width: 160px; height: 160px; border-radius: 50%; border: 1px solid currentColor; opacity: .14; }
+.quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.q { background: var(--surface); border: 1px solid var(--line); border-radius: 15px; padding: 8px 4px; white-space: nowrap; text-align: center; display: grid; justify-items: center; gap: 5px; font-weight: 600; font-size: 11.5px; }
+.q .ico { width: 30px; height: 30px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
+.sec { display: flex; justify-content: space-between; align-items: baseline; }
+.sec b { font-family: var(--display); font-size: 14px; }
+.sec a { color: var(--accent); font-size: 11.5px; font-weight: 600; text-decoration: none; }
+.list { display: grid; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 4px; }
+.row { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: center; padding: 6px 6px; }
+.row + .row { border-top: 1px solid var(--line); }
+.row .doc { width: 30px; height: 38px; padding: 5px 4px; gap: 2.5px; box-shadow: 0 0 0 1px var(--line); }
+.row .doc .t { height: 3px; } .row .doc .s { height: 2px; margin-bottom: 2px; } .row .doc .l { height: 1.5px; }
+.row b { display: block; font-size: 12.5px; font-weight: 600; }
+.row small { color: var(--muted); font-size: 10.5px; }
+.tag { font-family: var(--mono); font-size: 9.5px; padding: 2px 6px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-weight: 500; }
+.tabbar { margin: 0 16px 20px; height: 54px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); display: grid; grid-template-columns: 1fr 64px 1fr; align-items: center; justify-items: center; color: var(--faint); font-size: 10px; font-weight: 600; }
+.tabbar .on { color: var(--accent); }
+.tabbar div { display: grid; justify-items: center; gap: 2px; }
+.tabbar svg { width: 18px; height: 18px; }
+.fab { width: 50px; height: 50px; border-radius: 18px; background: var(--ink); color: var(--surface); display: grid; place-items: center; margin-top: -26px; box-shadow: var(--shadow); }
+.fab svg { width: 22px; height: 22px; }
+
+/* 2 Scan (camera, always dark) */
+.camtop { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; }
+.glass { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(12px); color: #EAF3F0; }
+.camtop .ib { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.14); color: #EAF3F0; border-radius: 50%; }
+.pill { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 15px; font-size: 11.5px; font-weight: 600; }
+.pill .dot { width: 7px; height: 7px; border-radius: 50%; background: #49E0C0; box-shadow: 0 0 0 4px rgba(73,224,192,.22); }
+.viewfinder { flex: 1; position: relative; margin: 6px 12px; border-radius: 24px; overflow: hidden; background: radial-gradient(120% 90% at 50% 30%, #2a3634 0%, #151d1c 60%, #0d1312 100%); }
+.viewfinder .doc { position: absolute; left: 17%; top: 12%; width: 66%; height: 72%; transform: perspective(500px) rotateX(9deg) rotateZ(-2deg); box-shadow: 0 18px 30px rgba(0,0,0,.45); }
+.quad { position: absolute; left: 15%; top: 10%; width: 70%; height: 76%; transform: perspective(500px) rotateX(9deg) rotateZ(-2deg); border: 2px solid #49E0C0; border-radius: 6px; background: rgba(73,224,192,.07); box-shadow: 0 0 24px rgba(73,224,192,.35); }
+.quad i { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #0B1110; border: 2.5px solid #49E0C0; }
+.quad i:nth-child(1) { left: -8px; top: -8px; } .quad i:nth-child(2) { right: -8px; top: -8px; } .quad i:nth-child(3) { right: -8px; bottom: -8px; } .quad i:nth-child(4) { left: -8px; bottom: -8px; }
+.hint { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); white-space: nowrap; }
+.seg { display: inline-grid; grid-auto-flow: column; gap: 2px; padding: 3px; border-radius: 14px; }
+.seg span { padding: 6px 14px; border-radius: 11px; font-size: 11.5px; font-weight: 600; color: inherit; opacity: .7; text-align: center; }
+.seg span.on { background: #EAF3F0; color: #0B1110; opacity: 1; }
+.camctl { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 10px 22px 28px; }
+.camctl .thumbs { justify-self: start; position: relative; width: 42px; height: 52px; }
+.camctl .thumbs .doc { position: absolute; inset: 0; padding: 6px 5px; gap: 3px; border-radius: 6px; box-shadow: 0 0 0 2px #0B1110; }
+.camctl .thumbs .doc:nth-child(1) { transform: rotate(-8deg); opacity: .6; } .camctl .thumbs .doc:nth-child(2) { transform: rotate(5deg); opacity: .8; }
+.camctl .thumbs b { position: absolute; right: -8px; top: -8px; width: 20px; height: 20px; border-radius: 50%; background: #49E0C0; color: #062520; font-size: 11px; display: grid; place-items: center; z-index: 2; }
+.shutter { width: 72px; height: 72px; border-radius: 50%; border: 3px solid #EAF3F0; display: grid; place-items: center; position: relative; }
+.shutter::after { content: ""; width: 58px; height: 58px; border-radius: 50%; background: #EAF3F0; }
+.shutter svg { position: absolute; inset: -6px; width: 84px; height: 84px; transform: rotate(-90deg); stroke: #49E0C0; stroke-width: 3; }
+.camctl .done { justify-self: end; height: 40px; padding: 0 16px; border-radius: 14px; background: #49E0C0; color: #062520; font-weight: 700; display: grid; place-items: center; font-size: 13px; }
+
+/* 3 Enhance */
+.stagebg { flex: 1; border-radius: 22px; background: var(--ground-2); display: grid; place-items: center; position: relative; min-height: 0; }
+.stagebg .doc { width: 66%; aspect-ratio: 1/1.38; box-shadow: 0 10px 24px rgba(15,29,26,.18); }
+.ba { position: absolute; top: 10px; right: 10px; }
+.ba.seg { background: var(--surface); border: 1px solid var(--line); }
+.ba.seg span { padding: 4px 10px; font-size: 10.5px; }
+.ba.seg span.on { background: var(--ink); color: var(--surface); }
+.filters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.f { display: grid; gap: 5px; justify-items: center; font-size: 10.5px; font-weight: 600; color: var(--muted); }
+.f .doc { width: 100%; aspect-ratio: 1/1.25; padding: 14% 12%; gap: 3px; border-radius: 10px; box-shadow: 0 0 0 1px var(--line); }
+.f .doc .t { height: 3px; } .f .doc .s { height: 2px; } .f .doc .l { height: 2px; }
+.f.on { color: var(--accent); }
+.f.on .doc { box-shadow: 0 0 0 2px var(--accent); }
+.f.gray .doc { filter: grayscale(1) contrast(.9); background: #f1f1f1; }
+.f.bw .doc { filter: grayscale(1) contrast(2.2); background: #fff; }
+.f.clean .doc { background: #fff; }
+.slider { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; }
+.track { height: 6px; border-radius: 3px; background: var(--line); position: relative; }
+.track::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: var(--v); border-radius: 3px; background: var(--accent); }
+.track::after { content: ""; position: absolute; left: var(--v); top: 50%; width: 18px; height: 18px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); transform: translate(-50%, -50%); box-shadow: 0 2px 6px rgba(15,29,26,.2); }
+.applyall { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; }
+
+/* toggle */
+.tg { width: 38px; height: 22px; border-radius: 11px; background: var(--accent); position: relative; flex: none; }
+.tg::after { content: ""; position: absolute; right: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--accent-ink); }
+.tg.off { background: var(--line); } .tg.off::after { right: auto; left: 3px; background: var(--surface); }
+
+/* 4 ID */
+.segL { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+.segL span { text-align: center; padding: 7px 0; border-radius: 11px; font-weight: 600; font-size: 12px; color: var(--muted); display: flex; justify-content: center; gap: 6px; align-items: center; }
+.segL span.on { background: var(--ink); color: var(--surface); }
+.segL .ok { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; }
+.segL .ok svg { width: 9px; height: 9px; stroke-width: 3; }
+.card { border-radius: 16px; aspect-ratio: 1.586; padding: 12px; position: relative; overflow: hidden; color: #1d3a35; background: linear-gradient(135deg, #e3f1ee 0%, #cfe6e1 55%, #e9efe7 100%); box-shadow: 0 0 0 1px var(--line), 0 10px 20px -12px rgba(15,29,26,.4); display: grid; grid-template-columns: 54px 1fr; gap: 6px 10px; align-content: start; }
+.card .ct { grid-column: 1 / -1; font-size: 8.5px; font-weight: 700; letter-spacing: .08em; }
+.card .ph { width: 54px; height: 66px; border-radius: 8px; background: linear-gradient(#bcd6d0, #9fc3bb); position: relative; overflow: hidden; }
+.card .ph::before { content: ""; position: absolute; left: 50%; top: 14px; width: 22px; height: 22px; border-radius: 50%; background: #7ea79e; transform: translateX(-50%); }
+.card .ph::after { content: ""; position: absolute; left: 50%; bottom: -14px; width: 44px; height: 32px; border-radius: 50%; background: #7ea79e; transform: translateX(-50%); }
+.card dl { margin: 0; display: grid; gap: 3px; font-size: 8px; }
+.card dt { opacity: .6; } .card dd { margin: 0; font-weight: 700; font-size: 9.5px; }
+.card .wm { position: absolute; right: 10px; bottom: 8px; font-family: var(--mono); font-size: 9px; font-weight: 500; letter-spacing: .14em; opacity: .55; border: 1px solid currentColor; padding: 1px 5px; border-radius: 4px; }
+.slot { border-radius: 16px; border: 1.5px dashed var(--line); aspect-ratio: 3.2; display: grid; place-items: center; color: var(--muted); font-size: 11.5px; font-weight: 600; background: var(--surface); }
+.slot span { display: flex; gap: 6px; align-items: center; }
+.field { display: grid; gap: 5px; }
+.input { height: 38px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); display: flex; align-items: center; padding: 0 12px; font-size: 12px; justify-content: space-between; }
+.input em { font-style: normal; color: var(--faint); font-size: 10.5px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { padding: 5px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; border: 1px solid var(--line); background: var(--surface); color: var(--muted); }
+.chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+/* 5 Video */
+.player { border-radius: 18px; overflow: hidden; aspect-ratio: 16/10; position: relative; background: radial-gradient(120% 120% at 40% 30%, #2b3735, #121918); }
+.player .doc { position: absolute; left: 26%; top: 14%; width: 40%; height: 78%; transform: rotate(-9deg); }
+.player .play { position: absolute; inset: 0; margin: auto; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
+.player .play svg { width: 16px; height: 16px; fill: currentColor; stroke: none; }
+.player .tc { position: absolute; left: 10px; bottom: 8px; font-size: 10px; white-space: nowrap; z-index: 2; background: rgba(11,17,16,.55); }
+.timeline { position: relative; height: 26px; }
+.timeline .bar { position: absolute; left: 0; right: 0; top: 11px; height: 4px; border-radius: 2px; background: var(--line); }
+.timeline .bar::before { content: ""; position: absolute; left: 0; width: 38%; height: 100%; border-radius: 2px; background: var(--accent); }
+.timeline .tick { position: absolute; top: 4px; width: 3px; height: 18px; border-radius: 2px; background: var(--accent); }
+.timeline .tick.w { background: var(--warn); }
+.timeline .tick.n { background: var(--faint); }
+.times { display: flex; justify-content: space-between; color: var(--muted); font-size: 10px; margin-top: -6px; }
+.frames { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.fr { display: grid; gap: 3px; font-size: 9.5px; color: var(--muted); text-align: center; }
+.fr .img { position: relative; aspect-ratio: 1/1; border-radius: 12px; overflow: hidden; background: #2a3432; }
+.fr .img .doc { position: absolute; left: 20%; top: 12%; width: 60%; height: 84%; padding: 10% 9%; gap: 2.5px; }
+.fr .img .doc .t { height: 3px; } .fr .img .doc .s { height: 2px; } .fr .img .doc .l { height: 1.5px; }
+.fr .img.blur .doc { filter: blur(2.5px); }
+.fr .mark { position: absolute; right: 5px; top: 5px; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid #fff; display: grid; place-items: center; z-index: 1; }
+.fr .mark.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.fr .mark.on svg { width: 10px; height: 10px; stroke-width: 3; }
+.fr .mark.w { background: var(--warn); border-color: var(--warn); color: #fff; font-weight: 700; font-size: 11px; }
+.fr.sel .img { box-shadow: 0 0 0 2px var(--accent); }
+.notice { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--warn-soft); color: var(--ink); font-size: 11px; }
+.notice b { color: var(--warn); }
+
+/* 6 Export */
+.formats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.fmt { border-radius: 14px; border: 1px solid var(--line); background: var(--surface); padding: 10px 6px; display: grid; justify-items: center; gap: 3px; font-weight: 700; font-size: 12px; }
+.fmt small { font-weight: 500; color: var(--muted); font-size: 9.5px; }
+.fmt.on { border: 2px solid var(--accent); background: var(--accent-soft); color: var(--accent); }
+.fmt.on small { color: var(--accent); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 4px 12px; display: grid; }
+.panel .pr { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; font-size: 12px; font-weight: 600; gap: 8px; }
+.panel .pr + .pr { border-top: 1px solid var(--line); }
+.panel .pr span { color: var(--muted); font-weight: 500; }
+.qual { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 3px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
+.qual div { text-align: center; padding: 6px 0; border-radius: 11px; font-weight: 700; font-size: 11.5px; display: grid; }
+.qual small { font-weight: 500; font-size: 9.5px; color: var(--muted); }
+.qual .on { background: var(--ink); color: var(--surface); }
+.qual .on small { color: inherit; opacity: .7; }
+.est { display: flex; justify-content: space-between; align-items: baseline; padding: 2px 4px; }
+.est b { font-family: var(--display); font-size: 22px; }
+.est span { color: var(--muted); font-size: 11px; }
+
+/* Lower sections */
+section.more { margin-top: 72px; display: grid; gap: 28px; }
+h2.sec-h { font-family: var(--display); font-size: 26px; margin: 0; letter-spacing: -.01em; }
+.sys { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.tile h4 { margin: 0; font-family: var(--display); font-size: 16px; }
+.sw { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.sw div { display: grid; gap: 4px; font-size: 11px; color: var(--muted); }
+.sw i { display: block; height: 40px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--line); }
+.ts { display: grid; gap: 6px; }
+.ts div { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.ts small { color: var(--muted); font-family: var(--mono); font-size: 10.5px; }
+ul.rules { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--muted); font-size: 13.5px; }
+ul.rules b { color: var(--ink); }
+.compare { display: grid; gap: 12px; }
+.compare img { width: 100%; height: auto; border-radius: 18px; border: 1px solid var(--line); }
+.compare p { margin: 0; color: var(--muted); font-size: 13.5px; max-width: 70ch; }
+.foot { margin-top: 48px; color: var(--faint); font-size: 12px; }
+@media (prefers-reduced-motion: no-preference) {
+  .quad { animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 34px rgba(73,224,192,.55); } }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-flash" viewBox="0 0 24 24"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M20 16l-5-5-8 8"/></symbol>
+  <symbol id="i-id" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16c.8-1.5 2-2.2 3-2.2s2.2.7 3 2.2M14 10h4M14 13.5h3"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="3"/><path d="M16 10.5l5-3v9l-5-3"/></symbol>
+  <symbol id="i-lib" viewBox="0 0 24 24"><path d="M5 4.5h9l5 5V19a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19z"/><path d="M14 4.5V9.5h5"/></symbol>
+  <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M4 12h16"/></symbol>
+  <symbol id="i-tools" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="6" cy="12" r=".8"/><circle cx="12" cy="12" r=".8"/><circle cx="18" cy="12" r=".8"/></symbol>
+  <symbol id="i-crop" viewBox="0 0 24 24"><path d="M7 3v14h14M3 7h14v14"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4M7.5 8.5L12 4l4.5 4.5M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <p class="eyebrow">LumaScan · screen design v2 · 2 October 2026</p>
+    <h1>Same six screens, <span class="lm">quieter and more confident.</span></h1>
+    <p class="lede">A premium pass over the original LumaScan board. The flows, content and teal brand stay the same. The changes are deeper colour, calmer surfaces, one strong action per screen, glass camera controls and a full dark mode. Switch your system theme to see dark mode.</p>
+  </header>
+
+  <div class="board">
+
+    <!-- 1 Library -->
+    <figure class="screen">
+      <div class="phone"><div class="scr">
+        <div class="island"></div>
+        <div class="sb"><span>9:41</span><i></i></div>
+        <div class="hello"><div><p>Good morning</p><h2>Library</h2></div><div class="avatar">VS</div></div>
+        <div class="body">
+          <div class="search"><svg><use href="#i-search"/></svg>Search titles and text</div>
+          <div class="hero"><b>New scan</b><span>Edges found for you</span><div class="ring"></div></div>
+          <div class="quick">
+            <div class="q"><div class="ico"><svg><use href="#i-image"/></svg></div>Import</div>
+            <div class="q"><div class="ico"><svg><use href="#i-id"/></svg></div>ID copy</div>
+            <div class="q"><div class="ico"><svg><use href="#i-video"/></svg></div>Video scan</div>
+          </div>
+          <div class="sec"><b>Recent</b><a href="#">See all</a></div>
+          <div class="list">
+            <div class="row"><div class="doc"><div class="t"></div><div class="s"></div><div class="l"></div><div class="l"></div><div class="l"></div></div><div><b>Project Proposal</b><small class="mono">3 pages · Today 10:24</small></div><span class="tag">OCR</span></div>
+            <div class="row"><div class="doc"><div class="t"></div><div class="s"></div><div class="l"></div><div class="l"></div></div><div><b>ID Copy</b><small class="mono">2 pages · Today 09:18</small></div><span class="tag">ID</span></div>
+                      </div>
+        </div>
+        <div class="tabbar">
+          <div class="on"><svg><use href="#i-lib"/></svg>Library</div>
+          <div class="fab"><svg><use href="#i-scan"/></svg></div>
+          <div><svg><use href="#i-tools"/></svg>Tools</div>
+        </div>
+        <div class="homebar"></div>
+      </div></div>
+      <figcaption><b>Library</b><span>Greeting header, one solid "New scan" card, and file-type tags on each document. Scan moves to a raised center button in a floating tab bar.</span></figcaption>
+    </figure>
+
+    <!-- 2 Scan -->
+    <figure class="screen">
+      <div class="phone"><div class="scr cam">
+        <div class="island"></div>
+        <div class="sb"><span>9:41</span><i></i></div>
+        <div class="camtop">
+          <div class="ib"><svg><use href="#i-close"/></svg></div>
+          <div class="pill glass"><span class="dot"></span>Page found · hold steady</div>
+          <div class="ib"><svg><use href="#i-flash"/></svg></div>
+        </div>
+        <div class="viewfinder">
+          <div class="doc"><div class="t"></div><div class="s"></div><div class="h"></div><div class="l"></div><div class="l"></div><div class="l"></div><div class="l"></div><div class="h"></div><div class="l"></div><div class="l"></div><div class="l"></div></div>
+          <div class="quad"><i></i><i></i><i></i><i></i></div>
+          <div class="hint seg glass"><span class="on">Auto</span><span>Manual</span></div>
+        </div>
+        <div class="camctl">
+          <div class="thumbs"><div class="doc"><div class="t"></div><div class="l"></div></div><div class="doc"><div class="t"></div><div class="l"></div></div><div class="doc"><div class="t"></div><div class="l"></div><div class="l"></div></div><b class="mono">3</b></div>
+          <div class="shutter"><svg viewBox="0 0 84 84"><circle cx="42" cy="42" r="39" stroke-dasharray="245" stroke-dashoffset="80"/></svg></div>
+          <div class="done">Done</div>
+        </div>
+        <div class="homebar"></div>
+      </div></div>
+      <figcaption><b>Document scan</b><span>The camera fills the screen with glass controls on top. A glowing outline tracks the page, and the ring around the shutter fills as auto-capture locks on.</span></figcaption>
+    </figure>
+
+    <!-- 3 Enhance -->
+    <figure class="screen">
+      <div class="phone"><div class="scr">
+        <div class="island"></div>
+        <div class="sb"><span>9:41</span><i></i></div>
+        <div class="nav"><div class="ib"><svg><use href="#i-back"/></svg></div><h3>Enhance <span class="mono" style="color:var(--muted);font-size:11px;font-weight:500">1 / 3</span></h3><div class="ib"><svg><use href="#i-crop"/></svg></div></div>
+        <div class="body">
+          <div class="stagebg">
+            <div class="doc"><div class="t"></div><div class="s"></div><div class="h"></div><div class="l"></div><div class="l"></div><div class="l"></div><div class="l"></div><div class="h"></div><div class="l"></div><div class="l"></div><div class="l"></div></div>
+            <div class="ba seg"><span>Before</span><span class="on">After</span></div>
+          </div>
+          <div class="filters">
+            <div class="f"><div class="doc"><div class="t"></div><div class="s"></div><div class="l"></div><div class="l"></div><div class="l"></div></div>Original</div>
+            <div class="f on clean"><div class="doc"><div class="t"></div><div class="s"></div><div class="l"></div><div class="l"></div><div class="l"></div></div>Clean</div>
+            <div class="f gray"><div class="doc"><div class="t"></div><div class="s"></div><div class="l"></div><div class="l"></div><div class="l"></div></div>Gray</div>
+            <div class="f bw"><div class="doc"><div class="t"></div><div class="s"></div><div class="l"></div><div class="l"></div><div class="l"></div></div>B&amp;W</div>
+          </div>
+          <div class="slider"><span class="label">Strength</span><div class="track" style="--v:70%"></div><span class="mono" style="font-size:11px">70%</span></div>
+          <div class="applyall">Apply to all 3 pages<div class="tg"></div></div>
+        </div>
+        <div class="dock"><div class="btn">Save pages</div></div>
+        <div class="homebar"></div>
+      </div></div>
+      <figcaption><b>Enhance</b><span>Larger page preview with a Before/After switch. Filter thumbnails show the real effect, and "Apply to all pages" is one switch instead of a hidden option.</span></figcaption>
+    </figure>
+
+    <!-- 4 ID -->
+    <figure class="screen">
+      <div class="phone"><div class="scr">
+        <div class="island"></div>
+        <div class="sb"><span>9:41</span><i></i></div>
+        <div class="nav"><div class="ib"><svg><use href="#i-back"/></svg></div><h3>ID copy</h3><div style="width:34px"></div></div>
+        <div class="body">
+          <div class="segL"><span class="on"><span class="ok"><svg><use href="#i-check"/></svg></span>Front</span><span>Back</span></div>
+          <div class="card">
+            <div class="ct">REPUBLIC OF EXAMPLE · IDENTITY CARD</div>
+            <div class="ph"></div>
+            <dl><dt>Name</dt><dd>ALEX TAYLOR</dd><dt>ID No.</dt><dd class="mono">EX1234567</dd><dt>Date of birth</dt><dd class="mono">01 JAN 1990</dd></dl>
+            <span class="wm">SAMPLE</span>
+          </div>
+          <div class="slot"><span><svg style="width:16px;height:16px"><use href="#i-plus"/></svg>Capture the back</span></div>
+          <div class="field"><span class="label">Layout</span><div class="chips"><span class="chip on">Both sides on one A4</span><span class="chip">Separate pages</span></div></div>
+          <div class="field"><span class="label">Watermark (optional)</span><div class="input">For identity verification only<em class="mono">02 Oct</em></div></div>
+        </div>
+        <div class="dock"><div class="btn">Continue <small>· back side next</small></div></div>
+        <div class="homebar"></div>
+      </div></div>
+      <figcaption><b>ID copy</b><span>A tick on each captured side, an empty slot that says what to do next, and layout choices before export. The sample card is fictional.</span></figcaption>
+    </figure>
+
+    <!-- 5 Video -->
+    <figure class="screen">
+      <div class="phone"><div class="scr">
+        <div class="island"></div>
+        <div class="sb"><span>9:41</span><i></i></div>
+        <div class="nav"><div class="ib"><svg><use href="#i-back"/></svg></div><h3>Video scan</h3><div style="width:34px"></div></div>
+        <div class="body">
+          <div class="player">
+            <div class="doc"><div class="t"></div><div class="s"></div><div class="l"></div><div class="l"></div><div class="l"></div><div class="l"></div></div>
+            <div class="play glass"><svg><use href="#i-play"/></svg></div>
+            <span class="tc mono glass pill" style="height:22px;padding:0 8px">00:04 / 00:12</span>
+          </div>
+          <div>
+            <div class="timeline"><div class="bar"></div><span class="tick" style="left:8%"></span><span class="tick" style="left:25%"></span><span class="tick w" style="left:42%"></span><span class="tick" style="left:58%"></span><span class="tick n" style="left:75%"></span><span class="tick n" style="left:92%"></span></div>
+            <div class="times mono"><span>0:00</span><span>0:12</span></div>
+          </div>
+          <div class="sec"><b>Best frames</b><span class="mono" style="font-size:11px;color:var(--muted)">3 of 6 selected</span></div>
+          <div class="frames">
+            <div class="fr sel"><div class="img"><span class="mark on"><svg><use href="#i-check"/></svg></span><div class="doc"><div class="t"></div><div class="l"></div><div class="l"></div><div class="l"></div></div></div><span class="mono">00:01</span></div>
+            <div class="fr sel"><div class="img"><span class="mark on"><svg><use href="#i-check"/></svg></span><div class="doc"><div class="t"></div><div class="l"></div><div class="l"></div><div class="l"></div></div></div><span class="mono">00:03</span></div>
+            <div class="fr"><div class="img blur"><span class="mark w">!</span><div class="doc"><div class="t"></div><div class="l"></div><div class="l"></div><div class="l"></div></div></div><span class="mono">00:05</span></div>
+            <div class="fr sel"><div class="img"><span class="mark on"><svg><use href="#i-check"/></svg></span><div class="doc"><div class="t"></div><div class="l"></div><div class="l"></div><div class="l"></div></div></div><span class="mono">00:07</span></div>
+            <div class="fr"><div class="img"><span class="mark"></span><div class="doc"><div class="t"></div><div class="l"></div><div class="l"></div><div class="l"></div></div></div><span class="mono">00:09</span></div>
+            <div class="fr"><div class="img"><span class="mark"></span><div class="doc"><div class="t"></div><div class="l"></div><div class="l"></div><div class="l"></div></div></div><span class="mono">00:11</span></div>
+          </div>
+          <div class="notice"><b>!</b>Frame 00:05 looks blurry. Keep it only if it shows a different page.</div>
+        </div>
+        <div class="dock"><div class="btn">Create 3 pages</div></div>
+        <div class="homebar"></div>
+      </div></div>
+      <figcaption><b>Video scan</b><span>Marks on the timeline show where pages were found. Blurry frames get a warning that says why, and the button counts the pages it will make.</span></figcaption>
+    </figure>
+
+    <!-- 6 Export -->
+    <figure class="screen">
+      <div class="phone"><div class="scr">
+        <div class="island"></div>
+        <div class="sb"><span>9:41</span><i></i></div>
+        <div class="nav"><div class="ib"><svg><use href="#i-back"/></svg></div><h3>Export</h3><div style="width:34px"></div></div>
+        <div class="body">
+          <div class="formats">
+            <div class="fmt on">PDF<small>3 pages</small></div>
+            <div class="fmt">JPG<small>per page</small></div>
+            <div class="fmt">PNG<small>per page</small></div>
+          </div>
+          <div class="panel">
+            <div class="pr">Paper size<span>A4 · 210 × 297 mm</span></div>
+            <div class="pr">Searchable text (OCR)<div class="tg"></div></div>
+            <div class="pr">Password<div class="tg off"></div></div>
+          </div>
+          <span class="label">Quality</span>
+          <div class="qual"><div>Compact<small>smallest</small></div><div class="on">Balanced<small>recommended</small></div><div>Print<small>300 dpi</small></div></div>
+          <div class="panel">
+            <div class="est"><span>Estimated size</span><b class="mono">≈ 1.2 MB</b></div>
+          </div>
+        </div>
+        <div class="dock"><div class="btn"><svg style="width:17px;height:17px"><use href="#i-share"/></svg>Export and share</div></div>
+        <div class="homebar"></div>
+      </div></div>
+      <figcaption><b>Export</b><span>Settings grouped into one panel, quality choices that say what they mean, and the estimated file size shown large so it is easy to check before sharing.</span></figcaption>
+    </figure>
+  </div>
+
+  <section class="more">
+    <div><p class="eyebrow">Design system</p><h2 class="sec-h">The rules behind the look</h2></div>
+    <div class="sys">
+      <div class="tile">
+        <h4>Colour</h4>
+        <div class="sw">
+          <div><i style="background:var(--accent)"></i>Accent</div>
+          <div><i style="background:var(--accent-soft)"></i>Accent soft</div>
+          <div><i style="background:#49E0C0"></i>Scan glow</div>
+          <div><i style="background:var(--ink)"></i>Ink</div>
+          <div><i style="background:var(--surface-2)"></i>Surface</div>
+          <div><i style="background:var(--warn)"></i>Warning</div>
+        </div>
+      </div>
+      <div class="tile">
+        <h4>Type</h4>
+        <div class="ts">
+          <div><span style="font-family:var(--display);font-size:22px;font-weight:700">Familjen Grotesk</span><small>titles 24/16</small></div>
+          <div><span style="font-size:15px">Figtree for everything you read</span><small>body 12.5</small></div>
+          <div><span class="mono" style="font-size:13px">3 pages · 1.2 MB</span><small>numbers</small></div>
+        </div>
+      </div>
+      <div class="tile">
+        <h4>Rules</h4>
+        <ul class="rules">
+          <li><b>One solid button</b> per screen; everything else is quiet.</li>
+          <li><b>Corners</b>: 22 for cards, 16 for buttons, 12 for fields.</li>
+          <li><b>Camera screens</b> are always dark with glass controls.</li>
+          <li><b>Numbers</b> (pages, times, sizes) use the mono face so they line up.</li>
+          <li><b>Warnings</b> say what is wrong and what to do.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="compare">
+      <div><p class="eyebrow">Before</p><h2 class="sec-h">Original board (v1)</h2></div>
+      <img src="v1-screens.png" alt="The original LumaScan screen design board with six screens: Library, Document Scan, Enhance, ID Scan, Video Scan and Export." loading="lazy" width="1536" height="1024">
+      <p>Same screens and content. The v2 changes are visual and interaction polish only, so the requirements and low-level design still apply.</p>
+    </div>
+  </section>
+  <p class="foot">Design mock-up with sample data only. The ID card shown is fictional.</p>
+</div>

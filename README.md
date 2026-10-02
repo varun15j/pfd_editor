@@ -7,6 +7,7 @@ This repository currently contains a specification and interactive screen protot
 ## Deliverables
 
 - [Requirements and acceptance criteria](docs/requirements.md)
+- [High-level design](docs/high-level-design.md)
 - [Detailed low-level design](docs/low-level-design.md)
 - [Screen specifications and navigation](docs/screen-design.md)
 - [Document and PDF effects catalog](docs/document.md)
@@ -14,6 +15,7 @@ This repository currently contains a specification and interactive screen protot
 - [Scanning flow implementation](docs/scanning-flow.md) — Flutter code for capture, crop, filters and PDF export, with run and permission setup.
 - [Engineering skill inventory](skills.md) — prefixed skills derived from HLD, LLD, algorithms, UX and verification documents.
 - [PNG screen-design board](design/lumascan-screen-design.png) — six high-fidelity screens at 1536×1024.
+- [Premium screen board v2](design/lumascan-premium-design.png) — the six screens restyled with dark mode and glass camera controls; source in [design/premium](design/premium/index.html).
 - [Interactive screen prototype](design/index.html) — open directly in a browser; no installation or internet needed.
 
 The prototype has 12 selectable screens. Try Library → Scan → Capture → Crop → Filters → Pages → Export. Also try ID front/back capture, video candidate selection, OCR correction, photo adjustments and permission/error states.
