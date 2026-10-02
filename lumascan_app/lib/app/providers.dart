@@ -12,6 +12,10 @@ final pageStoreProvider = Provider<PageStore>((ref) => PageStore());
 
 final scannerServiceProvider = Provider<ScannerService>((ref) => CunningScannerService());
 
-final renderServiceProvider = Provider<RenderService>((ref) => RenderService(ref.watch(pageStoreProvider)));
+final renderServiceProvider = Provider<RenderService>(
+  (ref) => RenderService(ref.watch(pageStoreProvider)),
+);
 
-final pdfExporterProvider = Provider<PdfExporter>((ref) => PdfExporter(ref.watch(pageStoreProvider)));
+final pdfExporterProvider = Provider<PdfExporter>(
+  (ref) => PdfExporter(ref.watch(pageStoreProvider)),
+);
