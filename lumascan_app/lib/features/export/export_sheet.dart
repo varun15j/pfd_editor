@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
+import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../domain/models.dart';
 import '../../export/pdf_exporter.dart';
@@ -41,13 +42,18 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
   File? _result;
   String? _error;
   bool _inLibrary = false;
+  bool _originalsRemoved = false;
+
+  /// Page count of the saved PDF; the draft may be emptied right after saving.
+  int _savedPages = 0;
 
   bool get _saving => _progress != null && _result == null;
 
   @override
   void initState() {
     super.initState();
-    _name = TextEditingController(text: PdfExporter.defaultScanName(DateTime.now()))..addListener(_onNameChanged);
+    _name = TextEditingController(text: ref.read(appSettingsProvider).fileNamePattern.format(DateTime.now()))
+      ..addListener(_onNameChanged);
   }
 
   @override
@@ -71,6 +77,8 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
     final exporter = ref.read(pdfExporterProvider);
     final fileName = PdfEditSaver.safeFileName(_name.text);
     final draft = ref.read(scanControllerProvider.notifier);
+    final keepOriginals = ref.read(appSettingsProvider).keepOriginals;
+    _savedPages = pages.length;
     setState(() {
       _progress = 0;
       _error = null;
@@ -90,6 +98,12 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
       // is missing from the Library list, so it is reported, not thrown.
       await library.addScan(file, pages);
       if (mounted) setState(() => _inLibrary = true);
+      if (!keepOriginals) {
+        // Settings: do not keep page images once the PDF is saved. Only after
+        // the PDF is safely in the Library, so a failed save loses nothing.
+        await draft.clear();
+        if (mounted) setState(() => _originalsRemoved = true);
+      }
     } on Object catch (e) {
       if (!mounted) return;
       if (_result != null) {
@@ -105,17 +119,13 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
 
   Future<void> _send() {
     final file = _result!;
-    return showSendPdfSheet(
-      context,
-      pdfPath: file.path,
-      name: p.basename(file.path),
-      pageCount: ref.read(scanControllerProvider).pages.length,
-    );
+    return showSendPdfSheet(context, pdfPath: file.path, name: p.basename(file.path), pageCount: _savedPages);
   }
 
   @override
   Widget build(BuildContext context) {
-    final pageCount = ref.watch(scanControllerProvider.select((s) => s.pages.length));
+    final draftPages = ref.watch(scanControllerProvider.select((s) => s.pages.length));
+    final pageCount = _result != null ? _savedPages : draftPages;
     final textTheme = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final result = _result;
@@ -140,6 +150,13 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
                 if (_inLibrary) ...[
                   const SizedBox(height: 4),
                   Text('Saved to your Library', style: textTheme.bodySmall),
+                ],
+                if (_originalsRemoved) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'The page images were removed from this device, as set in Settings.',
+                    style: textTheme.bodySmall,
+                  ),
                 ],
                 if (_error != null) ...[
                   const SizedBox(height: 8),

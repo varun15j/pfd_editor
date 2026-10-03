@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../data/library_store.dart';
 import '../../domain/models.dart';
@@ -125,6 +126,9 @@ class ScanController extends Notifier<ScanState> {
     }
   }
 
+  /// What a newly captured page starts with: the filter chosen in Settings.
+  EditRecipe get _newPageRecipe => EditRecipe(filter: ref.read(appSettingsProvider).defaultFilter);
+
   /// Opens the scanner and appends the captured pages to the draft.
   Future<ScanOutcome> scan(ScanSource source) async {
     if (state.busy) return const ScanCancelled();
@@ -137,7 +141,7 @@ class ScanController extends Notifier<ScanState> {
       final added = <ScanPage>[];
       for (final path in paths) {
         final id = store.newId();
-        added.add(ScanPage(id: id, originalPath: await store.importOriginal(path, id)));
+        added.add(ScanPage(id: id, originalPath: await store.importOriginal(path, id), recipe: _newPageRecipe));
       }
       await scanner.cleanUp();
       _commit([...state.pages, ...added]);
@@ -174,7 +178,7 @@ class ScanController extends Notifier<ScanState> {
             ScanPage(
               id: id,
               originalPath: original,
-              recipe: autoCrop && quad != null ? EditRecipe(crop: quad) : const EditRecipe(),
+              recipe: autoCrop && quad != null ? _newPageRecipe.copyWith(crop: quad) : _newPageRecipe,
             ),
           );
         } catch (_) {
@@ -199,7 +203,7 @@ class ScanController extends Notifier<ScanState> {
       final paths = await scanner.scan(source: ScanSource.camera, maxPages: 1);
       if (paths.isEmpty) return const ScanCancelled();
       final id = store.newId();
-      final page = ScanPage(id: id, originalPath: await store.importOriginal(paths.first, id));
+      final page = ScanPage(id: id, originalPath: await store.importOriginal(paths.first, id), recipe: _newPageRecipe);
       await scanner.cleanUp();
       if (!ref.mounted) return const ScanCancelled();
       _commit([for (final p in state.pages) p.id == pageId ? page : p]);
