@@ -12,7 +12,7 @@ void main() {
 
   PdfEditState state() => container.read(pdfEditControllerProvider);
 
-  Future<void> pumpEditor(WidgetTester tester) async {
+  Future<void> pumpEditor(WidgetTester tester, {PdfEditorEntry entry = PdfEditorEntry.edit}) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 2.6;
     addTearDown(tester.view.reset);
@@ -26,6 +26,7 @@ void main() {
         container: container,
         child: MaterialApp(
           home: PdfEditorScreen(
+            entry: entry,
             pageImage: (page, {thumbnail = false}) =>
                 ColoredBox(key: ValueKey('img${page.sourcePage}'), color: Colors.white),
           ),
@@ -168,6 +169,17 @@ void main() {
     await tester.pumpAndSettle();
     final moved = state().pages.first.annotations.single as SignatureAnnotation;
     expect(moved.left, lessThan(before));
+  });
+
+  testWidgets('entry sign opens the signature pad at once', (tester) async {
+    await pumpEditor(tester, entry: PdfEditorEntry.sign);
+    expect(find.byType(Signature), findsOneWidget);
+  });
+
+  testWidgets('entry organize opens the page organizer at once', (tester) async {
+    await pumpEditor(tester, entry: PdfEditorEntry.organize);
+    expect(find.text('3 pages'), findsOneWidget);
+    expect(find.byTooltip('Page actions'), findsWidgets);
   });
 
   testWidgets('organize screen reorders and deletes pages', (tester) async {
