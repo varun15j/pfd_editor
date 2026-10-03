@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../data/library_store.dart';
 import '../../domain/models.dart';
 import '../../domain/scanner_service.dart';
 
@@ -60,8 +61,48 @@ final scanControllerProvider = NotifierProvider<ScanController, ScanState>(ScanC
 class ScanController extends Notifier<ScanState> {
   static const _undoLimit = 30;
 
+  /// Draft reads and writes, chained so they reach the disk in order.
+  Future<void> _draftIo = Future.value();
+
+  /// Completes once the restored draft is loaded and every change made so
+  /// far is on disk.
+  @visibleForTesting
+  Future<void> get draftSaved => _draftIo;
+
   @override
-  ScanState build() => const ScanState();
+  ScanState build() {
+    _draftIo = _restoreDraft().catchError((Object e) => debugPrint('Draft restore failed: $e'));
+    return const ScanState();
+  }
+
+  /// Brings back the draft that was on screen when the app was last closed
+  /// or killed (US-09.1). The undo history is not restored.
+  Future<void> _restoreDraft() async {
+    final store = ref.read(draftStoreProvider);
+    final saved = await store.load();
+    if (!ref.mounted || saved.isEmpty) return;
+    // Pages scanned while the draft was loading go after the restored ones;
+    // their own save is queued behind this restore and writes the merge.
+    state = state.copyWith(pages: List.unmodifiable([...saved, ...state.pages]));
+  }
+
+  /// Queues a save of the draft. The pages are read when the save runs, so
+  /// it always writes the latest draft, even if it waited behind the restore.
+  void _persistDraft() {
+    final store = ref.read(draftStoreProvider);
+    _draftIo = _draftIo.then((_) {
+      if (ref.mounted) return _saveQuietly(store, state.pages);
+    });
+  }
+
+  static Future<void> _saveQuietly(DraftStore store, List<ScanPage> pages) async {
+    try {
+      await store.save(pages);
+    } catch (e) {
+      // The draft stays in memory; the next change tries again.
+      debugPrint('Draft autosave failed: $e');
+    }
+  }
 
   /// Opens the scanner and appends the captured pages to the draft.
   Future<ScanOutcome> scan(ScanSource source) async {
@@ -128,6 +169,7 @@ class ScanController extends Notifier<ScanState> {
     final stack = [...state.undoStack];
     final previous = stack.removeLast();
     state = state.copyWith(pages: previous, undoStack: stack);
+    _persistDraft();
   }
 
   /// Discards the draft and deletes its original files.
@@ -139,6 +181,7 @@ class ScanController extends Notifier<ScanState> {
         for (final p in snapshot) p.originalPath,
     };
     state = const ScanState();
+    _persistDraft();
     for (final path in paths) {
       await store.deleteOriginal(path);
     }
@@ -148,5 +191,6 @@ class ScanController extends Notifier<ScanState> {
     var stack = [...state.undoStack, state.pages];
     if (stack.length > _undoLimit) stack = stack.sublist(stack.length - _undoLimit);
     state = state.copyWith(pages: List.unmodifiable(pages), undoStack: stack);
+    _persistDraft();
   }
 }

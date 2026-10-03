@@ -23,6 +23,10 @@ class PageStore {
   Future<Directory> get originalsDir => _dir('pages');
   Future<Directory> get renderDir => _dir('renders');
   Future<Directory> get exportsDir => _dir('exports');
+  Future<Directory> get thumbnailsDir => _dir('thumbnails');
+
+  /// The private root every stored path is relative to.
+  Future<String> get rootPath async => (await _rootDir()).path;
 
   String newId() => '${DateTime.now().microsecondsSinceEpoch}_${_counter++}';
 
@@ -48,5 +52,26 @@ class PageStore {
     final tmp = File('$finalPath.part');
     await tmp.writeAsBytes(bytes, flush: true);
     return tmp.rename(finalPath);
+  }
+
+  /// Writes [bytes] to [relativePath] under the root through a temp file and
+  /// a rename, so a crash leaves either the old file or the new one.
+  Future<File> writeFileAtomically(String relativePath, List<int> bytes) async {
+    final target = File(p.join(await rootPath, relativePath));
+    await target.parent.create(recursive: true);
+    final tmp = File('${target.path}.part');
+    await tmp.writeAsBytes(bytes, flush: true);
+    return tmp.rename(target.path);
+  }
+
+  /// Reads a text file under the root, or null when it does not exist.
+  Future<String?> readText(String relativePath) async {
+    final f = File(p.join(await rootPath, relativePath));
+    return f.existsSync() ? f.readAsString() : null;
+  }
+
+  Future<void> deleteFile(String relativePath) async {
+    final f = File(p.join(await rootPath, relativePath));
+    if (f.existsSync()) await f.delete();
   }
 }
