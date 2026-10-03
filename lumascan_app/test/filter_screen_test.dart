@@ -291,6 +291,41 @@ void main() {
     expect(pages().every((p) => p.recipe.filter == DocumentFilter.original), isTrue);
   });
 
+  testWidgets('the confirmation has Undo and Keep and goes away after ten seconds', (tester) async {
+    await pumpEnhance(tester);
+    await choose(tester, 'Grayscale');
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All 3 pages'));
+    await tester.pump();
+    await tester.tap(find.text('Apply to all pages'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Changes applied to 3 pages'), findsOneWidget);
+    expect(find.text('Undo'), findsOneWidget);
+    expect(find.text('Keep'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 12));
+    await tester.pumpAndSettle();
+    expect(find.text('Changes applied to 3 pages'), findsNothing);
+    expect(pages().every((p) => p.recipe.filter == DocumentFilter.grayscale), isTrue, reason: 'timing out keeps them');
+  });
+
+  testWidgets('Keep closes the confirmation and keeps the filter', (tester) async {
+    await pumpEnhance(tester);
+    await choose(tester, 'Grayscale');
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All 3 pages'));
+    await tester.pump();
+    await tester.tap(find.text('Apply to all pages'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Keep'));
+    await tester.pumpAndSettle();
+    expect(find.text('Changes applied to 3 pages'), findsNothing);
+    expect(pages().every((p) => p.recipe.filter == DocumentFilter.grayscale), isTrue);
+  });
+
   testWidgets('fits at 200% text size', (tester) async {
     await pumpEnhance(tester, textScale: 2);
     expect(tester.takeException(), isNull);

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../domain/models.dart';
 import '../../imaging/render_service.dart';
+import '../../ui/undo_toast.dart';
 import '../crop/crop_screen.dart';
 import '../pages/page_image.dart';
 import '../pages/scan_controller.dart';
@@ -49,17 +50,13 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     final dropsMarks = controller.dropsMarks(page.id, draft);
     controller.applyEnhancement(page.id, draft, alsoPageIds: others);
     final count = targets.length;
-    messenger
-      ..clearSnackBars()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            '${count == 1 ? 'Changes applied to this page' : 'Changes applied to $count pages'}'
-            '${dropsMarks ? '. Markup removed from this page because it was rotated' : ''}',
-          ),
-          action: SnackBarAction(label: 'Undo', onPressed: controller.undo),
-        ),
-      );
+    showUndoToast(
+      messenger,
+      message:
+          '${count == 1 ? 'Changes applied to this page' : 'Changes applied to $count pages'}'
+          '${dropsMarks ? '. Markup removed from this page because it was rotated' : ''}',
+      onUndo: controller.undo,
+    );
     navigator.pop();
   }
 
