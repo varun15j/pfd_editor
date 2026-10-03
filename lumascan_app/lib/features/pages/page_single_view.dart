@@ -8,6 +8,7 @@ import '../../domain/models.dart';
 import '../../imaging/render_service.dart';
 import 'page_actions.dart';
 import 'page_image.dart';
+import 'scan_controller.dart';
 
 /// Single-page layout for the Pages screen: one large page you can swipe
 /// through, previous/next buttons around a "Page X of N" label, a strip of
@@ -35,6 +36,19 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(PageSingleView old) {
+    super.didUpdateWidget(old);
+    // A delete can leave the selection past the end; keep the counter, the
+    // big page and the strip on the same page.
+    if (_index >= widget.pages.length && widget.pages.isNotEmpty) {
+      _index = widget.pages.length - 1;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_pager.hasClients) _pager.jumpToPage(_index);
+      });
+    }
+  }
+
   void _goTo(int i) {
     if (i < 0 || i >= widget.pages.length) return;
     _pager.animateToPage(i, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
@@ -60,6 +74,7 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
     final index = math.min(_index, pages.length - 1);
     final page = pages[index];
     final colors = LumaColors.of(context);
+    final busy = ref.watch(scanControllerProvider.select((s) => s.busy));
 
     return Column(
       children: [
@@ -126,31 +141,31 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
             ),
           ),
         ),
-        Padding(
+        // One toolbar for the page's actions; it scrolls when large text
+        // makes the buttons wider than the screen.
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-          child: Row(
-            children: [
-              for (final a in PageAction.values)
-                Expanded(
-                  child: TextButton(
-                    style: TextButton.styleFrom(minimumSize: const Size(48, 56)),
-                    onPressed: () => runPageAction(context, ref, a, page, index),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: MediaQuery.sizeOf(context).width - 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                for (final a in PageAction.values)
+                  TextButton(
+                    style: TextButton.styleFrom(minimumSize: const Size(56, 56)),
+                    onPressed: busy ? null : () => runPageAction(context, ref, a, page, index),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(a.icon),
                         const SizedBox(height: 4),
-                        Text(
-                          a == PageAction.delete ? 'Delete' : a.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12),
-                        ),
+                        Text(a.shortLabel, maxLines: 1, style: const TextStyle(fontSize: 12)),
                       ],
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ],

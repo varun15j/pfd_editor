@@ -84,10 +84,10 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('app bar menu switches between list and gallery', (tester) async {
+  testWidgets('app bar menu switches between page, list and gallery', (tester) async {
     await pumpPages(tester);
-    expect(find.byType(ReorderableListView), findsOneWidget);
-    expect(find.byType(PageGallery), findsNothing);
+    expect(find.byType(PageSingleView), findsOneWidget);
+    expect(find.byType(ReorderableListView), findsNothing);
 
     await selectLayout(tester, 'Gallery view');
     expect(find.byType(PageGallery), findsOneWidget);
@@ -100,6 +100,9 @@ void main() {
 
     await selectLayout(tester, 'List view');
     expect(find.byType(ReorderableListView), findsOneWidget);
+
+    await selectLayout(tester, 'Page view');
+    expect(find.byType(PageSingleView), findsOneWidget);
   });
 
   testWidgets('tapping a gallery page opens its actions', (tester) async {
@@ -141,7 +144,6 @@ void main() {
 
   testWidgets('page view shows one page with arrows, counter and numbered strip', (tester) async {
     await pumpPages(tester);
-    await selectLayout(tester, 'Page view');
     expect(find.byType(PageSingleView), findsOneWidget);
     expect(find.text('Page 1 of 3'), findsOneWidget);
     for (final n in ['1', '2', '3']) {
@@ -159,15 +161,140 @@ void main() {
     expect(find.text('Page 3 of 3'), findsOneWidget);
     expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.chevron_right)).onPressed, isNull);
 
+    await tester.ensureVisible(find.text('Rotate'));
     await tester.tap(find.text('Rotate'));
     await tester.pumpAndSettle();
     expect(container.read(scanControllerProvider).pages[2].recipe.quarterTurns, 1);
 
     // Deleting the last page falls back to the new last page.
+    await tester.ensureVisible(find.text('Delete'));
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
     expect(ids(), hasLength(2));
     expect(find.text('Page 2 of 2'), findsOneWidget);
+  });
+
+  /// Opens [PagesScreen] on top of a home route so back navigation can be tested.
+  Future<void> pumpPushed(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.6;
+    addTearDown(tester.view.reset);
+    await tester.runAsync(() => container.read(scanControllerProvider.notifier).scan(ScanSource.camera));
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: buildLumaTheme(Brightness.light),
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const PagesScreen())),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('leaving with unsaved pages asks; Keep draft stays quiet next time', (tester) async {
+    await pumpPushed(tester);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Leave without exporting?'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PagesScreen), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Keep draft'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PagesScreen), findsNothing);
+    expect(container.read(scanControllerProvider).pages, hasLength(3));
+    expect(container.read(scanControllerProvider).unsaved, isFalse);
+  });
+
+  testWidgets('Discard on leave clears the draft', (tester) async {
+    await pumpPushed(tester);
+    // Let the page images finish loading before their files are deleted.
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.pump();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Discard'));
+    await tester.pump();
+    // clear() deletes files, which needs real time.
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.pump();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(container.read(scanControllerProvider).pages, isEmpty);
+    expect(find.byType(PagesScreen), findsNothing);
+    expect(container.read(scanControllerProvider).pages, isEmpty);
+  });
+
+  testWidgets('after markSaved, leaving does not ask', (tester) async {
+    await pumpPushed(tester);
+    container.read(scanControllerProvider.notifier).markSaved();
+    await tester.pump();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Leave without exporting?'), findsNothing);
+    expect(find.byType(PagesScreen), findsNothing);
+  });
+
+  testWidgets('undo and redo buttons walk the edit history', (tester) async {
+    await pumpPages(tester);
+    final undo = find.widgetWithIcon(IconButton, Icons.undo);
+    final redo = find.widgetWithIcon(IconButton, Icons.redo);
+    expect(tester.widget<IconButton>(undo).onPressed, isNotNull);
+    expect(tester.widget<IconButton>(redo).onPressed, isNull);
+
+    await tester.ensureVisible(find.text('Rotate'));
+    await tester.tap(find.text('Rotate'));
+    await tester.pumpAndSettle();
+    expect(container.read(scanControllerProvider).pages[0].recipe.quarterTurns, 1);
+    await tester.tap(undo);
+    await tester.pumpAndSettle();
+    expect(container.read(scanControllerProvider).pages[0].recipe.quarterTurns, 0);
+    expect(tester.widget<IconButton>(redo).onPressed, isNotNull);
+    await tester.tap(redo);
+    await tester.pumpAndSettle();
+    expect(container.read(scanControllerProvider).pages[0].recipe.quarterTurns, 1);
+  });
+
+  testWidgets('duplicate from the page toolbar', (tester) async {
+    await pumpPages(tester);
+    await tester.ensureVisible(find.text('Duplicate'));
+    await tester.tap(find.text('Duplicate'));
+    await tester.pumpAndSettle();
+    expect(ids(), hasLength(4));
+    expect(find.text('Page 1 duplicated as page 2'), findsOneWidget);
+    expect(find.text('Page 1 of 4'), findsOneWidget);
+  });
+
+  testWidgets('deleting the only page asks to discard the document', (tester) async {
+    await pumpPages(tester);
+    final notifier = container.read(scanControllerProvider.notifier);
+    for (final id in ids().skip(1)) {
+      notifier.remove(id);
+    }
+    await tester.pumpAndSettle();
+    expect(ids(), hasLength(1));
+
+    await tester.ensureVisible(find.text('Delete'));
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard this document?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(ids(), hasLength(1));
   });
 
   testWidgets('every view fits at 200% text size', (tester) async {

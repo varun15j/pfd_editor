@@ -9,7 +9,13 @@ import '../../domain/scanner_service.dart';
 
 @immutable
 class ScanState {
-  const ScanState({this.pages = const [], this.busy = false, this.undoStack = const []});
+  const ScanState({
+    this.pages = const [],
+    this.busy = false,
+    this.undoStack = const [],
+    this.redoStack = const [],
+    this.unsaved = false,
+  });
 
   final List<ScanPage> pages;
 
@@ -17,8 +23,13 @@ class ScanState {
   /// taps on the scan button are ignored while busy (LLD section 6).
   final bool busy;
   final List<List<ScanPage>> undoStack;
+  final List<List<ScanPage>> redoStack;
+
+  /// True when the pages changed since they were last exported as a PDF.
+  final bool unsaved;
 
   bool get canUndo => undoStack.isNotEmpty;
+  bool get canRedo => redoStack.isNotEmpty;
 
   ScanPage? pageById(String id) {
     for (final p in pages) {
@@ -27,11 +38,19 @@ class ScanState {
     return null;
   }
 
-  ScanState copyWith({List<ScanPage>? pages, bool? busy, List<List<ScanPage>>? undoStack}) => ScanState(
-        pages: pages ?? this.pages,
-        busy: busy ?? this.busy,
-        undoStack: undoStack ?? this.undoStack,
-      );
+  ScanState copyWith({
+    List<ScanPage>? pages,
+    bool? busy,
+    List<List<ScanPage>>? undoStack,
+    List<List<ScanPage>>? redoStack,
+    bool? unsaved,
+  }) => ScanState(
+    pages: pages ?? this.pages,
+    busy: busy ?? this.busy,
+    undoStack: undoStack ?? this.undoStack,
+    redoStack: redoStack ?? this.redoStack,
+    unsaved: unsaved ?? this.unsaved,
+  );
 }
 
 sealed class ScanOutcome {
@@ -84,7 +103,7 @@ class ScanController extends Notifier<ScanState> {
     if (!ref.mounted || saved.isEmpty) return;
     // Pages scanned while the draft was loading go after the restored ones;
     // their own save is queued behind this restore and writes the merge.
-    state = state.copyWith(pages: List.unmodifiable([...saved, ...state.pages]));
+    state = state.copyWith(pages: List.unmodifiable([...saved, ...state.pages]), unsaved: true);
   }
 
   /// Queues a save of the draft. The pages are read when the save runs, so
@@ -168,10 +187,51 @@ class ScanController extends Notifier<ScanState> {
     }
   }
 
+  /// Replaces [pageId] with a new camera capture. The page keeps its place;
+  /// its old image stays until the draft is cleared, so undo brings it back.
+  Future<ScanOutcome> retake(String pageId) async {
+    if (state.busy || state.pageById(pageId) == null) return const ScanCancelled();
+    state = state.copyWith(busy: true);
+    final scanner = ref.read(scannerServiceProvider);
+    final store = ref.read(pageStoreProvider);
+    try {
+      final paths = await scanner.scan(source: ScanSource.camera, maxPages: 1);
+      if (paths.isEmpty) return const ScanCancelled();
+      final id = store.newId();
+      final page = ScanPage(id: id, originalPath: await store.importOriginal(paths.first, id));
+      await scanner.cleanUp();
+      if (!ref.mounted) return const ScanCancelled();
+      _commit([for (final p in state.pages) p.id == pageId ? page : p]);
+      return const ScanAdded(1);
+    } on ScannerPermissionDenied catch (e) {
+      return ScanPermissionBlocked(permanently: e.permanently);
+    } on ScannerFailure catch (e) {
+      return ScanFailed(e.message);
+    } catch (e) {
+      return ScanFailed('Could not save the new page ($e)');
+    } finally {
+      if (ref.mounted) state = state.copyWith(busy: false);
+    }
+  }
+
+  /// Inserts a copy of [pageId], with the same edits, right after it. Both
+  /// pages share the original image, which is never modified.
+  void duplicate(String pageId) {
+    final i = state.pages.indexWhere((p) => p.id == pageId);
+    if (i < 0) return;
+    final copy = ScanPage(
+      id: ref.read(pageStoreProvider).newId(),
+      originalPath: state.pages[i].originalPath,
+      recipe: state.pages[i].recipe,
+    );
+    _commit([...state.pages]..insert(i + 1, copy));
+  }
+
+  /// Called once the pages are written to a PDF.
+  void markSaved() => state = state.copyWith(unsaved: false);
+
   void updateRecipe(String pageId, EditRecipe recipe) {
-    _commit([
-      for (final p in state.pages) p.id == pageId ? p.copyWith(recipe: recipe) : p,
-    ]);
+    _commit([for (final p in state.pages) p.id == pageId ? p.copyWith(recipe: recipe) : p]);
   }
 
   void rotate(String pageId, {bool clockwise = true}) {
@@ -197,14 +257,30 @@ class ScanController extends Notifier<ScanState> {
   /// Removes a page from the draft. The original file is kept until the
   /// draft is cleared so the removal can be undone.
   void remove(String pageId) {
-    _commit([for (final p in state.pages) if (p.id != pageId) p]);
+    _commit([
+      for (final p in state.pages)
+        if (p.id != pageId) p,
+    ]);
   }
 
   void undo() {
     if (!state.canUndo) return;
     final stack = [...state.undoStack];
     final previous = stack.removeLast();
-    state = state.copyWith(pages: previous, undoStack: stack);
+    state = state.copyWith(
+      pages: previous,
+      undoStack: stack,
+      redoStack: [...state.redoStack, state.pages],
+      unsaved: true,
+    );
+    _persistDraft();
+  }
+
+  void redo() {
+    if (!state.canRedo) return;
+    final stack = [...state.redoStack];
+    final next = stack.removeLast();
+    state = state.copyWith(pages: next, redoStack: stack, undoStack: [...state.undoStack, state.pages], unsaved: true);
     _persistDraft();
   }
 
@@ -213,7 +289,7 @@ class ScanController extends Notifier<ScanState> {
     final store = ref.read(pageStoreProvider);
     final paths = {
       for (final p in state.pages) p.originalPath,
-      for (final snapshot in state.undoStack)
+      for (final snapshot in [...state.undoStack, ...state.redoStack])
         for (final p in snapshot) p.originalPath,
     };
     state = const ScanState();
@@ -226,7 +302,7 @@ class ScanController extends Notifier<ScanState> {
   void _commit(List<ScanPage> pages) {
     var stack = [...state.undoStack, state.pages];
     if (stack.length > _undoLimit) stack = stack.sublist(stack.length - _undoLimit);
-    state = state.copyWith(pages: List.unmodifiable(pages), undoStack: stack);
+    state = state.copyWith(pages: List.unmodifiable(pages), undoStack: stack, redoStack: const [], unsaved: true);
     _persistDraft();
   }
 }
