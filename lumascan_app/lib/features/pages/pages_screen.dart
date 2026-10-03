@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../domain/models.dart';
 import '../../domain/scanner_service.dart';
+import '../capture/add_pages_sheet.dart';
 import '../crop/crop_screen.dart';
 import '../export/export_sheet.dart';
 import '../filters/filter_screen.dart';
@@ -86,7 +87,7 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
-                        onPressed: state.busy ? null : () => _scan(context, ref, ScanSource.camera),
+                        onPressed: state.busy ? null : () => showAddPagesSheet(context, ref),
                         icon: const Icon(Icons.add_a_photo_outlined),
                         label: const Text('Add pages'),
                       ),

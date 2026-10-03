@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../domain/scanner_service.dart';
+import '../capture/photo_import_screen.dart';
 import 'scan_controller.dart';
 
 /// Runs the scanner (or photo import) into the current draft and reports the
@@ -10,6 +11,9 @@ import 'scan_controller.dart';
 /// is blocked. Returns true when pages were added. Shared by Home, the Scan
 /// button and the draft screen so they all react the same way.
 Future<bool> runScan(BuildContext context, WidgetRef ref, ScanSource source) async {
+  // Photos go through LumaScan's own import, which keeps the chosen order and
+  // can auto-crop (C2).
+  if (source == ScanSource.gallery) return importPhotosFlow(context, ref);
   final outcome = await ref.read(scanControllerProvider.notifier).scan(source);
   if (!context.mounted) return false;
   final messenger = ScaffoldMessenger.of(context);
