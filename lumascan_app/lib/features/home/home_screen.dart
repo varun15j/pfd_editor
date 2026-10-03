@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/preferences.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../domain/scanner_service.dart';
 import '../library/document_tile.dart';
-import '../library/library_controller.dart';
+import '../library/library_actions.dart';
 import '../pages/scan_controller.dart';
 import '../pdf_editor/open_pdf.dart';
 
@@ -21,7 +22,12 @@ class HomeScreen extends ConsumerWidget {
     final c = LumaColors.of(context);
     final text = Theme.of(context).textTheme;
     final busy = state.busy;
-    final recent = ref.watch(savedDocumentsProvider).take(3).toList();
+    final recent = ref.watch(visibleDocumentsProvider).take(10).toList();
+    final dismissed = ref.watch(uiPrefsProvider.select((p) => p.dismissedCards));
+    final discovery = [
+      for (final card in _DiscoveryCard.all)
+        if (!dismissed.contains(card.id)) card,
+    ];
 
     return SafeArea(
       bottom: false,
@@ -64,6 +70,14 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(height: Space.lg),
             const LinearProgressIndicator(semanticsLabel: 'Adding pages'),
           ],
+          for (final card in discovery) ...[
+            const SizedBox(height: Space.lg),
+            _DiscoveryCardView(
+              card: card,
+              onTap: busy ? null : () => card.run(context, ref),
+              onDismiss: () => ref.read(uiPrefsProvider.notifier).dismissCard(card.id),
+            ),
+          ],
           const SizedBox(height: Space.xxl),
           Row(
             children: [
@@ -78,10 +92,19 @@ class HomeScreen extends ConsumerWidget {
             _DraftCard(pageCount: state.pages.length, onTap: () => openDraft(context)),
             const SizedBox(height: Space.sm),
           ],
-          for (final doc in recent) ...[
-            DocumentTile(document: doc),
-            const SizedBox(height: Space.sm),
-          ],
+          if (recent.isNotEmpty)
+            SizedBox(
+              height:
+                  RecentDocumentCard.width * 1.1 + MediaQuery.textScalerOf(context).scale(44) + Space.lg + Space.xs,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.none,
+                itemCount: recent.length,
+                separatorBuilder: (_, _) => const SizedBox(width: Space.md),
+                itemBuilder: (_, i) =>
+                    RecentDocumentCard(document: recent[i], onTap: () => openDocument(context, ref, recent[i])),
+              ),
+            ),
           if (state.pages.isEmpty && recent.isEmpty)
             Card(
               child: Padding(
@@ -185,6 +208,87 @@ class _DraftCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A dismissible tip on Home that points to a feature (B1 discovery cards).
+/// A card for Merge PDFs joins this list once that tool exists (G1); tools
+/// that are not built yet are never advertised.
+class _DiscoveryCard {
+  const _DiscoveryCard({
+    required this.id,
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.run,
+  });
+
+  final String id;
+  final IconData icon;
+  final String title;
+  final String message;
+  final void Function(BuildContext context, WidgetRef ref) run;
+
+  static final all = [
+    _DiscoveryCard(
+      id: 'photos_to_pdf',
+      icon: Icons.photo_library_outlined,
+      title: 'Turn photos into a PDF',
+      message: 'Pick photos of documents you already took.',
+      run: (context, ref) => scanThenReview(context, ref, ScanSource.gallery),
+    ),
+  ];
+}
+
+class _DiscoveryCardView extends StatelessWidget {
+  const _DiscoveryCardView({required this.card, required this.onTap, required this.onDismiss});
+
+  final _DiscoveryCard card;
+  final VoidCallback? onTap;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = LumaColors.of(context);
+    final text = Theme.of(context).textTheme;
+    return Card(
+      color: c.accentSoft,
+      clipBehavior: Clip.antiAlias,
+      child: Row(
+        children: [
+          Expanded(
+            child: Semantics(
+              button: true,
+              label: '${card.title}. ${card.message}',
+              excludeSemantics: true,
+              child: InkWell(
+                onTap: onTap,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(Space.lg, Space.lg, 0, Space.lg),
+                  child: Row(
+                    children: [
+                      Icon(card.icon, color: c.accent, size: 28),
+                      const SizedBox(width: Space.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(card.title, style: text.titleMedium),
+                            const SizedBox(height: 2),
+                            Text(card.message, style: text.bodySmall),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          IconButton(tooltip: 'Dismiss ${card.title}', icon: const Icon(Icons.close), onPressed: onDismiss),
+        ],
       ),
     );
   }

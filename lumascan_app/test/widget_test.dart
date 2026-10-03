@@ -2,18 +2,16 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumascan/app/app.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/app/theme.dart';
-import 'package:lumascan/data/library_store.dart';
 import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/scanner_service.dart';
 import 'package:lumascan/ui/state_views.dart';
 
 import 'support/memory_stores.dart';
+import 'support/pump_app.dart';
 
 class _BlockedScanner implements ScannerService {
   @override
@@ -27,31 +25,6 @@ class _BlockedScanner implements ScannerService {
 class _BrokenLibraryStore extends MemoryLibraryStore {
   @override
   Future<LibraryIndex> load() async => throw const FileSystemException('disk unavailable');
-}
-
-Future<void> pumpApp(
-  WidgetTester tester, {
-  List overrides = const [],
-  double textScale = 1,
-  LibraryStore? library,
-  DraftStore? draft,
-}) async {
-  tester.view.physicalSize = const Size(1080, 2340);
-  tester.view.devicePixelRatio = 2.6;
-  tester.platformDispatcher.textScaleFactorTestValue = textScale;
-  addTearDown(tester.view.reset);
-  addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        libraryStoreProvider.overrideWithValue(library ?? MemoryLibraryStore()),
-        draftStoreProvider.overrideWithValue(draft ?? MemoryDraftStore()),
-        ...overrides,
-      ],
-      child: const LumaScanApp(),
-    ),
-  );
-  await tester.pumpAndSettle();
 }
 
 /// WCAG relative-luminance contrast ratio.
