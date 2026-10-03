@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../domain/scanner_service.dart';
+import '../library/document_tile.dart';
+import '../library/library_controller.dart';
 import '../pages/scan_controller.dart';
 import '../pdf_editor/open_pdf.dart';
 
@@ -19,6 +21,7 @@ class HomeScreen extends ConsumerWidget {
     final c = LumaColors.of(context);
     final text = Theme.of(context).textTheme;
     final busy = state.busy;
+    final recent = ref.watch(savedDocumentsProvider).take(3).toList();
 
     return SafeArea(
       bottom: false,
@@ -71,9 +74,15 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: Space.sm),
-          if (state.pages.isNotEmpty)
-            _DraftCard(pageCount: state.pages.length, onTap: () => openDraft(context))
-          else
+          if (state.pages.isNotEmpty) ...[
+            _DraftCard(pageCount: state.pages.length, onTap: () => openDraft(context)),
+            const SizedBox(height: Space.sm),
+          ],
+          for (final doc in recent) ...[
+            DocumentTile(document: doc),
+            const SizedBox(height: Space.sm),
+          ],
+          if (state.pages.isEmpty && recent.isEmpty)
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(Space.lg),
