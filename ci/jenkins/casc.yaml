@@ -1,0 +1,64 @@
+# Jenkins configuration as code: admin user, GitHub credential and the
+# LumaScan multibranch job. Values in ${...} come from ci/jenkins/.env.
+jenkins:
+  systemMessage: "LumaScan CI"
+  numExecutors: 2
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_USER}"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+unclassified:
+  location:
+    url: "${JENKINS_URL}"
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - usernamePassword:
+              scope: GLOBAL
+              id: github
+              description: GitHub token for varun15j/pfd_editor
+              username: "${GITHUB_USER}"
+              password: "${GITHUB_TOKEN}"
+
+jobs:
+  - script: >
+      multibranchPipelineJob('lumascan') {
+        displayName('LumaScan')
+        branchSources {
+          branchSource {
+            source {
+              github {
+                id('lumascan-github')
+                repoOwner('varun15j')
+                repository('pfd_editor')
+                repositoryUrl('https://github.com/varun15j/pfd_editor')
+                configuredByUrl(true)
+                credentialsId('github')
+                traits {
+                  gitHubBranchDiscovery { strategyId(1) }
+                  gitHubPullRequestDiscovery { strategyId(1) }
+                }
+              }
+            }
+          }
+        }
+        factory {
+          workflowBranchProjectFactory { scriptPath('Jenkinsfile') }
+        }
+        // Backup for when no webhook reaches Jenkins: look for new PRs
+        // and pushes every 5 minutes.
+        triggers {
+          periodicFolderTrigger { interval('5m') }
+        }
+        orphanedItemStrategy {
+          discardOldItems { numToKeep(20) }
+        }
+      }

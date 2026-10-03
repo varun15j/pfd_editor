@@ -23,3 +23,24 @@ It runs inside the `ghcr.io/cirruslabs/flutter:3.47.6` Docker image, so the Jenk
 2. Turn on "Require status checks to pass before merging" and pick the Jenkins check
    (`continuous-integration/jenkins/pr-merge`). It appears in the list after the first PR build.
 3. Optionally turn on "Require branches to be up to date before merging".
+
+## Running Jenkins on your PC (docker-compose)
+
+`ci/jenkins/` starts a ready-made Jenkins with the plugins installed, an admin user, the GitHub
+credential and the **LumaScan** Multibranch job already created (configuration as code). You need
+Docker Desktop running.
+
+1. Create a GitHub fine-grained token for `varun15j/pfd_editor` with read access to Contents,
+   Metadata and Pull requests, and read/write access to Commit statuses.
+2. In `ci/jenkins`, copy `.env.example` to `.env`, set an admin password and paste the token.
+   `.env` is git-ignored.
+3. `cd ci/jenkins` then `docker compose up -d --build`.
+4. Open http://localhost:8080 and sign in. The LumaScan job scans the repo on start and then every
+   5 minutes, building each open PR and reporting its status back to GitHub.
+
+The first build pulls the Flutter image (several GB), so it takes a while.
+
+**Webhook (optional, for instant builds).** GitHub can't reach `localhost`, so expose Jenkins with a
+tunnel, e.g. `ngrok http 8080`. Set `JENKINS_URL` in `.env` to the tunnel URL, restart with
+`docker compose up -d`, and add `https://<tunnel>/github-webhook/` as the webhook in GitHub. Without
+it, the 5-minute scan still checks every PR.

@@ -1,0 +1,21 @@
+# Local Jenkins for LumaScan. Start with:
+#   cd ci/jenkins && copy .env.example .env   (then fill it in)
+#   docker compose up -d --build
+# Open http://localhost:8080 and sign in with the admin user from .env.
+services:
+  jenkins:
+    build: .
+    container_name: lumascan-jenkins
+    restart: unless-stopped
+    user: root  # needed to use the host's Docker socket
+    ports:
+      - "8080:8080"
+    env_file: .env
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      # Lets pipelines start the Flutter build container on the host's
+      # Docker (Docker Desktop on Windows exposes this path too).
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  jenkins_home:
