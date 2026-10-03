@@ -71,6 +71,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
     final store = ref.read(pageStoreProvider);
     final exporter = ref.read(pdfExporterProvider);
     final fileName = PdfEditSaver.safeFileName(_name.text);
+    final draft = ref.read(scanControllerProvider.notifier);
     setState(() {
       _progress = 0;
       _error = null;
@@ -85,6 +86,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
         },
       );
       if (mounted) setState(() => _result = file);
+      draft.markSaved();
       // The PDF is already safe on disk; a failed index write only means it
       // is missing from the Library list, so it is reported, not thrown.
       await library.addScan(file, pages);

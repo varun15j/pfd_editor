@@ -35,15 +35,18 @@ void main() {
     final cache = Directory('${tmp.path}/scanner_cache')..createSync();
     scanned = [
       for (var i = 0; i < 3; i++)
-        (File('${cache.path}/page$i.jpg')
-              ..writeAsBytesSync(img.encodeJpg(img.Image(width: 120 + i, height: 160)..clear(img.ColorRgb8(240, 235, 225)))))
+        (File('${cache.path}/page$i.jpg')..writeAsBytesSync(
+              img.encodeJpg(img.Image(width: 120 + i, height: 160)..clear(img.ColorRgb8(240, 235, 225))),
+            ))
             .path,
     ];
     scanner = FakeScanner(() async => scanned);
-    container = ProviderContainer(overrides: [
-      scannerServiceProvider.overrideWithValue(scanner),
-      pageStoreProvider.overrideWithValue(PageStore(rootDir: () async => tmp)),
-    ]);
+    container = ProviderContainer(
+      overrides: [
+        scannerServiceProvider.overrideWithValue(scanner),
+        pageStoreProvider.overrideWithValue(PageStore(rootDir: () async => tmp)),
+      ],
+    );
   });
 
   tearDown(() {
@@ -106,6 +109,81 @@ void main() {
     expect(state().pages.map((p) => p.id), [ids[1], ids[2], ids[0]]);
   });
 
+  test('retake swaps one page in place and keeps its position', () async {
+    await controller().scan(ScanSource.camera);
+    final before = state().pages.map((p) => p.id).toList();
+    final cache = Directory('${tmp.path}/scanner_cache');
+    scanner.next = () async => [
+      (File(
+        '${cache.path}/retake.jpg',
+      )..writeAsBytesSync(img.encodeJpg(img.Image(width: 90, height: 120)..clear(img.ColorRgb8(10, 10, 10))))).path,
+    ];
+    final oldPath = state().pages[1].originalPath;
+
+    final outcome = await controller().retake(before[1]);
+
+    expect(outcome, isA<ScanAdded>());
+    expect(state().pages, hasLength(3));
+    expect(state().pages[1].id, isNot(before[1]));
+    expect(state().pages[0].id, before[0]);
+    expect(state().pages[2].id, before[2]);
+    expect(state().pages[1].originalPath, isNot(oldPath));
+    expect(File(state().pages[1].originalPath).existsSync(), isTrue);
+    controller().undo();
+    expect(state().pages.map((p) => p.id), before);
+  });
+
+  test('a cancelled retake leaves the page untouched', () async {
+    await controller().scan(ScanSource.camera);
+    final before = state().pages.map((p) => p.id).toList();
+    scanner.next = () async => [];
+    expect(await controller().retake(before[0]), isA<ScanCancelled>());
+    expect(state().pages.map((p) => p.id), before);
+  });
+
+  test('duplicate inserts a copy after the page with the same recipe', () async {
+    await controller().scan(ScanSource.camera);
+    final ids = state().pages.map((p) => p.id).toList();
+    controller().rotate(ids[0]);
+    controller().duplicate(ids[0]);
+
+    expect(state().pages, hasLength(4));
+    expect(state().pages[0].id, ids[0]);
+    expect(state().pages[1].id, isNot(ids[0]));
+    expect(state().pages[1].originalPath, state().pages[0].originalPath);
+    expect(state().pages[1].recipe.quarterTurns, 1);
+    expect(state().pages[2].id, ids[1]);
+    controller().undo();
+    expect(state().pages, hasLength(3));
+  });
+
+  test('undo can be redone, and a new edit drops the redo history', () async {
+    await controller().scan(ScanSource.camera);
+    final ids = state().pages.map((p) => p.id).toList();
+    controller().rotate(ids[0]);
+    expect(state().canRedo, isFalse);
+
+    controller().undo();
+    expect(state().pages[0].recipe.quarterTurns, 0);
+    expect(state().canRedo, isTrue);
+    controller().redo();
+    expect(state().pages[0].recipe.quarterTurns, 1);
+    expect(state().canRedo, isFalse);
+
+    controller().undo();
+    controller().rotate(ids[1]);
+    expect(state().canRedo, isFalse);
+  });
+
+  test('unsaved flag follows edits and markSaved', () async {
+    await controller().scan(ScanSource.camera);
+    expect(state().unsaved, isTrue);
+    controller().markSaved();
+    expect(state().unsaved, isFalse);
+    controller().rotate(state().pages.first.id);
+    expect(state().unsaved, isTrue);
+  });
+
   test('clear deletes originals', () async {
     await controller().scan(ScanSource.camera);
     final paths = state().pages.map((p) => p.originalPath).toList();
@@ -118,7 +196,9 @@ void main() {
     await controller().scan(ScanSource.camera);
     controller().applyFilterToAll(DocumentFilter.grayscale);
     final progress = <double>[];
-    final file = await container.read(pdfExporterProvider).export(
+    final file = await container
+        .read(pdfExporterProvider)
+        .export(
           state().pages,
           const ExportOptions(quality: ExportQuality.small, fileName: 'test.pdf'),
           onProgress: (d, t) => progress.add(d / t),
