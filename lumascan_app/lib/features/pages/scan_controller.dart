@@ -246,6 +246,24 @@ class ScanController extends Notifier<ScanState> {
     _commit([for (final p in state.pages) p.copyWith(recipe: p.recipe.copyWith(filter: filter))]);
   }
 
+  /// Saves [draft] as [pageId]'s recipe and copies its filter, brightness and
+  /// contrast to every page in [alsoPageIds]. Those pages keep their own crop
+  /// and rotation. One undo step covers all of it.
+  void applyEnhancement(String pageId, EditRecipe draft, {Iterable<String> alsoPageIds = const []}) {
+    final others = alsoPageIds.toSet()..remove(pageId);
+    _commit([
+      for (final p in state.pages)
+        if (p.id == pageId)
+          p.copyWith(recipe: draft)
+        else if (others.contains(p.id))
+          p.copyWith(
+            recipe: p.recipe.copyWith(filter: draft.filter, brightness: draft.brightness, contrast: draft.contrast),
+          )
+        else
+          p,
+    ]);
+  }
+
   /// Moves a page; [newIndex] is its position after removal from [oldIndex].
   void move(int oldIndex, int newIndex) {
     if (oldIndex == newIndex) return;
