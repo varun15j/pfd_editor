@@ -8,6 +8,8 @@ import 'package:lumascan/app/theme.dart';
 import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/scanner_service.dart';
+import 'package:lumascan/domain/ui_prefs.dart';
+import 'package:lumascan/features/capture/scan_tips.dart';
 import 'package:lumascan/ui/state_views.dart';
 
 import 'support/memory_stores.dart';
@@ -38,6 +40,8 @@ double contrast(Color a, Color b) {
   return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
 }
 
+MemoryUiPrefsStore tipsSeen() => MemoryUiPrefsStore(const UiPrefs(dismissedCards: {scanTipsId}));
+
 void main() {
   group('app shell', () {
     testWidgets('home offers scan, import and PDF editing', (tester) async {
@@ -47,7 +51,7 @@ void main() {
         expect(find.bySemanticsLabel(label), findsOneWidget, reason: label);
       }
       expect(find.text('Your scans will show up here.'), findsOneWidget);
-      expect(find.byTooltip('Scan a document'), findsOneWidget);
+      expect(find.byTooltip('Create'), findsOneWidget);
     });
 
     testWidgets('bottom bar switches between the four tabs', (tester) async {
@@ -78,7 +82,11 @@ void main() {
     });
 
     testWidgets('blocked camera explains and links to Settings', (tester) async {
-      await pumpApp(tester, overrides: [scannerServiceProvider.overrideWithValue(_BlockedScanner())]);
+      await pumpApp(
+        tester,
+        prefs: tipsSeen(),
+        overrides: [scannerServiceProvider.overrideWithValue(_BlockedScanner())],
+      );
       await tester.tap(find.bySemanticsLabel('Scan'));
       await tester.pumpAndSettle();
       expect(find.text('Camera access needed'), findsOneWidget);
@@ -88,9 +96,15 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
     });
 
-    testWidgets('the centre Scan button uses the same camera flow', (tester) async {
-      await pumpApp(tester, overrides: [scannerServiceProvider.overrideWithValue(_BlockedScanner())]);
-      await tester.tap(find.byTooltip('Scan a document'));
+    testWidgets('scanning from the Create sheet uses the same camera flow', (tester) async {
+      await pumpApp(
+        tester,
+        prefs: tipsSeen(),
+        overrides: [scannerServiceProvider.overrideWithValue(_BlockedScanner())],
+      );
+      await tester.tap(find.byTooltip('Create'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Scan document'));
       await tester.pumpAndSettle();
       expect(find.text('Camera access needed'), findsOneWidget);
     });

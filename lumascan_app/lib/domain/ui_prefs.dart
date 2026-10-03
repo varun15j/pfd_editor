@@ -9,7 +9,8 @@ class UiPrefs {
 
   final LibraryView libraryView;
 
-  /// Ids of Home discovery cards the user closed.
+  /// Ids of Home discovery cards the user closed and one-time hints already
+  /// shown (such as the scan tips).
   final Set<String> dismissedCards;
 
   UiPrefs copyWith({LibraryView? libraryView, Set<String>? dismissedCards}) =>
