@@ -35,7 +35,8 @@ Docker Desktop running.
 2. In `ci/jenkins`, copy `.env.example` to `.env`, set an admin password and paste the token.
    `.env` is git-ignored.
 3. `cd ci/jenkins` then `docker compose up -d --build`.
-4. Open http://localhost:8080 and sign in. The LumaScan job scans the repo on start and then every
+4. Open http://localhost:8080 and sign in. If 8080 is already in use (e.g. by Apache/XAMPP), set
+   `JENKINS_PORT` (and `JENKINS_URL`) in `.env` to another port such as 8081. The LumaScan job scans the repo on start and then every
    5 minutes, building each open PR and reporting its status back to GitHub.
 
 The first build creates the agent image (Android SDK + Flutter, several GB), so it takes a while.
