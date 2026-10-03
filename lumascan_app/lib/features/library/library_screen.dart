@@ -7,17 +7,20 @@ import '../../app/preferences.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../domain/library.dart';
+import '../../domain/library_query.dart';
 import '../../domain/scanner_service.dart';
 import '../../domain/ui_prefs.dart';
 import '../../ui/state_views.dart';
 import 'document_tile.dart';
 import 'library_actions.dart';
 import 'library_controller.dart';
+import 'library_query_controller.dart';
+import 'library_query_sheets.dart';
 
-/// Library tab: every saved document, newest first, as a list or a grid
-/// (the choice is remembered). Long press selects several documents to
-/// share or delete. Search, sort and filters come with B2; folders and tags
-/// with B3.
+/// Library tab: every saved document as a list or a grid (the choice is
+/// remembered), with search by name, sort and filters (US-02.2, US-02.4).
+/// Long press selects several documents to share or delete. Folders and
+/// tags come with B3.
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
 
@@ -27,6 +30,19 @@ class LibraryScreen extends ConsumerStatefulWidget {
 
 class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   final _selected = <String>{};
+  late final TextEditingController _search;
+
+  @override
+  void initState() {
+    super.initState();
+    _search = TextEditingController(text: ref.read(libraryQueryProvider).text);
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
 
   bool get _selecting => _selected.isNotEmpty;
 
@@ -55,9 +71,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   @override
   Widget build(BuildContext context) {
     final library = ref.watch(libraryProvider);
-    final docs = ref.watch(visibleDocumentsProvider);
+    final all = ref.watch(visibleDocumentsProvider);
+    final docs = ref.watch(filteredDocumentsProvider);
+    final query = ref.watch(libraryQueryProvider);
     final view = ref.watch(uiPrefsProvider.select((p) => p.libraryView));
-    // Drop selections of documents that were deleted meanwhile.
+    // Drop selections of documents that were deleted or filtered out.
     _selected.retainAll({for (final d in docs) d.id});
 
     return PopScope(
@@ -66,7 +84,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         if (!didPop) _clearSelection();
       },
       child: Scaffold(
-        appBar: _selecting ? _selectionBar(docs) : _normalBar(view, enabled: docs.isNotEmpty),
+        appBar: _selecting ? _selectionBar(docs) : _normalBar(view, enabled: all.isNotEmpty),
         // Riverpod keeps retrying a failed load in the background, so an
         // error can arrive while the state still reads as loading.
         body: switch (library) {
@@ -75,7 +93,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             message: 'Your PDFs are still on this device.',
             onRetry: () => ref.invalidate(libraryProvider),
           ),
-          AsyncValue(hasValue: true) when docs.isEmpty => EmptyState(
+          AsyncValue(hasValue: true) when all.isEmpty => EmptyState(
             icon: Icons.folder_open_outlined,
             title: 'No saved documents yet',
             message: 'PDFs you save will appear here, ready to find and share.',
@@ -83,7 +101,28 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             actionIcon: Icons.document_scanner_outlined,
             onAction: () => scanThenReview(context, ref, ScanSource.camera),
           ),
-          AsyncValue(hasValue: true) => view == LibraryView.grid ? _grid(docs) : _list(docs),
+          AsyncValue(hasValue: true) => Column(
+            children: [
+              _searchBar(query),
+              if (query.isSorted || query.isFiltered) _activeChips(query),
+              Expanded(
+                child: docs.isEmpty
+                    ? EmptyState(
+                        icon: Icons.search_off,
+                        title: 'No matches',
+                        message: query.isSearching
+                            ? 'No document name contains "${query.text.trim()}".'
+                            : 'No documents match these filters.',
+                        actionLabel: 'Show all documents',
+                        actionIcon: Icons.filter_alt_off_outlined,
+                        onAction: _resetAll,
+                      )
+                    : view == LibraryView.grid
+                    ? _grid(docs)
+                    : _list(docs),
+              ),
+            ],
+          ),
           _ => const LoadingList(label: 'Loading documents'),
         },
       ),
@@ -122,7 +161,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           builder: (buttonContext) => IconButton(
             tooltip: 'Share selected',
             icon: const Icon(Icons.ios_share),
-            onPressed: () => shareDocuments(buttonContext, _selectedDocs(ref.read(visibleDocumentsProvider))),
+            onPressed: () => shareDocuments(buttonContext, _selectedDocs(ref.read(filteredDocumentsProvider))),
           ),
         ),
         IconButton(
@@ -130,12 +169,107 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           icon: const Icon(Icons.delete_outline),
           onPressed: () {
             // Read at tap time so a selection change in the same frame counts.
-            final docs = _selectedDocs(ref.read(visibleDocumentsProvider));
+            final docs = _selectedDocs(ref.read(filteredDocumentsProvider));
             _clearSelection();
             deleteWithUndo(context, ref, docs);
           },
         ),
       ],
+    );
+  }
+
+  void _resetAll() {
+    _search.clear();
+    ref.read(libraryQueryProvider.notifier)
+      ..search('')
+      ..resetSortAndFilters();
+  }
+
+  Widget _searchBar(LibraryQuery query) {
+    final filters = (query.types.isEmpty ? 0 : 1) + (query.date == DateFilter.any ? 0 : 1);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Space.page, Space.xs, Space.sm, Space.xs),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _search,
+              onChanged: ref.read(libraryQueryProvider.notifier).search,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Search by name',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: query.text.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Clear search',
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          _search.clear();
+                          ref.read(libraryQueryProvider.notifier).search('');
+                        },
+                      ),
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Sort: ${query.sort.label}',
+            icon: const Icon(Icons.sort),
+            onPressed: () => showSortSheet(context),
+          ),
+          IconButton(
+            tooltip: filters == 0 ? 'Filter' : 'Filter, $filters active',
+            icon: Badge(isLabelVisible: filters > 0, label: Text('$filters'), child: const Icon(Icons.filter_list)),
+            onPressed: () => showFilterSheet(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Active sort and filters as removable chips, with one Reset.
+  Widget _activeChips(LibraryQuery query) {
+    final q = ref.read(libraryQueryProvider.notifier);
+    // Wrap, not a scrolling row, so Reset is never pushed off screen.
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: Space.page),
+      child: Wrap(
+        spacing: Space.sm,
+        runSpacing: Space.xs,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          if (query.isSorted)
+            InputChip(
+              avatar: const Icon(Icons.sort, size: 18),
+              label: Text(query.sort.label),
+              onPressed: () => showSortSheet(context),
+              onDeleted: () => q.sortBy(LibrarySort.newest),
+              deleteButtonTooltipMessage: 'Remove sort',
+            ),
+          if (query.types.isNotEmpty)
+            InputChip(
+              label: Text(
+                [
+                  for (final t in ScanType.values)
+                    if (query.types.contains(t)) t.label,
+                ].join(', '),
+              ),
+              onPressed: () => showFilterSheet(context),
+              onDeleted: q.clearTypes,
+              deleteButtonTooltipMessage: 'Remove type filter',
+            ),
+          if (query.date != DateFilter.any)
+            InputChip(
+              avatar: const Icon(Icons.event, size: 18),
+              label: Text(query.dateLabel),
+              onPressed: () => showFilterSheet(context),
+              onDeleted: q.clearDate,
+              deleteButtonTooltipMessage: 'Remove date filter',
+            ),
+          TextButton(onPressed: q.resetSortAndFilters, child: const Text('Reset')),
+        ],
+      ),
     );
   }
 
