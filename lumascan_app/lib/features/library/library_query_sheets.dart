@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../domain/library.dart';
 import '../../domain/library_query.dart';
+import 'library_controller.dart';
 import 'library_query_controller.dart';
 
 Future<void> showSortSheet(BuildContext context) =>
@@ -71,6 +72,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   late DateFilter _date = _start.date;
   late DateTime? _from = _start.from;
   late DateTime? _to = _start.to;
+  late Set<String> _tags = {..._start.tags};
 
   String? get _rangeError => _date == DateFilter.custom ? LibraryQuery.rangeError(_from, _to) : null;
 
@@ -87,7 +89,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   }
 
   void _apply() {
-    ref.read(libraryQueryProvider.notifier).filter(types: _types, date: _date, from: _from, to: _to);
+    ref.read(libraryQueryProvider.notifier).filter(types: _types, date: _date, from: _from, to: _to, tags: _tags);
     Navigator.pop(context);
   }
 
@@ -95,6 +97,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final error = _rangeError;
+    final allTags = ref.watch(libraryProvider).value?.allTags ?? const <String>[];
     String day(DateTime? d) => d == null ? 'Pick a date' : MaterialLocalizations.of(context).formatMediumDate(d);
 
     return SafeArea(
@@ -120,6 +123,25 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                   ),
               ],
             ),
+            if (allTags.isNotEmpty) ...[
+              const SizedBox(height: Space.xl),
+              Text('Tags', style: text.titleSmall),
+              const SizedBox(height: Space.sm),
+              Wrap(
+                spacing: Space.sm,
+                runSpacing: Space.sm,
+                children: [
+                  for (final t in allTags)
+                    FilterChip(
+                      label: Text(t),
+                      selected: _tags.contains(t.toLowerCase()),
+                      onSelected: (on) => setState(
+                        () => _tags = on ? {..._tags, t.toLowerCase()} : ({..._tags}..remove(t.toLowerCase())),
+                      ),
+                    ),
+                ],
+              ),
+            ],
             const SizedBox(height: Space.xl),
             Text('Date changed', style: text.titleSmall),
             const SizedBox(height: Space.sm),
@@ -164,6 +186,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
             TextButton(
               onPressed: () => setState(() {
                 _types = {};
+                _tags = {};
                 _date = DateFilter.any;
                 _from = null;
                 _to = null;

@@ -33,6 +33,8 @@ class LibraryQuery {
     this.date = DateFilter.any,
     this.from,
     this.to,
+    this.folderId,
+    this.tags = const {},
   });
 
   final String text;
@@ -46,9 +48,15 @@ class LibraryQuery {
   final DateTime? from;
   final DateTime? to;
 
+  /// Folder being browsed; null shows every document.
+  final String? folderId;
+
+  /// Documents must carry every one of these tags (lower case).
+  final Set<String> tags;
+
   bool get isSearching => text.trim().isNotEmpty;
   bool get isSorted => sort != LibrarySort.newest;
-  bool get isFiltered => types.isNotEmpty || date != DateFilter.any;
+  bool get isFiltered => types.isNotEmpty || date != DateFilter.any || tags.isNotEmpty;
 
   /// True when anything differs from the default view.
   bool get isActive => isSearching || isSorted || isFiltered;
@@ -60,6 +68,8 @@ class LibraryQuery {
     DateFilter? date,
     DateTime? Function()? from,
     DateTime? Function()? to,
+    String? Function()? folderId,
+    Set<String>? tags,
   }) => LibraryQuery(
     text: text ?? this.text,
     sort: sort ?? this.sort,
@@ -67,10 +77,12 @@ class LibraryQuery {
     date: date ?? this.date,
     from: from == null ? this.from : from(),
     to: to == null ? this.to : to(),
+    folderId: folderId == null ? this.folderId : folderId(),
+    tags: tags ?? this.tags,
   );
 
-  /// Clears sort and filters but keeps the search text.
-  LibraryQuery resetSortAndFilters() => LibraryQuery(text: text);
+  /// Clears sort and filters but keeps the search text and folder.
+  LibraryQuery resetSortAndFilters() => LibraryQuery(text: text, folderId: folderId);
 
   /// Null when the custom range is usable, otherwise what is wrong with it.
   static String? rangeError(DateTime? from, DateTime? to) {
@@ -102,6 +114,8 @@ class LibraryQuery {
       for (final d in docs)
         if ((needle.isEmpty || d.name.toLowerCase().contains(needle)) &&
             (types.isEmpty || types.contains(d.type)) &&
+            (folderId == null || d.folderId == folderId) &&
+            (tags.isEmpty || tags.every((t) => d.tags.any((dt) => dt.toLowerCase() == t))) &&
             (start == null || !d.modifiedAt.isBefore(start)) &&
             (end == null || d.modifiedAt.isBefore(end)))
           d,
