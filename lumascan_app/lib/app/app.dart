@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/onboarding/onboarding_screen.dart';
 import 'preferences.dart';
 import 'shell.dart';
 import 'theme.dart';
@@ -16,7 +17,22 @@ class LumaScanApp extends ConsumerWidget {
       theme: buildLumaTheme(Brightness.light),
       darkTheme: buildLumaTheme(Brightness.dark),
       themeMode: ref.watch(themeModeProvider),
-      home: const AppShell(),
+      home: const StartGate(),
     );
+  }
+}
+
+/// Picks the first screen once the saved choices are read: the intro until it
+/// has been seen, then the app. Waiting avoids flashing the intro at someone
+/// who has already seen it.
+class StartGate extends ConsumerWidget {
+  const StartGate({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ready = ref.watch(appSettingsReadyProvider);
+    if (!ready.hasValue) return const Scaffold(body: SizedBox.shrink());
+    final seen = ref.watch(appSettingsProvider.select((s) => s.onboardingSeen));
+    return seen ? const AppShell() : OnboardingScreen(onDone: () {});
   }
 }

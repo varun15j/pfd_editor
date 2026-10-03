@@ -16,14 +16,19 @@ final appSettingsProvider = NotifierProvider<AppSettingsController, AppSettings>
 
 class AppSettingsController extends Notifier<AppSettings> {
   Future<void> _io = Future.value();
+  Future<void> _loaded = Future.value();
   bool _changed = false;
 
   /// Completes once the saved choices are loaded and every change is written.
   Future<void> get settled => _io;
 
+  /// Completes once the saved choices are read, whatever is saved afterwards.
+  Future<void> get loaded => _loaded;
+
   @override
   AppSettings build() {
-    _io = _load().catchError((Object _) {});
+    _loaded = _load().catchError((Object _) {});
+    _io = _loaded;
     return const AppSettings();
   }
 
@@ -43,6 +48,13 @@ class AppSettingsController extends Notifier<AppSettings> {
 
   void setFileNamePattern(FileNamePattern pattern) => _set(state.copyWith(fileNamePattern: pattern));
 
+  /// Remembers that the intro was shown, with the answer to the usage-data
+  /// question when one was given.
+  void completeOnboarding({bool? analytics}) =>
+      _set(state.copyWith(onboardingSeen: true, analytics: analytics ?? state.analytics));
+
+  void setAnalytics(bool value) => _set(state.copyWith(analytics: value));
+
   void _set(AppSettings settings) {
     _changed = true;
     state = settings;
@@ -50,6 +62,10 @@ class AppSettingsController extends Notifier<AppSettings> {
     _io = _io.then((_) => store.save(settings)).catchError((Object _) {});
   }
 }
+
+/// Completes once the saved Settings choices are read, so the first screen
+/// is not picked from the defaults.
+final appSettingsReadyProvider = FutureProvider<void>((ref) => ref.read(appSettingsProvider.notifier).loaded);
 
 /// Light, dark or follow the system.
 final themeModeProvider = Provider<ThemeMode>((ref) => ref.watch(appSettingsProvider.select((s) => s.themeMode)));

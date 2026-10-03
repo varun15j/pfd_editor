@@ -52,7 +52,7 @@ class MemoryUiPrefsStore extends UiPrefsStore {
 }
 
 class MemoryAppSettingsStore extends AppSettingsStore {
-  MemoryAppSettingsStore([this.settings = const AppSettings()]) : super(PageStore());
+  MemoryAppSettingsStore([this.settings = const AppSettings(onboardingSeen: true)]) : super(PageStore());
 
   AppSettings settings;
 

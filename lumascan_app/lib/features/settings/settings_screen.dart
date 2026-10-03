@@ -5,6 +5,7 @@ import '../../app/preferences.dart';
 import '../../app/theme.dart';
 import '../../domain/app_settings.dart';
 import '../../domain/models.dart';
+import '../onboarding/onboarding_screen.dart';
 import 'about_section.dart';
 import 'storage_section.dart';
 
@@ -79,6 +80,27 @@ class SettingsScreen extends ConsumerWidget {
           Text('Changes how the app looks. No files are affected.', style: text.bodySmall?.copyWith(color: c.muted)),
           const SizedBox(height: Space.xl),
           const StorageSection(),
+          const SizedBox(height: Space.xl),
+          const _Header('Privacy and intro'),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Share anonymous usage data'),
+            subtitle: const Text(
+              'Which features are used and where the app fails. Never your documents, pages or file names. '
+              'LumaScan works the same either way.',
+            ),
+            value: settings.analytics ?? false,
+            onChanged: controller.setAnalytics,
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Replay intro'),
+            subtitle: const Text('See the welcome screens again'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (context) => OnboardingScreen(onDone: () => Navigator.pop(context))),
+            ),
+          ),
           const SizedBox(height: Space.xl),
           const AboutSection(),
         ],
