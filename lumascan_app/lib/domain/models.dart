@@ -7,9 +7,10 @@ import 'package:path/path.dart' as path;
 /// compatible when more presets are added later.
 enum DocumentFilter {
   original('original', 'Original'),
-  magicColor('magic_color', 'Magic Color'),
+  magicColor('magic_color', 'Auto colour'),
   grayscale('grayscale', 'Grayscale'),
-  blackWhite('black_white', 'B&W');
+  blackWhite('black_white', 'B&W'),
+  whiteboard('whiteboard', 'Whiteboard');
 
   const DocumentFilter(this.id, this.label);
 
@@ -140,6 +141,8 @@ class EditRecipe {
     this.crop = CropQuad.full,
     this.quarterTurns = 0,
     this.filter = DocumentFilter.original,
+    this.brightness = 0,
+    this.contrast = 0,
   });
 
   final CropQuad crop;
@@ -148,33 +151,48 @@ class EditRecipe {
   final int quarterTurns;
   final DocumentFilter filter;
 
+  /// Manual adjustments applied after the filter, each from -1 to 1 (0 leaves
+  /// the page as the filter made it).
+  final double brightness;
+  final double contrast;
+
+  bool get hasAdjustments => brightness != 0 || contrast != 0;
+
   EditRecipe copyWith({
     CropQuad? crop,
     int? quarterTurns,
     DocumentFilter? filter,
+    double? brightness,
+    double? contrast,
   }) =>
       EditRecipe(
         crop: crop ?? this.crop,
         quarterTurns: (quarterTurns ?? this.quarterTurns) % 4,
         filter: filter ?? this.filter,
+        brightness: brightness ?? this.brightness,
+        contrast: contrast ?? this.contrast,
       );
 
   Map<String, Object?> toJson() => {
         if (!crop.isFull) 'crop': crop.toJson(),
         'quarterTurns': quarterTurns,
         'filter': filter.id,
+        if (brightness != 0) 'brightness': brightness,
+        if (contrast != 0) 'contrast': contrast,
       };
 
   static EditRecipe fromJson(Map<String, Object?> json) => EditRecipe(
         crop: json['crop'] == null ? CropQuad.full : CropQuad.fromJson(json['crop']),
         quarterTurns: ((json['quarterTurns'] as num?)?.toInt() ?? 0) % 4,
         filter: DocumentFilter.fromId(json['filter'] as String? ?? DocumentFilter.original.id),
+        brightness: ((json['brightness'] as num?)?.toDouble() ?? 0).clamp(-1.0, 1.0),
+        contrast: ((json['contrast'] as num?)?.toDouble() ?? 0).clamp(-1.0, 1.0),
       );
 
   /// Stable key used to cache rendered derivatives.
   String get cacheKey {
     final q = crop.points.map((p) => '${p.x.toStringAsFixed(4)},${p.y.toStringAsFixed(4)}').join(';');
-    return '$q|$quarterTurns|${filter.id}';
+    return '$q|$quarterTurns|${filter.id}|${brightness.toStringAsFixed(3)}|${contrast.toStringAsFixed(3)}';
   }
 
   @override
@@ -182,10 +200,12 @@ class EditRecipe {
       other is EditRecipe &&
       other.crop == crop &&
       other.quarterTurns == quarterTurns &&
-      other.filter == filter;
+      other.filter == filter &&
+      other.brightness == brightness &&
+      other.contrast == contrast;
 
   @override
-  int get hashCode => Object.hash(crop, quarterTurns, filter);
+  int get hashCode => Object.hash(crop, quarterTurns, filter, brightness, contrast);
 }
 
 @immutable

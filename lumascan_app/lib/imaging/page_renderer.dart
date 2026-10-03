@@ -8,12 +8,14 @@ import 'geometry.dart';
 import 'rgb_image.dart';
 
 /// Render pipeline from LLD section 7:
-/// decode → orientation → perspective warp → quarter turns → filter → encode.
+/// decode → orientation → perspective warp → quarter turns → filter →
+/// brightness and contrast → encode.
 RgbImage renderRecipe(Uint8List original, EditRecipe recipe, {int? maxDimension}) {
   var image = RgbImage.decode(original, maxDimension: maxDimension);
   image = warpPerspective(image, recipe.crop);
   image = rotateQuarterTurns(image, recipe.quarterTurns);
-  return applyFilter(image, recipe.filter);
+  image = applyFilter(image, recipe.filter);
+  return adjustBrightnessContrast(image, brightness: recipe.brightness, contrast: recipe.contrast);
 }
 
 class RenderedImage {

@@ -184,6 +184,28 @@ void main() {
     expect(state().unsaved, isTrue);
   });
 
+  test('applyEnhancement copies filter and adjustments but keeps crop and rotation', () async {
+    await controller().scan(ScanSource.camera);
+    final ids = state().pages.map((p) => p.id).toList();
+    controller().rotate(ids[1]);
+    const draft = EditRecipe(quarterTurns: 2, filter: DocumentFilter.whiteboard, brightness: 0.3, contrast: -0.2);
+
+    controller().applyEnhancement(ids[0], draft, alsoPageIds: [ids[1]]);
+
+    final pages = state().pages;
+    expect(pages[0].recipe, draft);
+    expect(pages[1].recipe.filter, DocumentFilter.whiteboard);
+    expect(pages[1].recipe.brightness, 0.3);
+    expect(pages[1].recipe.contrast, -0.2);
+    expect(pages[1].recipe.quarterTurns, 1);
+    expect(pages[2].recipe, const EditRecipe());
+
+    // One undo reverts the whole batch.
+    controller().undo();
+    expect(state().pages[0].recipe, const EditRecipe());
+    expect(state().pages[1].recipe, const EditRecipe(quarterTurns: 1));
+  });
+
   test('clear deletes originals', () async {
     await controller().scan(ScanSource.camera);
     final paths = state().pages.map((p) => p.originalPath).toList();
