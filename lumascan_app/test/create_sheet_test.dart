@@ -5,6 +5,7 @@ import 'package:lumascan/domain/scanner_service.dart';
 import 'package:lumascan/domain/ui_prefs.dart';
 import 'package:lumascan/features/capture/scan_tips.dart';
 
+import 'support/fake_photos.dart';
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
 
@@ -40,13 +41,13 @@ void main() {
   });
 
   testWidgets('Import photos from the sheet opens the photo picker', (tester) async {
-    final scanner = _Scanner();
-    await pumpApp(tester, overrides: [scannerServiceProvider.overrideWithValue(scanner)]);
+    final picker = FakePhotoPicker();
+    await pumpApp(tester, overrides: [photoPickerProvider.overrideWithValue(picker)]);
     await tester.tap(find.byTooltip('Create'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Import photos'));
     await tester.pumpAndSettle();
-    expect(scanner.sources, [ScanSource.gallery]);
+    expect(picker.picks, 1);
     expect(find.text('Scan document'), findsNothing);
   });
 
@@ -86,7 +87,12 @@ void main() {
 
   testWidgets('blocked camera explains why and offers photo import instead', (tester) async {
     final scanner = _Scanner(blocked: true);
-    await pumpApp(tester, prefs: tipsSeen(), overrides: [scannerServiceProvider.overrideWithValue(scanner)]);
+    final picker = FakePhotoPicker();
+    await pumpApp(
+      tester,
+      prefs: tipsSeen(),
+      overrides: [scannerServiceProvider.overrideWithValue(scanner), photoPickerProvider.overrideWithValue(picker)],
+    );
     await tester.tap(find.bySemanticsLabel('Scan'));
     await tester.pumpAndSettle();
     expect(find.text('Camera access needed'), findsOneWidget);
@@ -95,7 +101,8 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Import photos'));
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsNothing);
-    expect(scanner.sources, [ScanSource.camera, ScanSource.gallery]);
+    expect(scanner.sources, [ScanSource.camera]);
+    expect(picker.picks, 1);
   });
 
   testWidgets('Create sheet, tips and camera guide fit at 200% text', (tester) async {

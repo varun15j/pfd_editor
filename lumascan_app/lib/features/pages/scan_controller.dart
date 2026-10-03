@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../data/library_store.dart';
 import '../../domain/models.dart';
+import '../../domain/photo_import.dart';
 import '../../domain/scanner_service.dart';
 
 @immutable
@@ -127,6 +128,41 @@ class ScanController extends Notifier<ScanState> {
       return ScanFailed(e.message);
     } catch (e) {
       return ScanFailed('Could not save the scanned pages ($e)');
+    } finally {
+      if (ref.mounted) state = state.copyWith(busy: false);
+    }
+  }
+
+  /// Adds picked photos to the end of the draft in the given order. Photos
+  /// that can't be read are skipped and named in the result; the rest are
+  /// still added. With [autoCrop], each page starts cropped to the page found
+  /// in it, which the user can still adjust.
+  Future<PhotoImportResult> importPhotos(List<PickedPhoto> photos, {required bool autoCrop}) async {
+    if (state.busy || photos.isEmpty) return const PhotoImportResult(added: 0);
+    state = state.copyWith(busy: true);
+    final analyzer = ref.read(photoAnalyzerProvider);
+    final store = ref.read(pageStoreProvider);
+    final added = <ScanPage>[];
+    final unreadable = <String>[];
+    try {
+      for (final photo in photos) {
+        try {
+          final quad = await analyzer.analyze(photo.path);
+          final id = store.newId();
+          final original = await store.importOriginal(photo.path, id);
+          added.add(
+            ScanPage(
+              id: id,
+              originalPath: original,
+              recipe: autoCrop && quad != null ? EditRecipe(crop: quad) : const EditRecipe(),
+            ),
+          );
+        } catch (_) {
+          unreadable.add(photo.name);
+        }
+      }
+      if (added.isNotEmpty && ref.mounted) _commit([...state.pages, ...added]);
+      return PhotoImportResult(added: added.length, unreadable: unreadable);
     } finally {
       if (ref.mounted) state = state.copyWith(busy: false);
     }
