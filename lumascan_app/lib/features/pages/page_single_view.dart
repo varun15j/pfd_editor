@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../domain/models.dart';
 import '../../imaging/render_service.dart';
+import 'adding_progress.dart';
 import 'page_actions.dart';
 import 'page_image.dart';
 import 'scan_controller.dart';
@@ -75,6 +76,7 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
     final page = pages[index];
     final colors = LumaColors.of(context);
     final busy = ref.watch(scanControllerProvider.select((s) => s.busy));
+    final adding = ref.watch(addProgressProvider);
 
     return Column(
       children: [
@@ -131,14 +133,20 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             itemExtent: _stripItemExtent,
-            itemCount: pages.length,
-            itemBuilder: (context, i) => _StripThumb(
-              key: ValueKey(pages[i].id),
-              page: pages[i],
-              number: i + 1,
-              selected: i == index,
-              onTap: () => _goTo(i),
-            ),
+            itemCount: pages.length + (adding?.total ?? 0),
+            itemBuilder: (context, i) => i < pages.length
+                ? _StripThumb(
+                    key: ValueKey(pages[i].id),
+                    page: pages[i],
+                    number: i + 1,
+                    selected: i == index,
+                    onTap: () => _goTo(i),
+                  )
+                : Padding(
+                    key: ValueKey('adding-$i'),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: PagePlaceholder(number: i + 1, state: adding!.stateOf(i - pages.length)),
+                  ),
           ),
         ),
         // One toolbar for the page's actions; it scrolls when large text

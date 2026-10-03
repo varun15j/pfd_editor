@@ -10,11 +10,14 @@ import 'scan_controller.dart';
 /// outcome: a snackbar for added pages and failures, a dialog when the camera
 /// is blocked. Returns true when pages were added. Shared by Home, the Scan
 /// button and the draft screen so they all react the same way.
-Future<bool> runScan(BuildContext context, WidgetRef ref, ScanSource source) async {
+///
+/// [onAdding] is called once the pages being added are known, so a caller
+/// outside the draft can open it and show them arriving.
+Future<bool> runScan(BuildContext context, WidgetRef ref, ScanSource source, {VoidCallback? onAdding}) async {
   // Photos go through LumaScan's own import, which keeps the chosen order and
   // can auto-crop (C2).
-  if (source == ScanSource.gallery) return importPhotosFlow(context, ref);
-  final outcome = await ref.read(scanControllerProvider.notifier).scan(source);
+  if (source == ScanSource.gallery) return importPhotosFlow(context, ref, onAdding: onAdding);
+  final outcome = await ref.read(scanControllerProvider.notifier).scan(source, onAdding: onAdding);
   if (!context.mounted) return false;
   final messenger = ScaffoldMessenger.of(context);
   switch (outcome) {
@@ -30,8 +33,8 @@ Future<bool> runScan(BuildContext context, WidgetRef ref, ScanSource source) asy
       final choice = await showCameraPermissionGuide(context, permanently: permanently);
       if (!context.mounted) return false;
       return switch (choice) {
-        CameraGuideChoice.retry => runScan(context, ref, source),
-        CameraGuideChoice.importPhotos => runScan(context, ref, ScanSource.gallery),
+        CameraGuideChoice.retry => runScan(context, ref, source, onAdding: onAdding),
+        CameraGuideChoice.importPhotos => runScan(context, ref, ScanSource.gallery, onAdding: onAdding),
         CameraGuideChoice.settings => openAppSettings().then((_) => false),
         null => false,
       };
