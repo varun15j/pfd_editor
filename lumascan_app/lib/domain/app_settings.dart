@@ -37,6 +37,8 @@ class AppSettings {
     this.autoCropOnImport = true,
     this.keepOriginals = true,
     this.fileNamePattern = FileNamePattern.dateTime,
+    this.onboardingSeen = false,
+    this.analytics,
   });
 
   /// Looks only. Does not touch any file.
@@ -59,19 +61,34 @@ class AppSettings {
   /// Name offered for the next PDF. Saved files keep their names.
   final FileNamePattern fileNamePattern;
 
+  /// True once the intro has been shown (finished or skipped). Replaying it
+  /// from Settings does not change this.
+  final bool onboardingSeen;
+
+  /// Whether the user agreed to share anonymous usage data. Null until they
+  /// answer; null and false both mean nothing is shared. Scanning never
+  /// depends on the answer.
+  final bool? analytics;
+
   AppSettings copyWith({
     ThemeMode? themeMode,
     DocumentFilter? defaultFilter,
     bool? autoCropOnImport,
     bool? keepOriginals,
     FileNamePattern? fileNamePattern,
+    bool? onboardingSeen,
+    Object? analytics = _keep,
   }) => AppSettings(
     themeMode: themeMode ?? this.themeMode,
     defaultFilter: defaultFilter ?? this.defaultFilter,
     autoCropOnImport: autoCropOnImport ?? this.autoCropOnImport,
     keepOriginals: keepOriginals ?? this.keepOriginals,
     fileNamePattern: fileNamePattern ?? this.fileNamePattern,
+    onboardingSeen: onboardingSeen ?? this.onboardingSeen,
+    analytics: identical(analytics, _keep) ? this.analytics : analytics as bool?,
   );
+
+  static const Object _keep = Object();
 
   Map<String, Object?> toJson() => {
     'themeMode': themeMode.name,
@@ -79,6 +96,8 @@ class AppSettings {
     'autoCropOnImport': autoCropOnImport,
     'keepOriginals': keepOriginals,
     'fileNamePattern': fileNamePattern.name,
+    'onboardingSeen': onboardingSeen,
+    if (analytics != null) 'analytics': analytics,
   };
 
   /// Unknown or missing values fall back to the defaults, so a settings file
@@ -89,6 +108,8 @@ class AppSettings {
     autoCropOnImport: json['autoCropOnImport'] as bool? ?? true,
     keepOriginals: json['keepOriginals'] as bool? ?? true,
     fileNamePattern: FileNamePattern.values.asNameMap()[json['fileNamePattern']] ?? FileNamePattern.dateTime,
+    onboardingSeen: json['onboardingSeen'] as bool? ?? false,
+    analytics: json['analytics'] as bool?,
   );
 
   @override
@@ -98,8 +119,18 @@ class AppSettings {
       other.defaultFilter == defaultFilter &&
       other.autoCropOnImport == autoCropOnImport &&
       other.keepOriginals == keepOriginals &&
-      other.fileNamePattern == fileNamePattern;
+      other.fileNamePattern == fileNamePattern &&
+      other.onboardingSeen == onboardingSeen &&
+      other.analytics == analytics;
 
   @override
-  int get hashCode => Object.hash(themeMode, defaultFilter, autoCropOnImport, keepOriginals, fileNamePattern);
+  int get hashCode => Object.hash(
+    themeMode,
+    defaultFilter,
+    autoCropOnImport,
+    keepOriginals,
+    fileNamePattern,
+    onboardingSeen,
+    analytics,
+  );
 }
