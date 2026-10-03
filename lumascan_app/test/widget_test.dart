@@ -62,7 +62,7 @@ void main() {
 
       await tester.tap(find.bySemanticsLabel('Tools'));
       await tester.pumpAndSettle();
-      expect(find.text('Edit and sign a PDF'), findsOneWidget);
+      expect(find.text('Merge PDFs'), findsOneWidget);
 
       await tester.tap(find.bySemanticsLabel('Settings'));
       await tester.pumpAndSettle();

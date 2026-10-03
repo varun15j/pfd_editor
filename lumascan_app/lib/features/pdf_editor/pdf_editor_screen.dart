@@ -17,25 +17,40 @@ import 'signature_pad_screen.dart';
 /// Builds the image of one source page, sized by its parent.
 typedef PageImageBuilder = Widget Function(EditorPage page, {bool thumbnail});
 
+/// What the editor does as soon as it opens, for the Tools shortcuts.
+enum PdfEditorEntry {
+  /// Just the editor, in View mode.
+  edit,
+
+  /// Opens the signature pad on the first page.
+  sign,
+
+  /// Opens the page organizer.
+  organize,
+}
+
 /// PDF editor: one page at a time with pinch zoom in View mode, pen,
 /// highlighter, text, eraser and signature tools, page organizer and save.
 class PdfEditorScreen extends ConsumerStatefulWidget {
-  const PdfEditorScreen({super.key, required this.pageImage, this.onClosed});
+  const PdfEditorScreen({super.key, required this.pageImage, this.onClosed, this.entry = PdfEditorEntry.edit});
 
   /// Editor for a document opened with pdfrx. The document is disposed when
   /// the screen closes.
-  factory PdfEditorScreen.forDocument(PdfDocument document) => PdfEditorScreen(
-    pageImage: (page, {thumbnail = false}) => PdfPageView(
-      document: document,
-      pageNumber: page.sourcePage,
-      maximumDpi: thumbnail ? 72 : 300,
-      decoration: const BoxDecoration(color: Colors.white),
-    ),
-    onClosed: document.dispose,
-  );
+  factory PdfEditorScreen.forDocument(PdfDocument document, {PdfEditorEntry entry = PdfEditorEntry.edit}) =>
+      PdfEditorScreen(
+        entry: entry,
+        pageImage: (page, {thumbnail = false}) => PdfPageView(
+          document: document,
+          pageNumber: page.sourcePage,
+          maximumDpi: thumbnail ? 72 : 300,
+          decoration: const BoxDecoration(color: Colors.white),
+        ),
+        onClosed: document.dispose,
+      );
 
   final PageImageBuilder pageImage;
   final VoidCallback? onClosed;
+  final PdfEditorEntry entry;
 
   @override
   ConsumerState<PdfEditorScreen> createState() => _PdfEditorScreenState();
@@ -47,6 +62,25 @@ class _PdfEditorScreenState extends ConsumerState<PdfEditorScreen> {
   EditorTool _tool = EditorTool.view;
   MarkupStyle _style = const MarkupStyle();
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.entry == PdfEditorEntry.edit) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final pages = ref.read(pdfEditControllerProvider).pages;
+      if (pages.isEmpty) return;
+      switch (widget.entry) {
+        case PdfEditorEntry.sign:
+          _addSignature(pages.first);
+        case PdfEditorEntry.organize:
+          _organize();
+        case PdfEditorEntry.edit:
+          break;
+      }
+    });
+  }
 
   @override
   void dispose() {
