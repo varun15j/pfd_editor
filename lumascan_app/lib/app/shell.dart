@@ -73,12 +73,24 @@ class _AppShellState extends ConsumerState<AppShell> {
 Future<void> scanThenReview(BuildContext context, WidgetRef ref, ScanSource source) async {
   if (source == ScanSource.camera && !await showScanTipsOnce(context, ref)) return;
   if (!context.mounted) return;
-  final added = await runScan(context, ref, source);
-  if (added && context.mounted) openDraft(context);
+  // Open the draft as soon as the pages are known, so the wait for a long
+  // import is spent looking at the pages arriving.
+  final navigator = Navigator.of(context);
+  Route<void>? draft;
+  final added = await runScan(context, ref, source, onAdding: () => draft = openDraft(context));
+  if (draft == null) {
+    if (added && context.mounted) openDraft(context);
+  } else if (!added && draft!.isActive) {
+    // Nothing could be added (every photo unreadable): do not leave an empty draft open.
+    navigator.removeRoute(draft!);
+  }
 }
 
-void openDraft(BuildContext context) =>
-    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PagesScreen()));
+Route<void> openDraft(BuildContext context) {
+  final route = MaterialPageRoute<void>(builder: (_) => const PagesScreen());
+  Navigator.of(context).push(route);
+  return route;
+}
 
 class _BottomBar extends StatelessWidget {
   const _BottomBar({required this.selected, required this.onSelect});

@@ -9,11 +9,30 @@ import '../../domain/photo_import.dart';
 import '../../domain/scanner_service.dart';
 import '../../pdf_edit/annotations.dart';
 
+/// Pages being added to the draft: [done] of [total] are ready. The screen
+/// shows a placeholder for each page still to come.
+@immutable
+class AddProgress {
+  const AddProgress({required this.total, this.done = 0});
+
+  final int total;
+  final int done;
+
+  AddProgress advanced() => AddProgress(total: total, done: done + 1);
+
+  @override
+  bool operator ==(Object other) => other is AddProgress && other.total == total && other.done == done;
+
+  @override
+  int get hashCode => Object.hash(total, done);
+}
+
 @immutable
 class ScanState {
   const ScanState({
     this.pages = const [],
     this.busy = false,
+    this.adding,
     this.undoStack = const [],
     this.redoStack = const [],
     this.unsaved = false,
@@ -24,6 +43,10 @@ class ScanState {
   /// True while the scanner is open or pages are being imported. Repeat
   /// taps on the scan button are ignored while busy (LLD section 6).
   final bool busy;
+
+  /// Set while the pages of one scan or import are being saved, so the screen
+  /// can show what is coming. Null the rest of the time.
+  final AddProgress? adding;
   final List<List<ScanPage>> undoStack;
   final List<List<ScanPage>> redoStack;
 
@@ -43,17 +66,21 @@ class ScanState {
   ScanState copyWith({
     List<ScanPage>? pages,
     bool? busy,
+    Object? adding = _keep,
     List<List<ScanPage>>? undoStack,
     List<List<ScanPage>>? redoStack,
     bool? unsaved,
   }) => ScanState(
     pages: pages ?? this.pages,
     busy: busy ?? this.busy,
+    adding: identical(adding, _keep) ? this.adding : adding as AddProgress?,
     undoStack: undoStack ?? this.undoStack,
     redoStack: redoStack ?? this.redoStack,
     unsaved: unsaved ?? this.unsaved,
   );
 }
+
+const Object _keep = Object();
 
 sealed class ScanOutcome {
   const ScanOutcome();
@@ -129,8 +156,21 @@ class ScanController extends Notifier<ScanState> {
   /// What a newly captured page starts with: the filter chosen in Settings.
   EditRecipe get _newPageRecipe => EditRecipe(filter: ref.read(appSettingsProvider).defaultFilter);
 
-  /// Opens the scanner and appends the captured pages to the draft.
-  Future<ScanOutcome> scan(ScanSource source) async {
+  /// Shows [total] pages as on their way, then calls [onAdding] so the screen
+  /// can open the draft while they are saved.
+  void _beginAdding(int total, VoidCallback? onAdding) {
+    state = state.copyWith(adding: AddProgress(total: total));
+    onAdding?.call();
+  }
+
+  void _pageAdded() {
+    final progress = state.adding;
+    if (progress != null && ref.mounted) state = state.copyWith(adding: progress.advanced());
+  }
+
+  /// Opens the scanner and appends the captured pages to the draft. [onAdding]
+  /// is called once the captured pages are known and are being saved.
+  Future<ScanOutcome> scan(ScanSource source, {VoidCallback? onAdding}) async {
     if (state.busy) return const ScanCancelled();
     state = state.copyWith(busy: true);
     final scanner = ref.read(scannerServiceProvider);
@@ -138,10 +178,13 @@ class ScanController extends Notifier<ScanState> {
     try {
       final paths = await scanner.scan(source: source);
       if (paths.isEmpty) return const ScanCancelled();
+      if (!ref.mounted) return const ScanCancelled();
+      _beginAdding(paths.length, onAdding);
       final added = <ScanPage>[];
       for (final path in paths) {
         final id = store.newId();
         added.add(ScanPage(id: id, originalPath: await store.importOriginal(path, id), recipe: _newPageRecipe));
+        _pageAdded();
       }
       await scanner.cleanUp();
       _commit([...state.pages, ...added]);
@@ -153,7 +196,7 @@ class ScanController extends Notifier<ScanState> {
     } catch (e) {
       return ScanFailed('Could not save the scanned pages ($e)');
     } finally {
-      if (ref.mounted) state = state.copyWith(busy: false);
+      if (ref.mounted) state = state.copyWith(busy: false, adding: null);
     }
   }
 
@@ -161,9 +204,14 @@ class ScanController extends Notifier<ScanState> {
   /// that can't be read are skipped and named in the result; the rest are
   /// still added. With [autoCrop], each page starts cropped to the page found
   /// in it, which the user can still adjust.
-  Future<PhotoImportResult> importPhotos(List<PickedPhoto> photos, {required bool autoCrop}) async {
+  Future<PhotoImportResult> importPhotos(
+    List<PickedPhoto> photos, {
+    required bool autoCrop,
+    VoidCallback? onAdding,
+  }) async {
     if (state.busy || photos.isEmpty) return const PhotoImportResult(added: 0);
     state = state.copyWith(busy: true);
+    _beginAdding(photos.length, onAdding);
     final analyzer = ref.read(photoAnalyzerProvider);
     final store = ref.read(pageStoreProvider);
     final added = <ScanPage>[];
@@ -184,11 +232,12 @@ class ScanController extends Notifier<ScanState> {
         } catch (_) {
           unreadable.add(photo.name);
         }
+        _pageAdded();
       }
       if (added.isNotEmpty && ref.mounted) _commit([...state.pages, ...added]);
       return PhotoImportResult(added: added.length, unreadable: unreadable);
     } finally {
-      if (ref.mounted) state = state.copyWith(busy: false);
+      if (ref.mounted) state = state.copyWith(busy: false, adding: null);
     }
   }
 

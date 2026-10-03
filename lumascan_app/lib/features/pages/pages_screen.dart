@@ -9,6 +9,7 @@ import '../crop/crop_screen.dart';
 import '../export/export_sheet.dart';
 import '../filters/filter_screen.dart';
 import '../pdf_editor/open_pdf.dart';
+import 'adding_progress.dart';
 import 'page_actions.dart';
 import 'page_gallery.dart';
 import 'page_image.dart';
@@ -35,6 +36,10 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
     final state = ref.watch(scanControllerProvider);
     final controller = ref.read(scanControllerProvider.notifier);
     final pages = state.pages;
+    final adding = state.adding;
+    // Pages on their way count as content, so a new document shows them
+    // arriving instead of the empty state.
+    final empty = pages.isEmpty && adding == null;
 
     return PopScope(
       canPop: !state.unsaved || pages.isEmpty,
@@ -43,7 +48,11 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(pages.isEmpty ? 'LumaScan' : '${pages.length} page${pages.length == 1 ? '' : 's'}'),
+          title: Text(
+            pages.isEmpty
+                ? (adding == null ? 'LumaScan' : 'Adding pages')
+                : '${pages.length} page${pages.length == 1 ? '' : 's'}',
+          ),
           actions: [
             if (pages.isNotEmpty)
               PopupMenuButton<PagesLayout>(
@@ -76,19 +85,37 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
               ),
           ],
         ),
-        body: pages.isEmpty
+        body: empty
             ? _EmptyState(busy: state.busy, onScan: (s) => _scan(context, ref, s))
-            : switch (_layout) {
-                PagesLayout.gallery => PageGallery(pages: pages),
-                PagesLayout.page => PageSingleView(pages: pages),
-                PagesLayout.list => ReorderableListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                  itemCount: pages.length,
-                  buildDefaultDragHandles: false,
-                  onReorderItem: controller.move,
-                  itemBuilder: (context, i) => _PageCard(key: ValueKey(pages[i].id), index: i, page: pages[i]),
-                ),
-              },
+            : Column(
+                children: [
+                  if (adding != null) AddingBanner(progress: adding),
+                  Expanded(
+                    // Page view needs a page to show, so a document with none yet
+                    // shows its placeholders in the gallery.
+                    child: switch (pages.isEmpty ? PagesLayout.gallery : _layout) {
+                      PagesLayout.gallery => PageGallery(pages: pages),
+                      PagesLayout.page => PageSingleView(pages: pages),
+                      PagesLayout.list => ReorderableListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                        itemCount: pages.length + (adding == null ? 0 : adding.total),
+                        buildDefaultDragHandles: false,
+                        onReorderItem: (from, to) {
+                          // Placeholders are not pages, so they cannot be moved or moved onto.
+                          if (from < pages.length && to <= pages.length) controller.move(from, to);
+                        },
+                        itemBuilder: (context, i) => i < pages.length
+                            ? _PageCard(key: ValueKey(pages[i].id), index: i, page: pages[i])
+                            : _PlaceholderCard(
+                                key: ValueKey('adding-$i'),
+                                number: i + 1,
+                                state: adding!.stateOf(i - pages.length),
+                              ),
+                      ),
+                    },
+                  ),
+                ],
+              ),
         bottomNavigationBar: pages.isEmpty
             ? null
             : SafeArea(
@@ -259,6 +286,34 @@ class _EmptyState extends StatelessWidget {
       ],
     );
   }
+}
+
+/// A page still being added, in the list layout. It sits after the real
+/// pages and cannot be dragged.
+class _PlaceholderCard extends StatelessWidget {
+  const _PlaceholderCard({super.key, required this.number, required this.state});
+
+  final int number;
+  final PlaceholderState state;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    margin: const EdgeInsets.only(bottom: 10),
+    child: Padding(
+      padding: const EdgeInsets.all(10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 64,
+            height: 84,
+            child: PagePlaceholder(number: number, state: state),
+          ),
+          const SizedBox(width: 12),
+          Text('Page $number', style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    ),
+  );
 }
 
 class _PageCard extends ConsumerWidget {

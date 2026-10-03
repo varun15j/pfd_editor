@@ -11,7 +11,7 @@ import '../pages/scan_controller.dart';
 
 /// Picks photos, lets the user set their order, and adds them to the end of
 /// the draft. Returns true when pages were added.
-Future<bool> importPhotosFlow(BuildContext context, WidgetRef ref) async {
+Future<bool> importPhotosFlow(BuildContext context, WidgetRef ref, {VoidCallback? onAdding}) async {
   final messenger = ScaffoldMessenger.of(context);
   final List<PickedPhoto> picked;
   try {
@@ -29,7 +29,9 @@ Future<bool> importPhotosFlow(BuildContext context, WidgetRef ref) async {
   );
   if (choice == null || !context.mounted) return false;
 
-  final result = await ref.read(scanControllerProvider.notifier).importPhotos(choice.photos, autoCrop: choice.autoCrop);
+  final result = await ref
+      .read(scanControllerProvider.notifier)
+      .importPhotos(choice.photos, autoCrop: choice.autoCrop, onAdding: onAdding);
   if (!context.mounted) return result.added > 0;
   final added = result.added == 0 ? null : 'Added ${result.added} page${result.added == 1 ? '' : 's'}';
   final skipped = result.unreadable.isEmpty
