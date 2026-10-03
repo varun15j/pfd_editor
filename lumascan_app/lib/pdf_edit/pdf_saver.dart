@@ -12,10 +12,14 @@ import 'pdf_flattener.dart';
 
 /// A source page rendered to JPEG.
 class RasterPage {
-  const RasterPage(this.jpeg, this.width, this.height);
+  const RasterPage(this.jpeg, this.width, this.height, {this.widthPt, this.heightPt});
   final Uint8List jpeg;
   final int width;
   final int height;
+
+  /// The page's size in PDF points, when the rasterizer knows it.
+  final double? widthPt;
+  final double? heightPt;
 }
 
 /// Renders pages of the source PDF to images. Behind an interface so the
@@ -80,7 +84,7 @@ class PdfrxRasterizer implements PdfRasterizer {
           quality: jpegQuality,
         ),
       );
-      return RasterPage(jpeg, iw, ih);
+      return RasterPage(jpeg, iw, ih, widthPt: page.width, heightPt: page.height);
     } finally {
       image.dispose();
     }

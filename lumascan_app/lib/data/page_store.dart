@@ -25,6 +25,10 @@ class PageStore {
   Future<Directory> get exportsDir => _dir('exports');
   Future<Directory> get thumbnailsDir => _dir('thumbnails');
 
+  /// Smaller copies made for sending. Throwaway: the saved PDF stays in
+  /// [exportsDir], and these can be deleted at any time.
+  Future<Directory> get shareDir => _dir('share');
+
   /// The private root every stored path is relative to.
   Future<String> get rootPath async => (await _rootDir()).path;
 

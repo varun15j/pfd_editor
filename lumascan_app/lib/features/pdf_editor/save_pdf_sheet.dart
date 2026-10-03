@@ -3,12 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
-import 'package:share_plus/share_plus.dart';
 
 import '../../domain/models.dart';
 import '../../pdf_edit/pdf_edit_controller.dart';
 import '../../pdf_edit/pdf_saver.dart';
 import '../library/library_controller.dart';
+import '../share/send_pdf_sheet.dart';
 
 Future<void> showSavePdfSheet(BuildContext context) => showModalBottomSheet<void>(
   context: context,
@@ -80,14 +80,13 @@ class _SavePdfSheetState extends ConsumerState<SavePdfSheet> {
     }
   }
 
-  Future<void> _share(BuildContext context) async {
-    final box = context.findRenderObject() as RenderBox?;
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(_result!.path, mimeType: 'application/pdf')],
-        // Required on iPad, where the share sheet is a popover.
-        sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
-      ),
+  Future<void> _send() {
+    final file = _result!;
+    return showSendPdfSheet(
+      context,
+      pdfPath: file.path,
+      name: p.basename(file.path),
+      pageCount: ref.read(pdfEditControllerProvider).pages.length,
     );
   }
 
@@ -117,13 +116,7 @@ class _SavePdfSheetState extends ConsumerState<SavePdfSheet> {
                 Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
               ],
               const SizedBox(height: 16),
-              Builder(
-                builder: (buttonContext) => FilledButton.icon(
-                  onPressed: () => _share(buttonContext),
-                  icon: const Icon(Icons.ios_share),
-                  label: const Text('Share or save'),
-                ),
-              ),
+              FilledButton.icon(onPressed: _send, icon: const Icon(Icons.ios_share), label: const Text('Send')),
               const SizedBox(height: 8),
               TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
             ] else ...[

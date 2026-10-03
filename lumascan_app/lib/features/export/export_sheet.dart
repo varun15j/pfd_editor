@@ -3,14 +3,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
-import 'package:share_plus/share_plus.dart';
 
 import '../../app/providers.dart';
 import '../../domain/models.dart';
 import '../../export/pdf_exporter.dart';
 import '../../pdf_edit/pdf_saver.dart';
+import '../../ui/file_size.dart';
 import '../library/library_controller.dart';
 import '../pages/scan_controller.dart';
+import '../share/send_pdf_sheet.dart';
+
+export '../../ui/file_size.dart';
 
 Future<void> showExportSheet(BuildContext context) => showModalBottomSheet<void>(
   context: context,
@@ -20,10 +23,6 @@ Future<void> showExportSheet(BuildContext context) => showModalBottomSheet<void>
   enableDrag: false,
   builder: (_) => const ExportSheet(),
 );
-
-/// "850 KB" or "1.4 MB".
-String formatFileSize(int bytes) =>
-    bytes < 1024 * 1024 ? '${(bytes / 1024).round()} KB' : '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
 
 /// Save (S09): name, page size and quality with estimated sizes, progress,
 /// then share. Success is shown only once the file is on disk.
@@ -104,15 +103,13 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
     }
   }
 
-  Future<void> _share(BuildContext context) async {
+  Future<void> _send() {
     final file = _result!;
-    final box = context.findRenderObject() as RenderBox?;
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(file.path, mimeType: 'application/pdf')],
-        // Required on iPad, where the share sheet is a popover.
-        sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
-      ),
+    return showSendPdfSheet(
+      context,
+      pdfPath: file.path,
+      name: p.basename(file.path),
+      pageCount: ref.read(scanControllerProvider).pages.length,
     );
   }
 
@@ -149,13 +146,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
                   Text(_error!, style: TextStyle(color: scheme.error)),
                 ],
                 const SizedBox(height: 16),
-                Builder(
-                  builder: (buttonContext) => FilledButton.icon(
-                    onPressed: () => _share(buttonContext),
-                    icon: const Icon(Icons.ios_share),
-                    label: const Text('Share or save'),
-                  ),
-                ),
+                FilledButton.icon(onPressed: _send, icon: const Icon(Icons.ios_share), label: const Text('Send')),
                 const SizedBox(height: 8),
                 TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
               ] else ...[

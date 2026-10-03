@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../domain/library.dart';
 import '../pdf_editor/open_pdf.dart';
+import '../share/send_pdf_sheet.dart';
 import 'library_controller.dart';
 
 /// Ids hidden from the UI while their delete can still be undone. Nothing
@@ -55,7 +56,14 @@ Future<void> openDocument(BuildContext context, WidgetRef ref, SavedDocument doc
   await openPdfInEditor(context, ref, path: doc.pdfPath, name: '${doc.name}.pdf');
 }
 
+/// One document opens the send sheet (as is, or a smaller copy). Several are
+/// handed to the system share sheet together.
 Future<void> shareDocuments(BuildContext context, List<SavedDocument> docs) async {
+  if (docs.length == 1) {
+    final doc = docs.single;
+    await showSendPdfSheet(context, pdfPath: doc.pdfPath, name: doc.name, pageCount: doc.pageCount);
+    return;
+  }
   final box = context.findRenderObject() as RenderBox?;
   await SharePlus.instance.share(
     ShareParams(
