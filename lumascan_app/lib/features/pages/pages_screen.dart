@@ -269,7 +269,6 @@ class _PageCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final controller = ref.read(scanControllerProvider.notifier);
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       clipBehavior: Clip.antiAlias,
@@ -301,7 +300,7 @@ class _PageCard extends ConsumerWidget {
                         IconButton(
                           tooltip: 'Rotate',
                           icon: const Icon(Icons.rotate_right),
-                          onPressed: () => controller.rotate(page.id),
+                          onPressed: () => rotatePage(context, ref, page),
                         ),
                         IconButton(
                           tooltip: 'Delete page',

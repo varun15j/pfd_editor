@@ -32,22 +32,7 @@ Future<Uint8List> buildEditedPdf(List<FlattenPage> pages, {String? title}) {
         build: (_) => pw.Stack(
           children: [
             pw.Positioned.fill(child: pw.Image(pw.MemoryImage(page.jpeg), fit: pw.BoxFit.fill)),
-            pw.Positioned.fill(
-              child: pw.CustomPaint(
-                size: PdfPoint(w, h),
-                painter: (canvas, size) => _paintMarks(canvas, size, page.annotations),
-              ),
-            ),
-            for (final a in page.annotations)
-              if (a is TextAnnotation)
-                pw.Positioned(
-                  left: a.origin.x * w,
-                  top: a.origin.y * h,
-                  child: pw.Text(
-                    a.text,
-                    style: pw.TextStyle(fontSize: a.fontSize * w, color: _pdfColor(a.color), lineSpacing: 0),
-                  ),
-                ),
+            ...markWidgets(page.annotations, w, h),
           ],
         ),
       ),
@@ -55,6 +40,25 @@ Future<Uint8List> buildEditedPdf(List<FlattenPage> pages, {String? title}) {
   }
   return doc.save();
 }
+
+/// The annotations as PDF widgets for a box [w] by [h] points: vector strokes
+/// and signatures in one layer, and text as real PDF text. Place them in a
+/// stack over the page image.
+List<pw.Widget> markWidgets(List<Annotation> annotations, double w, double h) => [
+  pw.Positioned.fill(
+    child: pw.CustomPaint(size: PdfPoint(w, h), painter: (canvas, size) => _paintMarks(canvas, size, annotations)),
+  ),
+  for (final a in annotations)
+    if (a is TextAnnotation)
+      pw.Positioned(
+        left: a.origin.x * w,
+        top: a.origin.y * h,
+        child: pw.Text(
+          a.text,
+          style: pw.TextStyle(fontSize: a.fontSize * w, color: _pdfColor(a.color), lineSpacing: 0),
+        ),
+      ),
+];
 
 PdfColor _pdfColor(int argb) => PdfColor.fromInt(argb | 0xFF000000);
 

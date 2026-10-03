@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../domain/models.dart';
 import '../../imaging/page_renderer.dart';
+import '../pages/marks_notice.dart';
 import '../pages/scan_controller.dart';
 
 const _cornerNames = ['Top left', 'Top right', 'Bottom right', 'Bottom left'];
@@ -92,7 +93,10 @@ class _CropScreenState extends ConsumerState<CropScreen> {
     final controller = ref.read(scanControllerProvider.notifier);
     final page = ref.read(scanControllerProvider).pageById(widget.pageId);
     if (page != null && page.recipe.crop != _quad) {
-      controller.updateRecipe(page.id, page.recipe.copyWith(crop: _quad));
+      final next = page.recipe.copyWith(crop: _quad);
+      final dropsMarks = controller.dropsMarks(page.id, next);
+      controller.updateRecipe(page.id, next);
+      if (dropsMarks) showMarksRemovedNotice(context, controller);
     }
     Navigator.of(context).pop();
   }

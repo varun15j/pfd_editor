@@ -46,13 +46,17 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
       navigator.pop();
       return;
     }
+    final dropsMarks = controller.dropsMarks(page.id, draft);
     controller.applyEnhancement(page.id, draft, alsoPageIds: others);
     final count = targets.length;
     messenger
       ..clearSnackBars()
       ..showSnackBar(
         SnackBar(
-          content: Text(count == 1 ? 'Changes applied to this page' : 'Changes applied to $count pages'),
+          content: Text(
+            '${count == 1 ? 'Changes applied to this page' : 'Changes applied to $count pages'}'
+            '${dropsMarks ? '. Markup removed from this page because it was rotated' : ''}',
+          ),
           action: SnackBarAction(label: 'Undo', onPressed: controller.undo),
         ),
       );
@@ -105,7 +109,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 padding: const EdgeInsets.all(16),
-                child: PageImage(page: page, recipe: shown, maxDimension: RenderService.previewSize),
+                child: PageImage(page: page, recipe: shown, maxDimension: RenderService.previewSize, showMarks: false),
               ),
             ),
           ),
@@ -273,7 +277,7 @@ class _FilterChoice extends StatelessWidget {
                       border: Border.all(color: selected ? teal : Colors.transparent, width: 2),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: PageImage(page: page, recipe: recipe, maxDimension: 240),
+                    child: PageImage(page: page, recipe: recipe, maxDimension: 240, showMarks: false),
                   ),
                   if (selected)
                     Positioned(

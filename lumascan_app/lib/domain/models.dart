@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 
+import '../pdf_edit/annotations.dart';
+
 /// Document filter presets. Ids follow docs/document.md so recipes stay
 /// compatible when more presets are added later.
 enum DocumentFilter {
@@ -214,6 +216,7 @@ class ScanPage {
     required this.id,
     required this.originalPath,
     this.recipe = const EditRecipe(),
+    this.annotations = const [],
   });
 
   final String id;
@@ -222,18 +225,33 @@ class ScanPage {
   final String originalPath;
   final EditRecipe recipe;
 
-  ScanPage copyWith({EditRecipe? recipe}) =>
-      ScanPage(id: id, originalPath: originalPath, recipe: recipe ?? this.recipe);
+  /// Pen, highlighter, text and signature marks, positioned on the rendered
+  /// page (after crop and rotation). A crop or rotation change removes them,
+  /// because they would no longer line up.
+  final List<Annotation> annotations;
+
+  ScanPage copyWith({EditRecipe? recipe, List<Annotation>? annotations}) => ScanPage(
+        id: id,
+        originalPath: originalPath,
+        recipe: recipe ?? this.recipe,
+        annotations: annotations ?? this.annotations,
+      );
 
   /// [originalPath] is stored by file name only, because the app's private
   /// folder can move between launches (iOS changes it on every update).
   /// [fromJson] resolves it against the current originals folder.
-  Map<String, Object?> toJson() => {'id': id, 'file': path.basename(originalPath), 'recipe': recipe.toJson()};
+  Map<String, Object?> toJson() => {
+        'id': id,
+        'file': path.basename(originalPath),
+        'recipe': recipe.toJson(),
+        if (annotations.isNotEmpty) 'annotations': [for (final a in annotations) a.toJson()],
+      };
 
   static ScanPage fromJson(Map<String, Object?> json, {required String originalsDir}) => ScanPage(
         id: json['id']! as String,
         originalPath: path.join(originalsDir, json['file']! as String),
         recipe: EditRecipe.fromJson((json['recipe'] as Map?)?.cast<String, Object?>() ?? const {}),
+        annotations: Annotation.listFromJson(json['annotations']),
       );
 }
 
