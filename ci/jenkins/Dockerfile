@@ -1,10 +1,11 @@
-# Jenkins controller with the Docker CLI, so pipelines can run their
+# Jenkins controller with the Docker CLI (on Debian 13 the client lives in
+# docker-cli; docker.io no longer ships it), so pipelines can run their
 # steps inside the Flutter image (see ../../Jenkinsfile).
 FROM jenkins/jenkins:lts-jdk21
 
 USER root
 RUN apt-get update \
- && apt-get install -y --no-install-recommends docker.io \
+ && apt-get install -y --no-install-recommends docker-cli docker-buildx \
  && rm -rf /var/lib/apt/lists/*
 
 USER jenkins
