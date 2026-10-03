@@ -6,6 +6,7 @@ import '../../data/library_store.dart';
 import '../../domain/models.dart';
 import '../../domain/photo_import.dart';
 import '../../domain/scanner_service.dart';
+import '../../pdf_edit/annotations.dart';
 
 @immutable
 class ScanState {
@@ -223,6 +224,7 @@ class ScanController extends Notifier<ScanState> {
       id: ref.read(pageStoreProvider).newId(),
       originalPath: state.pages[i].originalPath,
       recipe: state.pages[i].recipe,
+      annotations: state.pages[i].annotations,
     );
     _commit([...state.pages]..insert(i + 1, copy));
   }
@@ -230,8 +232,31 @@ class ScanController extends Notifier<ScanState> {
   /// Called once the pages are written to a PDF.
   void markSaved() => state = state.copyWith(unsaved: false);
 
+  /// Saves [recipe] for [pageId]. Marks are placed on the rendered page, so a
+  /// new crop or rotation removes them (see [dropsMarks]).
   void updateRecipe(String pageId, EditRecipe recipe) {
-    _commit([for (final p in state.pages) p.id == pageId ? p.copyWith(recipe: recipe) : p]);
+    _commit([for (final p in state.pages) p.id == pageId ? _withRecipe(p, recipe) : p]);
+  }
+
+  static ScanPage _withRecipe(ScanPage page, EditRecipe recipe) =>
+      page.copyWith(recipe: recipe, annotations: _changesGeometry(page.recipe, recipe) ? const [] : page.annotations);
+
+  static bool _changesGeometry(EditRecipe a, EditRecipe b) => a.crop != b.crop || a.quarterTurns != b.quarterTurns;
+
+  /// True when saving [recipe] on [pageId] would remove marks, so the screen
+  /// can say so.
+  bool dropsMarks(String pageId, EditRecipe recipe) {
+    final page = state.pageById(pageId);
+    return page != null && page.annotations.isNotEmpty && _changesGeometry(page.recipe, recipe);
+  }
+
+  /// Replaces the marks on [pageId]. One undo step.
+  void setAnnotations(String pageId, List<Annotation> annotations) {
+    final page = state.pageById(pageId);
+    if (page == null) return;
+    _commit([
+      for (final p in state.pages) p.id == pageId ? p.copyWith(annotations: List.unmodifiable(annotations)) : p,
+    ]);
   }
 
   void rotate(String pageId, {bool clockwise = true}) {
@@ -254,7 +279,7 @@ class ScanController extends Notifier<ScanState> {
     _commit([
       for (final p in state.pages)
         if (p.id == pageId)
-          p.copyWith(recipe: draft)
+          _withRecipe(p, draft)
         else if (others.contains(p.id))
           p.copyWith(
             recipe: p.recipe.copyWith(filter: draft.filter, brightness: draft.brightness, contrast: draft.contrast),

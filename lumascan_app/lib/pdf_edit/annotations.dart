@@ -12,6 +12,30 @@ sealed class Annotation {
   const Annotation(this.id);
 
   final String id;
+
+  Map<String, Object?> toJson();
+
+  static Annotation fromJson(Map<String, Object?> json) => switch (json['type']) {
+    'ink' => InkAnnotation.fromJson(json),
+    'text' => TextAnnotation.fromJson(json),
+    'signature' => SignatureAnnotation.fromJson(json),
+    final other => throw FormatException('Unknown annotation type: $other'),
+  };
+
+  /// Reads a saved list, skipping entries that cannot be read so one bad mark
+  /// never loses the rest of the page.
+  static List<Annotation> listFromJson(Object? json) {
+    if (json is! List) return const [];
+    final out = <Annotation>[];
+    for (final item in json) {
+      try {
+        out.add(fromJson((item as Map).cast<String, Object?>()));
+      } catch (_) {
+        // Skip a damaged mark.
+      }
+    }
+    return out;
+  }
 }
 
 /// A freehand pen or highlighter stroke.
@@ -37,6 +61,24 @@ class InkAnnotation extends Annotation {
 
   InkAnnotation withPoint(NormPoint p) =>
       InkAnnotation(id: id, points: [...points, p.clamp()], color: color, width: width, highlighter: highlighter);
+
+  @override
+  Map<String, Object?> toJson() => {
+    'type': 'ink',
+    'id': id,
+    'points': [for (final p in points) p.toJson()],
+    'color': color,
+    'width': width,
+    if (highlighter) 'highlighter': true,
+  };
+
+  static InkAnnotation fromJson(Map<String, Object?> json) => InkAnnotation(
+    id: json['id']! as String,
+    points: [for (final p in json['points']! as List) NormPoint.fromJson(p)],
+    color: (json['color']! as num).toInt(),
+    width: (json['width']! as num).toDouble(),
+    highlighter: json['highlighter'] == true,
+  );
 }
 
 /// A single-line or multi-line text box anchored at its top-left corner.
@@ -62,6 +104,24 @@ class TextAnnotation extends Annotation {
     text: text ?? this.text,
     color: color ?? this.color,
     fontSize: fontSize ?? this.fontSize,
+  );
+
+  @override
+  Map<String, Object?> toJson() => {
+    'type': 'text',
+    'id': id,
+    'origin': origin.toJson(),
+    'text': text,
+    'color': color,
+    'fontSize': fontSize,
+  };
+
+  static TextAnnotation fromJson(Map<String, Object?> json) => TextAnnotation(
+    id: json['id']! as String,
+    origin: NormPoint.fromJson(json['origin']),
+    text: json['text']! as String,
+    color: (json['color']! as num).toInt(),
+    fontSize: (json['fontSize'] as num?)?.toDouble() ?? 0.035,
   );
 }
 
@@ -93,6 +153,32 @@ class SignatureAnnotation extends Annotation {
 
   /// Pen width as a fraction of the box width, on screen and in the PDF.
   static const strokeFraction = 0.015;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'type': 'signature',
+    'id': id,
+    'strokes': [
+      for (final s in strokes) [for (final p in s) p.toJson()],
+    ],
+    'left': left,
+    'top': top,
+    'width': width,
+    'aspectRatio': aspectRatio,
+    'color': color,
+  };
+
+  static SignatureAnnotation fromJson(Map<String, Object?> json) => SignatureAnnotation(
+    id: json['id']! as String,
+    strokes: [
+      for (final s in json['strokes']! as List) [for (final p in s as List) NormPoint.fromJson(p)],
+    ],
+    left: (json['left']! as num).toDouble(),
+    top: (json['top']! as num).toDouble(),
+    width: (json['width']! as num).toDouble(),
+    aspectRatio: (json['aspectRatio']! as num).toDouble(),
+    color: (json['color']! as num).toInt(),
+  );
 
   /// Box height as a fraction of the page height, for a page whose
   /// width/height ratio is [pageAspect].

@@ -7,6 +7,7 @@ import '../../app/providers.dart';
 import '../../domain/models.dart';
 import '../../imaging/page_renderer.dart';
 import '../../imaging/render_service.dart';
+import '../pdf_editor/annotation_layer.dart';
 
 /// Shows a page rendered with its recipe (or an override), rendering on a
 /// background isolate and keeping the previous image visible meanwhile.
@@ -17,12 +18,18 @@ class PageImage extends ConsumerStatefulWidget {
     this.recipe,
     this.maxDimension = RenderService.thumbnailSize,
     this.fit = BoxFit.contain,
+    this.showMarks = true,
   });
 
   final ScanPage page;
   final EditRecipe? recipe;
   final int maxDimension;
   final BoxFit fit;
+
+  /// Draws the page's pen, text and signature marks over the image. Turn off
+  /// where the image is shown with a different crop or rotation than the
+  /// page's own, because the marks would not line up.
+  final bool showMarks;
 
   @override
   ConsumerState<PageImage> createState() => _PageImageState();
@@ -50,9 +57,7 @@ class _PageImageState extends ConsumerState<PageImage> {
   }
 
   void _start() {
-    _future = ref
-        .read(renderServiceProvider)
-        .render(widget.page, recipe: _recipe, maxDimension: widget.maxDimension)
+    _future = ref.read(renderServiceProvider).render(widget.page, recipe: _recipe, maxDimension: widget.maxDimension)
       ..then((r) => _last = r, onError: (_) {});
   }
 
@@ -71,7 +76,26 @@ class _PageImageState extends ConsumerState<PageImage> {
         return Stack(
           fit: StackFit.expand,
           children: [
-            Image.file(File(image.path), fit: widget.fit, gaplessPlayback: true),
+            if (widget.showMarks && widget.page.annotations.isNotEmpty)
+              // The image and its marks share one box sized like the image,
+              // so the marks stay on the page under any fit.
+              FittedBox(
+                fit: widget.fit,
+                clipBehavior: Clip.hardEdge,
+                child: SizedBox(
+                  width: image.width.toDouble(),
+                  height: image.height.toDouble(),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.file(File(image.path), fit: BoxFit.fill, gaplessPlayback: true),
+                      StaticMarks(widget.page.annotations),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Image.file(File(image.path), fit: widget.fit, gaplessPlayback: true),
             if (snap.connectionState != ConnectionState.done)
               const Align(
                 alignment: Alignment.topRight,

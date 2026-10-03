@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumascan/features/markup/markup_style.dart';
 import 'package:lumascan/features/pdf_editor/pdf_editor_screen.dart';
 import 'package:lumascan/pdf_edit/annotations.dart';
 import 'package:lumascan/pdf_edit/pdf_edit_controller.dart';
@@ -56,6 +57,52 @@ void main() {
     expect(state().dirty, isTrue);
   });
 
+  testWidgets('one colour and thickness picker serves pen, highlighter and text', (tester) async {
+    await pumpEditor(tester);
+    await tester.tap(find.text('Pen'));
+    await tester.pump();
+    final blue = find.byWidgetPredicate(
+      (w) =>
+          w is Container &&
+          w.decoration is BoxDecoration &&
+          (w.decoration! as BoxDecoration).color == MarkupStyle.palette[1],
+    );
+    await tester.tap(blue);
+    await tester.pump();
+    await tester.tap(find.text('Thin'));
+    await tester.pump();
+
+    Future<void> stroke() async {
+      await tester.dragFrom(tester.getCenter(pageImage(1)), const Offset(80, 0));
+      await tester.pump();
+    }
+
+    await stroke();
+    await tester.ensureVisible(find.text('Highlight'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Highlight'));
+    await tester.pumpAndSettle();
+    await stroke();
+    await tester.ensureVisible(find.text('Text'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Text'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(tester.getTopLeft(pageImage(1)) + const Offset(40, 40));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Hi');
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    const thin = MarkupStyle(size: MarkupSize.thin);
+    final marks = state().pages.first.annotations;
+    final pen = marks[0] as InkAnnotation;
+    final marker = marks[1] as InkAnnotation;
+    final label = marks[2] as TextAnnotation;
+    expect((pen.color, pen.width), (MarkupStyle.palette[1].toARGB32(), thin.inkWidth(highlighter: false)));
+    expect((marker.color, marker.width), (MarkupStyle.palette[1].toARGB32(), thin.inkWidth(highlighter: true)));
+    expect((label.color, label.fontSize), (MarkupStyle.palette[1].toARGB32(), thin.fontSize));
+  });
+
   testWidgets('drawing in View mode does nothing', (tester) async {
     await pumpEditor(tester);
     await tester.drag(pageImage(1), const Offset(60, 60));
@@ -98,6 +145,8 @@ void main() {
 
   testWidgets('signature is drawn on the pad and placed on the page', (tester) async {
     await pumpEditor(tester);
+    // The toolbar scrolls, so Sign starts off-screen on a phone.
+    await tester.ensureVisible(find.text('Sign'));
     await tester.tap(find.text('Sign'));
     await tester.pumpAndSettle();
     expect(find.text('Draw your signature'), findsOneWidget);
