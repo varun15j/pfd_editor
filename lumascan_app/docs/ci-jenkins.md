@@ -7,7 +7,7 @@ The `Jenkinsfile` at the repo root checks every pull request before it can be me
 3. `flutter test` (all tests must pass; results are archived as `test-results.json`)
 4. `flutter build apk --debug` (the APK is archived on the build)
 
-It runs inside the `ghcr.io/cirruslabs/flutter:3.47.6` Docker image, so the Jenkins agent only needs Docker.
+It runs inside an agent image built from `ci/agent/Dockerfile` (Android SDK + Flutter 3.47.6), so the Jenkins agent only needs Docker.
 
 ## One-time setup
 
@@ -38,7 +38,7 @@ Docker Desktop running.
 4. Open http://localhost:8080 and sign in. The LumaScan job scans the repo on start and then every
    5 minutes, building each open PR and reporting its status back to GitHub.
 
-The first build pulls the Flutter image (several GB), so it takes a while.
+The first build creates the agent image (Android SDK + Flutter, several GB), so it takes a while.
 
 **Webhook (optional, for instant builds).** GitHub can't reach `localhost`, so expose Jenkins with a
 tunnel, e.g. `ngrok http 8080`. Set `JENKINS_URL` in `.env` to the tunnel URL, restart with

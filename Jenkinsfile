@@ -2,10 +2,10 @@
 // through a Multibranch Pipeline job; see lumascan_app/docs/ci-jenkins.md.
 pipeline {
   agent {
-    docker {
-      // Flutter plus the Android SDK. Keep in step with the Flutter version
-      // the app is developed on.
-      image 'ghcr.io/cirruslabs/flutter:3.47.6'
+    // Android SDK + Flutter 3.47.6, built from ci/agent/Dockerfile and
+    // cached by Docker after the first run.
+    dockerfile {
+      dir 'ci/agent'
       args '-u root'
     }
   }
