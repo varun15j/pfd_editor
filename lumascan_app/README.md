@@ -34,6 +34,10 @@ flutter pub get
 flutter test          # 26 unit and widget tests
 flutter run           # with a phone connected or an emulator running
 ```
+## Version
+
+The version is the `version:` line in `pubspec.yaml` and shows in Settings > About. Each pull request raises it with `dart run tool/bump_version.dart`; see `docs/versioning.md`.
+
 ## if build fails
 ```bash
 cd android
