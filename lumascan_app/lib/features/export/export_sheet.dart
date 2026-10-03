@@ -12,11 +12,11 @@ import '../library/library_controller.dart';
 import '../pages/scan_controller.dart';
 
 Future<void> showExportSheet(BuildContext context) => showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => const ExportSheet(),
-    );
+  context: context,
+  isScrollControlled: true,
+  showDragHandle: true,
+  builder: (_) => const ExportSheet(),
+);
 
 /// Export (S09): page size and quality, progress, then share.
 class ExportSheet extends ConsumerStatefulWidget {
@@ -39,12 +39,15 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
     // Read up front: the export finishes and is filed even if the sheet is
     // closed meanwhile.
     final library = ref.read(libraryProvider.notifier);
+    final draft = ref.read(scanControllerProvider.notifier);
     setState(() {
       _progress = 0;
       _error = null;
     });
     try {
-      final file = await ref.read(pdfExporterProvider).export(
+      final file = await ref
+          .read(pdfExporterProvider)
+          .export(
             pages,
             ExportOptions(pageSize: _size, quality: _quality),
             onProgress: (done, total) {
@@ -52,6 +55,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
             },
           );
       if (mounted) setState(() => _result = file);
+      draft.markSaved();
       // The PDF is already safe on disk; a failed index write only means it
       // is missing from the Library list, so it is reported, not thrown.
       await library.addScan(file, pages);
@@ -72,11 +76,13 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
   Future<void> _share(BuildContext context) async {
     final file = _result!;
     final box = context.findRenderObject() as RenderBox?;
-    await SharePlus.instance.share(ShareParams(
-      files: [XFile(file.path, mimeType: 'application/pdf')],
-      // Required on iPad, where the share sheet is a popover.
-      sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
-    ));
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path, mimeType: 'application/pdf')],
+        // Required on iPad, where the share sheet is a popover.
+        sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
+      ),
+    );
   }
 
   @override
@@ -99,10 +105,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
                 '${p.basename(result.path)} · $pageCount page${pageCount == 1 ? '' : 's'} · '
                 '${(result.lengthSync() / 1024 / 1024).toStringAsFixed(1)} MB',
               ),
-              if (_inLibrary) ...[
-                const SizedBox(height: 4),
-                Text('Saved to your Library', style: textTheme.bodySmall),
-              ],
+              if (_inLibrary) ...[const SizedBox(height: 4), Text('Saved to your Library', style: textTheme.bodySmall)],
               if (_error != null) ...[
                 const SizedBox(height: 8),
                 Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
@@ -125,9 +128,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
               Text('Page size', style: textTheme.titleSmall),
               const SizedBox(height: 8),
               SegmentedButton<PdfPageSize>(
-                segments: [
-                  for (final s in PdfPageSize.values) ButtonSegment(value: s, label: Text(s.label)),
-                ],
+                segments: [for (final s in PdfPageSize.values) ButtonSegment(value: s, label: Text(s.label))],
                 selected: {_size},
                 onSelectionChanged: _progress != null ? null : (v) => setState(() => _size = v.first),
               ),
@@ -135,9 +136,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
               Text('Quality', style: textTheme.titleSmall),
               const SizedBox(height: 8),
               SegmentedButton<ExportQuality>(
-                segments: [
-                  for (final q in ExportQuality.values) ButtonSegment(value: q, label: Text(q.label)),
-                ],
+                segments: [for (final q in ExportQuality.values) ButtonSegment(value: q, label: Text(q.label))],
                 selected: {_quality},
                 onSelectionChanged: _progress != null ? null : (v) => setState(() => _quality = v.first),
               ),
