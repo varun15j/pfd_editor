@@ -1,3 +1,4 @@
+import 'package:flutter/semantics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -95,18 +96,35 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
       body: Column(
         children: [
           Expanded(
-            child: GestureDetector(
-              // Press and hold to compare with the unfiltered page.
-              onLongPressStart: (_) => setState(() => _showOriginal = true),
-              onLongPressEnd: (_) => setState(() => _showOriginal = false),
-              child: Container(
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: LumaColors.of(context).surfaceRaised,
-                  borderRadius: BorderRadius.circular(16),
+            child: Semantics(
+              container: true,
+              excludeSemantics: true,
+              image: true,
+              label: _showOriginal ? 'Page preview, original' : 'Page preview',
+              // A screen reader cannot press and hold, so comparing is a
+              // switch there.
+              customSemanticsActions: {
+                CustomSemanticsAction(label: _showOriginal ? 'Show filtered page' : 'Show original page'): () =>
+                    setState(() => _showOriginal = !_showOriginal),
+              },
+              child: GestureDetector(
+                // Press and hold to compare with the unfiltered page.
+                onLongPressStart: (_) => setState(() => _showOriginal = true),
+                onLongPressEnd: (_) => setState(() => _showOriginal = false),
+                child: Container(
+                  margin: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: LumaColors.of(context).surfaceRaised,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: PageImage(
+                    page: page,
+                    recipe: shown,
+                    maxDimension: RenderService.previewSize,
+                    showMarks: false,
+                  ),
                 ),
-                padding: const EdgeInsets.all(16),
-                child: PageImage(page: page, recipe: shown, maxDimension: RenderService.previewSize, showMarks: false),
               ),
             ),
           ),

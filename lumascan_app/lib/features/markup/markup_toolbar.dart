@@ -78,28 +78,12 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
                       Wrap(
                         alignment: WrapAlignment.center,
                         children: [
-                          for (final c in MarkupStyle.palette)
-                            Semantics(
-                              button: true,
-                              selected: c == style.color,
-                              label: 'Colour',
-                              child: InkResponse(
-                                onTap: () => widget.onStyle(style.copyWith(color: c)),
-                                radius: 22,
-                                child: Container(
-                                  width: 28,
-                                  height: 28,
-                                  margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: c,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: c == style.color ? scheme.primary : scheme.outlineVariant,
-                                      width: c == style.color ? 3 : 1,
-                                    ),
-                                  ),
-                                ),
-                              ),
+                          for (var i = 0; i < MarkupStyle.palette.length; i++)
+                            _Swatch(
+                              color: MarkupStyle.palette[i],
+                              name: MarkupStyle.paletteNames[i],
+                              selected: MarkupStyle.palette[i] == style.color,
+                              onTap: () => widget.onStyle(style.copyWith(color: MarkupStyle.palette[i])),
                             ),
                         ],
                       ),
@@ -111,7 +95,6 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
                             ChoiceChip(
                               label: Text(s.label),
                               selected: s == style.size,
-                              visualDensity: VisualDensity.compact,
                               onSelected: (_) => widget.onStyle(style.copyWith(size: s)),
                             ),
                         ],
@@ -148,6 +131,47 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One colour in the picker. The circle is small, the tap area is not.
+class _Swatch extends StatelessWidget {
+  const _Swatch({required this.color, required this.name, required this.selected, required this.onTap});
+
+  final Color color;
+  final String name;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$name ink',
+      excludeSemantics: true,
+      onTap: onTap,
+      child: InkResponse(
+        onTap: onTap,
+        radius: 24,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Center(
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                border: Border.all(color: selected ? scheme.primary : scheme.outlineVariant, width: selected ? 3 : 1),
+              ),
+            ),
           ),
         ),
       ),

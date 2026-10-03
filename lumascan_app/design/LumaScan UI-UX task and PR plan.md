@@ -52,7 +52,7 @@ Seventeen PRs, each one branch off `design/prototype-polish-hld`. Size: S is abo
 | F1 | Settings | Settings: capture and filter defaults, file naming, keep originals, theme, storage with clear cache (keeps saved files), help, about and legal | US-10.3, US-10.4, US-01.4 (local parts) | `claude/ui-settings` | A1 | M | 2 | Not started |
 | F2 | Settings | Onboarding and consent: 3-page intro with skip and progress, optional analytics choice shown separately and changeable in Settings, shown once | US-01.1, US-01.3 | `claude/ui-onboarding` | F1 | S | 4 | Not started |
 | G1 | Tools | Tools hub and merge: tool grid (sign, reorder, merge); merge with source list, page counts, reordering and locked or broken file warnings | US-08.1, UC-07 | `claude/ui-tools-merge` | A1, A2 | L | 4 | Not started |
-| H1 | Quality | Accessibility and polish sweep: 200% font scale, screen-reader labels, contrast, golden tests for each main screen | Section 6 NFRs | `claude/ui-a11y-sweep` | All above | M | 4 | Not started |
+| H1 | Quality | Accessibility and polish sweep: 200% font scale, screen-reader labels, contrast, golden tests for each main screen | Section 6 NFRs | `claude/ui-a11y-sweep` | All above | M | 4 | PR open |
 
 ### PR waves
 
@@ -178,10 +178,10 @@ Each PR is done when every task below is ticked, its widget tests pass and `flut
 
 ### H1 Accessibility and polish sweep
 
-- [ ] Every main screen tested at 200% font scale with no clipped labels
-- [ ] Screen-reader pass: names, roles and state on every control
-- [ ] Contrast check against WCAG AA in light and dark
-- [ ] Golden tests for Home, Files, Review, Crop, Enhance, Save and Settings
+- [x] Every main screen tested at 200% font scale with no clipped labels
+- [x] Screen-reader pass: names, roles and state on every control
+- [x] Contrast check against WCAG AA in light and dark
+- [x] Golden tests for Home, Files, Review, Crop, Enhance, Save and Settings
 
 ## Not in these PRs, and decisions needed
 
