@@ -3,6 +3,22 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+/// How much space the app's files take, by what they are for.
+class StorageUsage {
+  const StorageUsage({this.savedPdfs = 0, this.pageOriginals = 0, this.cache = 0});
+
+  /// Saved PDFs and the previews shown for them in the Library.
+  final int savedPdfs;
+
+  /// Page images of the document being worked on (the draft).
+  final int pageOriginals;
+
+  /// Rebuildable files: page previews and smaller copies made for sending.
+  final int cache;
+
+  int get total => savedPdfs + pageOriginals + cache;
+}
+
 /// Owns the app's private files: page originals, rendered derivatives and
 /// exported PDFs. Scanner output lives in a plugin cache that can be cleared
 /// at any time, so every page is copied here before it is shown.
@@ -33,6 +49,42 @@ class PageStore {
   Future<String> get rootPath async => (await _rootDir()).path;
 
   String newId() => '${DateTime.now().microsecondsSinceEpoch}_${_counter++}';
+
+  Future<int> _sizeOf(List<String> folders) async {
+    final root = await rootPath;
+    var total = 0;
+    for (final name in folders) {
+      final dir = Directory(p.join(root, name));
+      if (!dir.existsSync()) continue;
+      await for (final e in dir.list(recursive: true, followLinks: false)) {
+        if (e is File) total += await e.length();
+      }
+    }
+    return total;
+  }
+
+  Future<StorageUsage> usage() async => StorageUsage(
+    savedPdfs: await _sizeOf(['exports', 'thumbnails']),
+    pageOriginals: await _sizeOf(['pages']),
+    cache: await _sizeOf(['renders', 'share']),
+  );
+
+  /// Deletes the rebuildable files (page previews and smaller copies made for
+  /// sending) and returns the bytes freed. Saved PDFs, their Library previews
+  /// and the page images of the current draft are not touched.
+  Future<int> clearCache() async {
+    final root = await rootPath;
+    var freed = 0;
+    for (final name in ['renders', 'share']) {
+      final dir = Directory(p.join(root, name));
+      if (!dir.existsSync()) continue;
+      await for (final e in dir.list(recursive: true, followLinks: false)) {
+        if (e is File) freed += await e.length();
+      }
+      await dir.delete(recursive: true);
+    }
+    return freed;
+  }
 
   /// Copies a scanner file into private storage and returns the new path.
   Future<String> importOriginal(String sourcePath, String id) async {

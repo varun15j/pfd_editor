@@ -1,20 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/app_settings_store.dart';
 import '../data/ui_prefs_store.dart';
+import '../domain/app_settings.dart';
+import '../domain/models.dart';
 import '../domain/ui_prefs.dart';
 import 'providers.dart';
 
-/// Light, dark or follow the system. Kept in memory for now; the Settings PR
-/// (F1 in the UI/UX plan) stores it on the device.
-final themeModeProvider = NotifierProvider<ThemeModeController, ThemeMode>(ThemeModeController.new);
+final appSettingsStoreProvider = Provider<AppSettingsStore>((ref) => AppSettingsStore(ref.watch(pageStoreProvider)));
 
-class ThemeModeController extends Notifier<ThemeMode> {
+/// The Settings choices. Starts with the defaults and switches to the saved
+/// choices once they are read.
+final appSettingsProvider = NotifierProvider<AppSettingsController, AppSettings>(AppSettingsController.new);
+
+class AppSettingsController extends Notifier<AppSettings> {
+  Future<void> _io = Future.value();
+  bool _changed = false;
+
+  /// Completes once the saved choices are loaded and every change is written.
+  Future<void> get settled => _io;
+
   @override
-  ThemeMode build() => ThemeMode.system;
+  AppSettings build() {
+    _io = _load().catchError((Object _) {});
+    return const AppSettings();
+  }
 
-  void set(ThemeMode mode) => state = mode;
+  Future<void> _load() async {
+    final saved = await ref.read(appSettingsStoreProvider).load();
+    // A choice made while loading wins over the stored one.
+    if (ref.mounted && !_changed) state = saved;
+  }
+
+  void setThemeMode(ThemeMode mode) => _set(state.copyWith(themeMode: mode));
+
+  void setDefaultFilter(DocumentFilter filter) => _set(state.copyWith(defaultFilter: filter));
+
+  void setAutoCropOnImport(bool value) => _set(state.copyWith(autoCropOnImport: value));
+
+  void setKeepOriginals(bool value) => _set(state.copyWith(keepOriginals: value));
+
+  void setFileNamePattern(FileNamePattern pattern) => _set(state.copyWith(fileNamePattern: pattern));
+
+  void _set(AppSettings settings) {
+    _changed = true;
+    state = settings;
+    final store = ref.read(appSettingsStoreProvider);
+    _io = _io.then((_) => store.save(settings)).catchError((Object _) {});
+  }
 }
+
+/// Light, dark or follow the system.
+final themeModeProvider = Provider<ThemeMode>((ref) => ref.watch(appSettingsProvider.select((s) => s.themeMode)));
 
 final uiPrefsStoreProvider = Provider<UiPrefsStore>((ref) => UiPrefsStore(ref.watch(pageStoreProvider)));
 

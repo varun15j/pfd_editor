@@ -1,6 +1,8 @@
+import 'package:lumascan/data/app_settings_store.dart';
 import 'package:lumascan/data/library_store.dart';
 import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/data/ui_prefs_store.dart';
+import 'package:lumascan/domain/app_settings.dart';
 import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/ui_prefs.dart';
@@ -47,4 +49,16 @@ class MemoryUiPrefsStore extends UiPrefsStore {
 
   @override
   Future<void> save(UiPrefs prefs) async => this.prefs = prefs;
+}
+
+class MemoryAppSettingsStore extends AppSettingsStore {
+  MemoryAppSettingsStore([this.settings = const AppSettings()]) : super(PageStore());
+
+  AppSettings settings;
+
+  @override
+  Future<AppSettings> load() async => settings;
+
+  @override
+  Future<void> save(AppSettings settings) async => this.settings = settings;
 }

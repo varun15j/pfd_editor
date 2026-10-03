@@ -41,10 +41,26 @@ class _PageImageState extends ConsumerState<PageImage> {
 
   EditRecipe get _recipe => widget.recipe ?? widget.page.recipe;
 
+  RenderService? _service;
+
   @override
   void initState() {
     super.initState();
+    final service = ref.read(renderServiceProvider)..addListener(_onCacheCleared);
+    _service = service;
     _start();
+  }
+
+  @override
+  void dispose() {
+    _service?.removeListener(_onCacheCleared);
+    super.dispose();
+  }
+
+  /// The rendered files were deleted: drop the picture and render it again.
+  void _onCacheCleared() {
+    _last = null;
+    setState(_start);
   }
 
   @override
