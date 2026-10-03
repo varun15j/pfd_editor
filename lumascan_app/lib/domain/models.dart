@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 
@@ -78,6 +80,20 @@ class CropQuad {
   CropQuad withPoint(int index, NormPoint p) {
     final pts = [...points];
     pts[index] = p.clamp();
+    return CropQuad(pts[0], pts[1], pts[2], pts[3]);
+  }
+
+  /// Moves the side from corner [edge] to corner [edge] + 1 by ([dx], [dy]),
+  /// both corners together. The move is cut short so neither corner leaves
+  /// the image, which keeps the side's length and direction.
+  CropQuad translateEdge(int edge, double dx, double dy) {
+    final a = edge % 4, b = (edge + 1) % 4;
+    final pa = points[a], pb = points[b];
+    final mx = dx.clamp(-math.min(pa.x, pb.x), 1 - math.max(pa.x, pb.x)).toDouble();
+    final my = dy.clamp(-math.min(pa.y, pb.y), 1 - math.max(pa.y, pb.y)).toDouble();
+    final pts = [...points];
+    pts[a] = NormPoint(pa.x + mx, pa.y + my);
+    pts[b] = NormPoint(pb.x + mx, pb.y + my);
     return CropQuad(pts[0], pts[1], pts[2], pts[3]);
   }
 
