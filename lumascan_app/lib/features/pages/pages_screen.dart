@@ -8,17 +8,28 @@ import '../crop/crop_screen.dart';
 import '../export/export_sheet.dart';
 import '../filters/filter_screen.dart';
 import '../pdf_editor/open_pdf.dart';
+import 'page_gallery.dart';
 import 'page_image.dart';
+import 'page_single_view.dart';
 import 'scan_actions.dart';
 import 'scan_controller.dart';
 
 /// Draft review screen (S08 Pages): every captured page, in order, with
 /// crop, rotate, filter and delete actions, plus add-more and export.
-class PagesScreen extends ConsumerWidget {
+/// Pages show as a list, a gallery grid or one page at a time; a menu in the
+/// app bar switches between them.
+class PagesScreen extends ConsumerStatefulWidget {
   const PagesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PagesScreen> createState() => _PagesScreenState();
+}
+
+class _PagesScreenState extends ConsumerState<PagesScreen> {
+  PagesLayout _layout = PagesLayout.list;
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(scanControllerProvider);
     final controller = ref.read(scanControllerProvider.notifier);
     final pages = state.pages;
@@ -27,6 +38,17 @@ class PagesScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(pages.isEmpty ? 'LumaScan' : '${pages.length} page${pages.length == 1 ? '' : 's'}'),
         actions: [
+          if (pages.isNotEmpty)
+            PopupMenuButton<PagesLayout>(
+              tooltip: 'Change view',
+              icon: Icon(_layout.icon),
+              initialValue: _layout,
+              onSelected: (layout) => setState(() => _layout = layout),
+              itemBuilder: (context) => [
+                for (final l in PagesLayout.values)
+                  CheckedPopupMenuItem(value: l, checked: l == _layout, child: Text(l.label)),
+              ],
+            ),
           if (state.canUndo)
             IconButton(tooltip: 'Undo', icon: const Icon(Icons.undo), onPressed: controller.undo),
           if (pages.isNotEmpty)
@@ -39,17 +61,21 @@ class PagesScreen extends ConsumerWidget {
       ),
       body: pages.isEmpty
           ? _EmptyState(busy: state.busy, onScan: (s) => _scan(context, ref, s))
-          : ReorderableListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-              itemCount: pages.length,
-              buildDefaultDragHandles: false,
-              onReorderItem: controller.move,
-              itemBuilder: (context, i) => _PageCard(
-                key: ValueKey(pages[i].id),
-                index: i,
-                page: pages[i],
-              ),
-            ),
+          : switch (_layout) {
+              PagesLayout.gallery => PageGallery(pages: pages),
+              PagesLayout.page => PageSingleView(pages: pages),
+              PagesLayout.list => ReorderableListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                  itemCount: pages.length,
+                  buildDefaultDragHandles: false,
+                  onReorderItem: controller.move,
+                  itemBuilder: (context, i) => _PageCard(
+                    key: ValueKey(pages[i].id),
+                    index: i,
+                    page: pages[i],
+                  ),
+                ),
+            },
       bottomNavigationBar: pages.isEmpty
           ? null
           : SafeArea(
@@ -96,6 +122,18 @@ class PagesScreen extends ConsumerWidget {
     );
     if (ok == true) await ref.read(scanControllerProvider.notifier).clear();
   }
+}
+
+/// How the Pages screen lays out the draft's pages.
+enum PagesLayout {
+  list('List view', Icons.view_list_outlined),
+  gallery('Gallery view', Icons.grid_view_outlined),
+  page('Page view', Icons.crop_portrait_outlined);
+
+  const PagesLayout(this.label, this.icon);
+
+  final String label;
+  final IconData icon;
 }
 
 class _EmptyState extends StatelessWidget {
