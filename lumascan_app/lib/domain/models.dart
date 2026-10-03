@@ -211,13 +211,23 @@ enum PdfPageSize {
 }
 
 enum ExportQuality {
-  high('High', maxDimension: 2400, jpegQuality: 90),
-  medium('Medium', maxDimension: 1700, jpegQuality: 80),
-  small('Small file', maxDimension: 1200, jpegQuality: 65);
+  high('High', maxDimension: 2400, jpegQuality: 90, bitsPerPixel: 0.9, hint: 'Sharp text, best for printing'),
+  medium('Medium', maxDimension: 1700, jpegQuality: 80, bitsPerPixel: 0.6, hint: 'Good for email and sharing'),
+  small('Small file', maxDimension: 1200, jpegQuality: 65, bitsPerPixel: 0.4, hint: 'Smallest, for reading on screen');
 
-  const ExportQuality(this.label, {required this.maxDimension, required this.jpegQuality});
+  const ExportQuality(
+    this.label, {
+    required this.maxDimension,
+    required this.jpegQuality,
+    required this.bitsPerPixel,
+    required this.hint,
+  });
 
   final String label;
   final int maxDimension;
   final int jpegQuality;
+
+  /// Typical compressed size of a scanned page, used only for size estimates.
+  final double bitsPerPixel;
+  final String hint;
 }
