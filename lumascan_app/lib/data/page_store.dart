@@ -54,6 +54,19 @@ class PageStore {
     return tmp.rename(finalPath);
   }
 
+  /// [fileName], or "name (2).pdf", "name (3).pdf" and so on when that file
+  /// already exists in the exports folder, so a new save never replaces one.
+  Future<String> freeExportName(String fileName) async {
+    final dir = (await exportsDir).path;
+    final stem = p.basenameWithoutExtension(fileName);
+    final ext = p.extension(fileName);
+    var candidate = fileName;
+    for (var n = 2; File(p.join(dir, candidate)).existsSync(); n++) {
+      candidate = '$stem ($n)$ext';
+    }
+    return candidate;
+  }
+
   /// Writes [bytes] to [relativePath] under the root through a temp file and
   /// a rename, so a crash leaves either the old file or the new one.
   Future<File> writeFileAtomically(String relativePath, List<int> bytes) async {

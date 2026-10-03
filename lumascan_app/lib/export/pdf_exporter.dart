@@ -57,6 +57,21 @@ class PdfExporter {
     return _store.writeExportAtomically(name, bytes);
   }
 
+  /// Name offered in the save sheet, e.g. "Scan 2026-10-03 14.30".
+  static String defaultScanName(DateTime t) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return 'Scan ${t.year}-${two(t.month)}-${two(t.day)} ${two(t.hour)}.${two(t.minute)}';
+  }
+
+  /// Rough size of the finished PDF, for the quality options. Assumes A4-shaped
+  /// pages: the long side is capped at the quality's `maxDimension` and a
+  /// scanned document compresses to about [ExportQuality.bitsPerPixel].
+  static int estimateBytes(int pageCount, ExportQuality quality) {
+    final longSide = quality.maxDimension;
+    final pixels = longSide * longSide * 0.707;
+    return (pageCount * pixels * quality.bitsPerPixel / 8).round();
+  }
+
   static String defaultFileName(DateTime t) {
     String two(int v) => v.toString().padLeft(2, '0');
     return 'Scan_${t.year}${two(t.month)}${two(t.day)}_${two(t.hour)}${two(t.minute)}${two(t.second)}.pdf';
