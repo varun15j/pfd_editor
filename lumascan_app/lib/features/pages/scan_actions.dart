@@ -23,32 +23,44 @@ Future<bool> runScan(BuildContext context, WidgetRef ref, ScanSource source) asy
       messenger.showSnackBar(SnackBar(content: Text('Scan failed: $message')));
       return false;
     case ScanPermissionBlocked(:final permanently):
-      final retry = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Camera access needed'),
-          content: Text(
-            permanently
-                ? 'Camera access is turned off for LumaScan. Turn it on in Settings to scan documents. '
-                      'You can still import pages from your photos.'
-                : 'LumaScan needs the camera to scan documents. Pages stay on this device.',
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not now')),
-            if (permanently)
-              FilledButton(
-                onPressed: () {
-                  Navigator.pop(context, false);
-                  openAppSettings();
-                },
-                child: const Text('Open Settings'),
-              )
-            else
-              FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Try again')),
-          ],
-        ),
-      );
-      if (retry == true && context.mounted) return runScan(context, ref, source);
-      return false;
+      final choice = await showCameraPermissionGuide(context, permanently: permanently);
+      if (!context.mounted) return false;
+      return switch (choice) {
+        CameraGuideChoice.retry => runScan(context, ref, source),
+        CameraGuideChoice.importPhotos => runScan(context, ref, ScanSource.gallery),
+        CameraGuideChoice.settings => openAppSettings().then((_) => false),
+        null => false,
+      };
   }
 }
+
+enum CameraGuideChoice { retry, settings, importPhotos }
+
+/// Explains why the camera is needed, how to allow it, and offers photo
+/// import so the user is never stuck (C1).
+Future<CameraGuideChoice?> showCameraPermissionGuide(BuildContext context, {required bool permanently}) =>
+    showDialog<CameraGuideChoice>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.no_photography_outlined),
+        title: const Text('Camera access needed'),
+        content: Text(
+          permanently
+              ? 'LumaScan uses the camera only to scan pages, and the pages stay on this device. '
+                    'Camera access is turned off, so turn it on in Settings, or import photos of the pages instead.'
+              : 'LumaScan uses the camera only to scan pages, and the pages stay on this device. '
+                    'Allow camera access when asked, or import photos of the pages instead.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Not now')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, CameraGuideChoice.importPhotos),
+            child: const Text('Import photos'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, permanently ? CameraGuideChoice.settings : CameraGuideChoice.retry),
+            child: Text(permanently ? 'Open Settings' : 'Try again'),
+          ),
+        ],
+      ),
+    );

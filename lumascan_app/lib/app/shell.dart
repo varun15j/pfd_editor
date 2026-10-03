@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/scanner_service.dart';
+import '../features/capture/create_sheet.dart';
+import '../features/capture/scan_tips.dart';
 import '../features/home/home_screen.dart';
 import '../features/library/library_screen.dart';
 import '../features/pages/pages_screen.dart';
@@ -24,7 +26,7 @@ enum AppTab {
   final IconData selectedIcon;
 }
 
-/// Main navigation: Home, Library, Tools and Settings, with Scan as a raised
+/// Main navigation: Home, Library, Tools and Settings, with Create as a raised
 /// centre button rather than a tab (LumaScan_features.md, "V2 information
 /// architecture": capture is a task, not a destination).
 class AppShell extends ConsumerStatefulWidget {
@@ -56,9 +58,9 @@ class _AppShellState extends ConsumerState<AppShell> {
       floatingActionButton: SizedBox.square(
         dimension: 64,
         child: FloatingActionButton(
-          tooltip: 'Scan a document',
-          onPressed: busy ? null : () => scanThenReview(context, ref, ScanSource.camera),
-          child: const Icon(Icons.document_scanner_outlined, size: 28),
+          tooltip: 'Create',
+          onPressed: busy ? null : () => showCreateSheet(context, ref),
+          child: const Icon(Icons.add, size: 32),
         ),
       ),
       bottomNavigationBar: _BottomBar(selected: _tab, onSelect: _select),
@@ -67,8 +69,10 @@ class _AppShellState extends ConsumerState<AppShell> {
 }
 
 /// Scans or imports into the draft, then opens the draft so the new pages can
-/// be checked straight away.
+/// be checked straight away. The first camera scan shows the scan tips.
 Future<void> scanThenReview(BuildContext context, WidgetRef ref, ScanSource source) async {
+  if (source == ScanSource.camera && !await showScanTipsOnce(context, ref)) return;
+  if (!context.mounted) return;
   final added = await runScan(context, ref, source);
   if (added && context.mounted) openDraft(context);
 }
