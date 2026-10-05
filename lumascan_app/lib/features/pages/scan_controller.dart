@@ -107,6 +107,20 @@ class ScanFailed extends ScanOutcome {
 
 final scanControllerProvider = NotifierProvider<ScanController, ScanState>(ScanController.new);
 
+/// Whether the draft on disk matches the pages on screen. [saved] is only
+/// reported once the draft file was written, so the screen never claims a
+/// save that did not happen.
+enum DraftSaveStatus { saved, saving, failed }
+
+final draftSaveStatusProvider = NotifierProvider<DraftSaveStatusNotifier, DraftSaveStatus>(DraftSaveStatusNotifier.new);
+
+class DraftSaveStatusNotifier extends Notifier<DraftSaveStatus> {
+  @override
+  DraftSaveStatus build() => DraftSaveStatus.saved;
+
+  void set(DraftSaveStatus status) => state = status;
+}
+
 class ScanController extends Notifier<ScanState> {
   static const _undoLimit = 30;
 
@@ -135,21 +149,37 @@ class ScanController extends Notifier<ScanState> {
     state = state.copyWith(pages: List.unmodifiable([...saved, ...state.pages]), unsaved: true);
   }
 
+  /// Saves queued and not yet written, for [draftSaveStatusProvider].
+  int _pendingSaves = 0;
+
   /// Queues a save of the draft. The pages are read when the save runs, so
   /// it always writes the latest draft, even if it waited behind the restore.
   void _persistDraft() {
     final store = ref.read(draftStoreProvider);
-    _draftIo = _draftIo.then((_) {
-      if (ref.mounted) return _saveQuietly(store, state.pages);
+    final status = ref.read(draftSaveStatusProvider.notifier);
+    _pendingSaves++;
+    status.set(DraftSaveStatus.saving);
+    _draftIo = _draftIo.then((_) async {
+      if (!ref.mounted) return;
+      final ok = await _saveQuietly(store, state.pages);
+      _pendingSaves--;
+      if (!ref.mounted) return;
+      if (!ok) {
+        status.set(DraftSaveStatus.failed);
+      } else if (_pendingSaves == 0) {
+        status.set(DraftSaveStatus.saved);
+      }
     });
   }
 
-  static Future<void> _saveQuietly(DraftStore store, List<ScanPage> pages) async {
+  static Future<bool> _saveQuietly(DraftStore store, List<ScanPage> pages) async {
     try {
       await store.save(pages);
+      return true;
     } catch (e) {
       // The draft stays in memory; the next change tries again.
       debugPrint('Draft autosave failed: $e');
+      return false;
     }
   }
 
