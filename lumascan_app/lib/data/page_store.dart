@@ -95,9 +95,21 @@ class PageStore {
     return dest;
   }
 
+  /// The upright, uncropped copy of [originalPath] the editor works from,
+  /// kept next to the original so it lives and dies with it.
+  static String workingPreviewPath(String originalPath) => _beside(originalPath, 'preview');
+
+  /// The smaller working copy of [originalPath], for thumbnails.
+  static String workingSmallPath(String originalPath) => _beside(originalPath, 'small');
+
+  static String _beside(String originalPath, String kind) =>
+      p.join(p.dirname(originalPath), '${p.basenameWithoutExtension(originalPath)}.$kind.jpg');
+
+  /// Deletes an original and the working copies made from it.
   Future<void> deleteOriginal(String path) async {
-    final f = File(path);
-    if (f.existsSync()) await f.delete();
+    for (final f in [File(path), File(workingPreviewPath(path)), File(workingSmallPath(path))]) {
+      if (f.existsSync()) await f.delete();
+    }
   }
 
   /// Writes bytes to a temp file and renames it, so a crash never leaves a
