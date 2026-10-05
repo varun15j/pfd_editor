@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../../domain/models.dart';
+import '../../domain/scanner_service.dart';
 import '../capture/add_pages_sheet.dart';
+import '../export/export_sheet.dart';
 import '../pages/page_image.dart';
+import '../pages/scan_actions.dart';
 import '../pages/scan_controller.dart';
 import 'batch_action_bar.dart';
 import 'batch_action_runner.dart';
+import 'batch_completion.dart';
 import 'batch_selection.dart';
 
 /// Batch Review (BE-02, US-03.5): every page of the draft in a two-column
@@ -25,6 +29,20 @@ class _BatchReviewScreenState extends ConsumerState<BatchReviewScreen> {
 
   void _select(BatchSelection selection) => setState(() => _selection = selection);
 
+  Future<void> _finish() async {
+    final outcome = await showBatchCompletionSheet(context);
+    if (outcome == null || !mounted) return;
+    switch (outcome) {
+      // New pages join the same draft; edits and the selection are kept.
+      case BatchOutcome.camera:
+        await runScan(context, ref, ScanSource.camera);
+      case BatchOutcome.review:
+        Navigator.of(context).pop();
+      case BatchOutcome.export:
+        await showExportSheet(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(scanControllerProvider);
@@ -33,9 +51,16 @@ class _BatchReviewScreenState extends ConsumerState<BatchReviewScreen> {
     _selection = _selection.retain(pages);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Batch review')),
+      appBar: AppBar(
+        title: const Text('Batch review'),
+        actions: [if (pages.isNotEmpty) TextButton(onPressed: state.busy ? null : _finish, child: const Text('Done'))],
+      ),
       body: Column(
         children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: Align(alignment: Alignment.centerLeft, child: DraftSaveIndicator()),
+          ),
           _SelectionRow(
             selection: _selection,
             allSelected: _selection.coversAll(pages),
