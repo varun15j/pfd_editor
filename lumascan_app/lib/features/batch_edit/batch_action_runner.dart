@@ -5,6 +5,7 @@ import '../../ui/undo_toast.dart';
 import '../pages/page_actions.dart';
 import '../pages/scan_controller.dart';
 import 'batch_actions.dart';
+import 'batch_enhance_screen.dart';
 import 'batch_selection.dart';
 
 /// Runs [action] on the selected pages. Every change that touches several
@@ -19,6 +20,9 @@ Future<void> runBatchAction(BuildContext context, WidgetRef ref, BatchAction act
   final noun = 'page${count == 1 ? '' : 's'}';
 
   switch (action) {
+    case BatchAction.enhance:
+      await Navigator.of(context)
+          .push(MaterialPageRoute<void>(builder: (_) => BatchEnhanceScreen(pageIds: [for (final p in selected) p.id])));
     case BatchAction.rotate:
       final dropsMarks = controller.rotationDropsMarks(selection.ids);
       controller.rotatePages(selection.ids);

@@ -5,6 +5,7 @@ import 'batch_selection.dart';
 /// Actions in Batch Review (BE-03). The first group sits in the action bar;
 /// the rest are under More.
 enum BatchAction {
+  enhance('Enhance', Icons.auto_fix_high_outlined, 'enhance'),
   rotate('Rotate', Icons.rotate_right, 'rotate'),
   delete('Delete', Icons.delete_outline, 'delete'),
   retake('Retake', Icons.camera_alt_outlined, 'retake', singlePage: true),
@@ -23,7 +24,7 @@ enum BatchAction {
   final bool singlePage;
 
   /// Shown in the action bar; the others are under More.
-  static const bar = [rotate, delete];
+  static const bar = [enhance, rotate, delete];
   static const more = [retake, markup, duplicate];
 }
 
