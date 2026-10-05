@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../domain/models.dart';
 import '../../domain/scanner_service.dart';
+import '../batch_edit/batch_review_screen.dart';
 import '../capture/add_pages_sheet.dart';
 import '../crop/crop_screen.dart';
 import '../export/export_sheet.dart';
@@ -66,6 +67,15 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
                 ],
               ),
             if (pages.isNotEmpty) ...[
+              IconButton(
+                tooltip: 'Batch edit',
+                icon: const Icon(Icons.library_add_check_outlined),
+                onPressed: state.busy
+                    ? null
+                    : () => Navigator.of(
+                        context,
+                      ).push(MaterialPageRoute<void>(builder: (_) => const BatchReviewScreen())),
+              ),
               IconButton(
                 tooltip: 'Undo',
                 icon: const Icon(Icons.undo),
