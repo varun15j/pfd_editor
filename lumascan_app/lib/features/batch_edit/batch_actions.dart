@@ -8,6 +8,7 @@ enum BatchAction {
   enhance('Enhance', Icons.auto_fix_high_outlined, 'enhance'),
   rotate('Rotate', Icons.rotate_right, 'rotate'),
   crop('Crop', Icons.crop, 'crop'),
+  ocr('OCR', Icons.text_snippet_outlined, 'read text from'),
   delete('Delete', Icons.delete_outline, 'delete'),
   retake('Retake', Icons.camera_alt_outlined, 'retake', singlePage: true),
   markup('Markup', Icons.draw_outlined, 'mark up', singlePage: true),
@@ -29,7 +30,7 @@ enum BatchAction {
   final bool needsSelection;
 
   /// Shown in the action bar; the others are under More.
-  static const bar = [enhance, rotate, crop, delete];
+  static const bar = [enhance, rotate, crop, ocr, delete];
   static const more = [retake, markup, duplicate, reorder];
 }
 

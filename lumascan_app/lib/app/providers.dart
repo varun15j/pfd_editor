@@ -4,6 +4,7 @@ import '../data/cunning_scanner_service.dart';
 import '../data/library_store.dart';
 import '../data/page_store.dart';
 import '../data/photo_import_services.dart';
+import '../domain/ocr.dart';
 import '../domain/photo_import.dart';
 import '../domain/scanner_service.dart';
 import '../export/pdf_exporter.dart';
@@ -30,3 +31,5 @@ final draftStoreProvider = Provider<DraftStore>((ref) => DraftStore(ref.watch(pa
 final photoPickerProvider = Provider<PhotoPicker>((ref) => FilePickerPhotoPicker());
 
 final photoAnalyzerProvider = Provider<PhotoAnalyzer>((ref) => DetectorPhotoAnalyzer());
+
+final ocrEngineProvider = Provider<OcrEngine>((ref) => const UnavailableOcrEngine());
