@@ -4,6 +4,7 @@ import '../data/cunning_scanner_service.dart';
 import '../data/library_store.dart';
 import '../data/page_store.dart';
 import '../data/photo_import_services.dart';
+import '../debug/image_profiler.dart';
 import '../domain/ocr.dart';
 import '../domain/photo_import.dart';
 import '../domain/scanner_service.dart';
@@ -17,12 +18,10 @@ final pageStoreProvider = Provider<PageStore>((ref) => PageStore());
 final scannerServiceProvider = Provider<ScannerService>((ref) => CunningScannerService());
 
 final renderServiceProvider = Provider<RenderService>(
-  (ref) => RenderService(ref.watch(pageStoreProvider)),
+  (ref) => RenderService(ref.watch(pageStoreProvider), profiler: ref.watch(imageProfilerProvider)),
 );
 
-final pdfExporterProvider = Provider<PdfExporter>(
-  (ref) => PdfExporter(ref.watch(pageStoreProvider)),
-);
+final pdfExporterProvider = Provider<PdfExporter>((ref) => PdfExporter(ref.watch(pageStoreProvider)));
 
 final libraryStoreProvider = Provider<LibraryStore>((ref) => LibraryStore(ref.watch(pageStoreProvider)));
 

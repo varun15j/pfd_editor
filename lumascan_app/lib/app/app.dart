@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../debug/debug_panel.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import 'preferences.dart';
 import 'shell.dart';
@@ -17,6 +18,9 @@ class LumaScanApp extends ConsumerWidget {
       theme: buildLumaTheme(Brightness.light),
       darkTheme: buildLumaTheme(Brightness.dark),
       themeMode: ref.watch(themeModeProvider),
+      navigatorKey: debugNavigatorKey,
+      // Debug builds: swipe in from the left edge for the debug panel.
+      builder: (context, child) => DebugPanelHost(child: child!),
       home: const StartGate(),
     );
   }

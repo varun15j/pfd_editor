@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/preferences.dart';
 import '../../app/theme.dart';
+import '../../debug/image_profiler.dart';
+import '../../debug/profiling_report_screen.dart';
 import '../../domain/app_settings.dart';
 import '../../domain/models.dart';
 import '../onboarding/onboarding_screen.dart';
@@ -101,6 +103,22 @@ class SettingsScreen extends ConsumerWidget {
               MaterialPageRoute<void>(builder: (context) => OnboardingScreen(onDone: () => Navigator.pop(context))),
             ),
           ),
+          if (ref.watch(imageProfilerProvider).available) ...[
+            const SizedBox(height: Space.xl),
+            const _Header('Developer (debug builds only)'),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.speed_outlined),
+              title: const Text('Image loading profile'),
+              subtitle: const Text(
+                'Average render, filter, resize and thumbnail times per screen, and photo sizes. '
+                'Turn profiling on from the debug panel: swipe in from the left edge.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () =>
+                  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ProfilingReportScreen())),
+            ),
+          ],
           const SizedBox(height: Space.xl),
           const AboutSection(),
         ],
