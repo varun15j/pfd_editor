@@ -1,14 +1,14 @@
 # UI/UX Improvement Findings
 
-Review date: 2 October 2026  
+Review date: 5 October 2026
 Status: Findings documented; proposed corrections remain open.  
-Scope: 52 reference screenshots, 10 epics, 38 user stories, 10 use cases, and the related LumaScan requirements and design documents.
+Scope: 60 reference screenshots, 10 epics, 39 user stories, 10 use cases, and the related LumaScan requirements and design documents.
 
 ## 1. Review conclusion
 
 The specification covers the main scanning journey well, but needs revision before development handoff. The most important issues are conflicting release scope, ambiguity about OCR text editing, incorrect screenshot-to-story assignments, and incomplete acceptance criteria. The reference interfaces also expose opportunities to improve keyboard editing, tool discovery, save visibility, tutorials, and sharing feedback.
 
-The screenshot gallery was checked during review: all 52 image references resolve, each image appears once in the gallery, and Screen-01 through Screen-52 retain chronological order. This confirms file integrity; the semantic mappings still need the corrections below.
+The original screenshot gallery and the eight batch-edit references were checked during review. Screens 53–60 continue the global sequence in capture-time order and are stored under `design/Ui_improvment/batch_edit`. This confirms file integrity; the semantic mappings and observed-versus-proposed distinction still require the corrections below.
 
 This review evaluates documentation and visible screen states. Runtime performance, interaction accessibility, processing reliability, and exported PDF quality require application testing. A visible button or promotional tile demonstrates an entry point or advertised capability, not a verified successful workflow.
 
@@ -19,6 +19,7 @@ This review evaluates documentation and visible screen states. Runtime performan
 - [Screen design and interaction specification](../../docs/screen-design.md)
 - [Low-level design, including OCR alignment and export behavior](../../docs/low-level-design.md)
 - [LumaScan feature direction](../../LumaScan_features.md)
+- [Epic 3 batch-edit and edge-detection plan](../Ui_improvment/batch_edit/batch_edit.md)
 
 Source references below use section names and stable story/screen IDs so they remain useful as documents change.
 
@@ -37,12 +38,16 @@ Source references below use section names and stable story/screen IDs so they re
 | F-05 | Observed evidence and proposed behavior are mixed | Medium | Evidence index and acceptance criteria |
 | F-06 | Stories combine separate jobs and leave feature coverage gaps | Medium | EP-03, EP-04, EP-05, EP-08, EP-10 |
 | F-07 | Acceptance criteria and exception flows are incomplete | High | All epics; UC-02 through UC-10 |
+| F-08 | Camera capture has no dedicated route into selected-page batch review | High | EP-03, EP-05, EP-06, EP-07 |
 | UX-01 | Keyboard editing leaves too little readable document space | High | Screens 20–21; US-07.2 |
 | UX-02 | Horizontal editor tools are difficult to discover | Medium | Screens 16–17; EP-05, EP-06 |
 | UX-03 | Trial promotion displaces the primary save action | High | Screens 32–33; EP-09, EP-10 |
 | UX-04 | Tutorial overlays obscure task context | Medium | Screens 27, 36–37 |
 | UX-05 | Saving, uploading, and sharing need distinct states | High | Screens 34–39; EP-09 |
 | UX-06 | Navigation and visual-system definitions conflict | High | Feature direction, screen design, screenshot specification |
+| UX-07 | Live page boundaries are inaccurate and unstable on realistic notebooks | High | Screens 53–55; US-03.1 |
+| UX-08 | Batch action scope and availability are ambiguous | High | Screens 58–60; US-03.5, US-07.1 |
+| UX-09 | Capture guidance obscures the document and lacks actionable quality states | Medium | Screens 53–57; US-03.1–04 |
 
 ## 4. Product, epic, and story findings
 
@@ -145,17 +150,27 @@ The following mappings were introduced during the earlier filename assignment an
 - Sharing distinguishes file preparation and handoff from delivery confirmed by another application.
 - Performance targets identify reference devices, input sizes, and measurement method.
 
+### F-08 — Camera-to-batch review is not specified
+
+**Evidence:** Existing US-03.3 mentions that a thumbnail opens captured-page review, and EP-05/EP-06 list page and batch operations, but no story defines selection state, action availability, navigation back to the active camera, or one-step undo for a selected-page operation. Screens 58–60 expose a batch OCR entry point without showing its selection, progress, or recovery contract.
+
+**Impact:** Camera, review, enhancement, crop, and OCR implementations can create incompatible flows. Batch actions may unexpectedly affect all pages, apply invalid shared crop geometry, create one undo entry per page, or end the camera session when the user intended to resume capture.
+
+**Recommended improvement:** Add US-03.5 and make Batch Review a named camera subflow. Define selection by page ID; atomic safe operations; guided per-page crop; single-page-only actions; return-to-camera behavior; durable draft commits; OCR capability, cancellation, and partial failure; and separate review/export outcomes. Use the detailed [batch-edit plan](../Ui_improvment/batch_edit/batch_edit.md) as the implementation contract.
+
+**Completion criteria:** The EP-03 feature list, US-03.5, UC-02, Batch Review screen specification, controller operations, undo semantics, and recovery tests describe the same behavior.
+
 ## 5. Epic-by-epic assessment
 
 | Epic | Required refinement |
 |---|---|
 | EP-01 — Account/onboarding | Establish optional account behavior; separate onboarding, sign-out/deletion, and legal/help flows |
 | EP-02 — Library | Add rename, trash/restore, batch actions, sort direction, and precise filter rules |
-| EP-03 — Capture | Separate modes; define duplicate suppression, quality feedback, and interruption recovery |
+| EP-03 — Capture | Separate modes; add US-03.5 Batch Review; define duplicate suppression, quality feedback, detection confidence, and interruption recovery |
 | EP-04 — Import | Define formats, selection order, limits, and partial-import failures |
-| EP-05 — Page management | Specify retake replacement, accessible reorder controls, undo scope, and last-page deletion |
+| EP-05 — Page management | Specify selected-page operations, retake replacement, accessible reorder controls, atomic undo scope, and last-page deletion |
 | EP-06 — Enhancement | Require recoverable originals; define batch scope and distinguish image cleanup from annotation erasing |
-| EP-07 — OCR | Separate recognition, transcript correction, searchable export, and visible text replacement |
+| EP-07 — OCR | Separate recognition, batch job scope/progress, transcript correction, searchable export, and visible text replacement |
 | EP-08 — PDF tools | Add extraction/collage coverage; define preservation of existing text, vectors, and annotations |
 | EP-09 — Save/share | Distinguish local save, export, upload, and sharing; define cancellation and conflict behavior |
 | EP-10 — Settings/AI/billing | Separate ownership and define purchase, expiry, AI failure, and preference persistence states |
@@ -224,12 +239,42 @@ These are proposed changes to the specification, not findings that the current a
 
 **Completion criteria:** Screen routes, navigation diagrams, component names, color tokens, spacing, typography, target sizes, and accessibility criteria agree across the specification and design documents. Define light/dark, loading, disabled, focused, selected, and error states for shared components.
 
+### UX-07 — Make live edge detection accurate and stable
+
+**Evidence:** [Screen 53](../Ui_improvment/batch_edit/US-03.1-Scan-A-Standard-Document_EP-03_Screen-53.jpg) outlines background and excludes part of the notebook. [Screen 54](../Ui_improvment/batch_edit/US-03.1-Scan-A-Standard-Document_EP-03_Screen-54.jpg) shows a materially different outline for the same target. [Screen 55](../Ui_improvment/batch_edit/US-03.1-Scan-A-Standard-Document_EP-03_Screen-55.jpg) remains in a searching state amid strong non-document rectangles.
+
+**Impact:** An unstable outline reduces trust, can auto-capture incorrect geometry, and increases manual crop work. A detector biased toward bright, low-saturation paper underperforms on colored charts, banners, notebooks, book spreads, shadows, and text-heavy material.
+
+**Recommended improvement:** The ADR-008 custom camera should score multiple candidates using border edge support, convexity, rectangularity, area/aspect plausibility, local contrast, and interior text/line density in addition to color evidence. Track corners over time, require five qualifying analyzed frames with no more than 2.5% average diagonal drift, suppress auto-capture for clipped/low-confidence candidates, and verify geometry at full resolution. Keep manual shutter and manual crop available.
+
+**Completion criteria:** The labelled corpus reaches the accuracy thresholds in the batch-edit plan, the existing detector tests do not regress, preview analysis sustains adaptive 5–10 FPS on named devices, and auto-capture never fires below stability, confidence, or containment thresholds.
+
+### UX-08 — Explain batch scope and disabled actions
+
+**Evidence:** [Screens 58–60](../Ui_improvment/batch_edit/batch_edit.md#2-evidence-review) show `OCR in batch` in enabled and disabled presentations but do not expose selected pages, the reason for unavailability, progress, cancellation, or page-level failures.
+
+**Impact:** Users cannot predict which pages change or how to make an action available. Hidden scope is especially risky for destructive actions and expensive OCR work.
+
+**Recommended improvement:** Batch Review must show selection controls and count. Action labels or confirmation copy name the affected count. Unsupported or invalid actions remain discoverable with a reason and recovery action. Safe operations commit once; crop is sequential; retake, markup, and duplicate require one page.
+
+**Completion criteria:** Zero-, one-, and multi-selection states have testable action availability. Every batch action defines scope, progress where applicable, cancellation, partial failure, and undo. Screen-reader announcements include action and selected count.
+
+### UX-09 — Keep camera guidance contextual and non-blocking
+
+**Evidence:** Screens 53–54 place a large `Please don't move` message over page content, while Screens 56–57 use substantial modal guidance over the live camera.
+
+**Impact:** Guidance hides the edges and text the user needs to align, competes with the live outline, and does not distinguish instability from clipping, low light, blur, or glare.
+
+**Recommended improvement:** Use a compact guidance chip outside the active page region whenever possible. Provide distinct Searching, Move closer/farther, Entire page in frame, Hold steady, More light, Reduce glare, Ready, and Captured states. Tutorials are dismissible, pause auto-capture while blocking interaction, and do not recur after completion unless replayed.
+
+**Completion criteria:** Guidance never disables manual shutter, does not cover the detected document's center at normal orientation, has accessible text/state, and responds to measured quality conditions rather than a generic delay.
+
 ## 7. Recommended revision sequence
 
 1. **Resolve product scope:** Choose the authoritative release baseline and settle account, offline, cloud, billing, and AI placement (F-01, F-03).
 2. **Define content behavior:** Separate OCR/transcript/text replacement, PDF preservation, and save/export semantics (F-02, F-07, UX-05).
 3. **Repair traceability:** Correct screenshot assignments, label evidence confidence, and add missing stories (F-04, F-05, F-06).
-4. **Unify design:** Adopt one navigation model and token system, then refine keyboard, toolbar, save, and tutorial layouts (UX-01 through UX-06).
+4. **Unify design:** Adopt one navigation model and token system, then refine keyboard, toolbar, save, tutorial, camera guidance, and batch layouts (UX-01 through UX-09).
 5. **Complete acceptance coverage:** Add error, empty, interrupted, cancelled, and partial-success states to each affected use case (F-07).
 6. **Validate implementation:** Test real-device interactions, accessibility, processing recovery, and generated files against the reconciled criteria.
 
@@ -243,5 +288,7 @@ These are proposed changes to the specification, not findings that the current a
 - [ ] All use cases define interruption, failure, cancellation, and retained-data behavior.
 - [ ] Navigation, terminology, tokens, and target sizes are consistent.
 - [ ] Keyboard editing, tool discovery, premium cancellation, and sharing states have reviewable designs.
-- [ ] All 52 screenshot links still resolve after any future renaming.
+- [ ] US-03.5 defines selection, action availability, atomic undo, guided crop, camera return, OCR failure, and draft recovery.
+- [ ] Edge-detection quality is measured on original labelled photos rather than composited UI screenshots.
+- [ ] All 60 screenshot links still resolve after any future renaming.
 - [ ] Runtime and output-quality validation results are recorded separately from visual review.

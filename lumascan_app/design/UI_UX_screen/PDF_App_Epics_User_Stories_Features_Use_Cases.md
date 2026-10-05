@@ -3,7 +3,7 @@
 ## Product requirements: epics, user stories, features, use cases, and screenshot evidence
 
 **Document status:** Draft product specification  
-**Evidence set:** 52 mobile screenshots captured on 2 October 2026  
+**Evidence set:** 60 mobile screenshots captured on 2 and 5 October 2026
 **Evidence ordering:** Ascending by screenshot capture time  
 **Reference products observed:** OKEN-style PDF toolbox and Adobe Scan  
 
@@ -169,6 +169,8 @@ As a user, I want to narrow the library by type and date and order it predictabl
 - High-speed continuous capture with pause/resume and page counter.
 - Stability/page-change prompts and manual-capture fallback.
 - Optional post-capture border adjustment and automatic straightening.
+- Camera-to-batch review with selection, atomic safe edits, guided crop, reorder, and capability-gated OCR.
+- Confidence-based live guidance for clipped edges, instability, low light, blur, and glare.
 
 ### User stories and acceptance criteria
 
@@ -201,6 +203,18 @@ As a field user, I want a mode tuned for small structured documents.
 - ID mode guides front/back acquisition and preserves correct pairing.
 - Business-card mode frames the card and can hand recognized contact data to the review flow.
 - Sensitive document handling follows the application privacy policy.
+
+**US-03.5 — Batch-edit captured pages**
+
+As a multi-page scanning user, I want to review and edit several captured pages together so that I can correct a document efficiently before saving or returning to the camera.
+
+- The camera page counter opens Batch Review without ending the capture session.
+- Users can select individual pages, select all, clear selection, and see the selected count.
+- Enhancement, rotation, deletion, and OCR apply atomically to selected page IDs; one Undo reverses the batch action.
+- Crop runs as a guided per-page queue and never copies one page's geometry to another page.
+- Retake, markup, and duplicate require one selected page and explain that requirement when disabled.
+- Returning to the camera retains edits; review, export, and local draft-save outcomes remain distinct.
+- Committed pages and accepted edits survive process termination through the local draft.
 
 ---
 
@@ -534,9 +548,21 @@ As a user, I want AI assistance only when enabled and appropriate.
 2. Book mode shows a center divider; high-speed mode starts continuous capture.
 3. Each accepted capture increments the page count and adds a thumbnail.
 4. The user pauses, resumes, or manually triggers capture when prompted.
-5. The user opens review, removes bad pages, retakes pages, and fixes ordering.
-6. The user applies a filter to selected pages or the whole document.
-7. The document is saved as one PDF.
+5. The page counter opens Batch Review without closing the capture session; all pages initially appear selected.
+6. The user changes selection, removes bad pages, reorders pages, or opens a single-page retake.
+7. The user applies safe enhancement or rotation to selected pages, or starts the guided crop queue.
+8. Optional OCR reports page-level progress and failures without blocking image review.
+9. The user returns to capture, reviews the document, or explicitly exports one PDF.
+
+**Alternate/exception flows**
+
+- No pages captured: Batch Review is unavailable and the camera remains usable.
+- Batch action unavailable: the control explains the required selection or missing capability.
+- Crop queue interrupted: accepted page crops remain in the draft and unfinished pages are reported.
+- OCR cancelled or partially failed: captured images and successful page results remain available; failed pages can retry.
+- Process terminated: committed captures and accepted edits restore from the local draft.
+
+**Postconditions:** The local draft contains the ordered committed pages and accepted edits; export status is separate and known.
 
 ### UC-03 — Scan an ID or business card
 
@@ -640,7 +666,7 @@ As a user, I want AI assistance only when enabled and appropriate.
 - Use encrypted transport for cloud, OCR, and AI requests.
 - Ask for the minimum necessary media, camera, and notification permissions.
 - Exclude recognized document content, passwords, and signatures from analytics.
-- Explain public-link access before link creation.
+                                                                                                                                                                    - Explain public-link access before link creation.
 - Provide retention and deletion behavior for local, cloud, OCR, and AI data.
 
 ### Content and interaction quality
@@ -739,6 +765,14 @@ As a user, I want AI assistance only when enabled and appropriate.
 | 50 | 22:46:06 | Subscription tiers, AI assistant, restore/manage purchases | `US-10.2-Restore-Or-Manage-A-Subscription_EP-10_Screen-50.jpg` |
 | 51 | 22:46:33 | Browser help center and top questions | `US-01.1-Understand-The-Product_EP-01_Screen-51.jpg` |
 | 52 | 22:46:54 | Account storage and account deletion | `US-01.4-Manage-My-Account_EP-01_Screen-52.jpg` |
+| 53 | 10:04:02 | Inaccurate notebook boundary and blocking stability prompt | `US-03.1-Scan-A-Standard-Document_EP-03_Screen-53.jpg` |
+| 54 | 10:04:06 | Shifted boundary on the same notebook page | `US-03.1-Scan-A-Standard-Document_EP-03_Screen-54.jpg` |
+| 55 | 10:04:55 | Searching state, capture modes, and import controls | `US-03.1-Scan-A-Standard-Document_EP-03_Screen-55.jpg` |
+| 56 | 10:05:13 | ID capture guidance and template choices | `US-03.4-Capture-IDs-And-Business-Cards_EP-03_Screen-56.jpg` |
+| 57 | 10:05:58 | Book-mode guidance and advertised page splitting | `US-03.2-Scan-An-Open-Book_EP-03_Screen-57.jpg` |
+| 58 | 10:06:09 | Batch OCR entry point in text capture mode | `US-03.5-Batch-Edit-Captured-Pages_EP-03_Screen-58.jpg` |
+| 59 | 10:06:44 | Enabled batch OCR action | `US-03.5-Batch-Edit-Captured-Pages_EP-03_Screen-59.jpg` |
+| 60 | 10:06:51 | Disabled batch OCR action without visible reason | `US-03.5-Batch-Edit-Captured-Pages_EP-03_Screen-60.jpg` |
 
 ---
 
@@ -954,15 +988,49 @@ The gallery is deliberately chronological so that product flows can be reconstru
 
 ![Account and storage](./US-01.4-Manage-My-Account_EP-01_Screen-52.jpg)
 
+### 53 — 10:04:02 — Inaccurate notebook boundary
+
+![Inaccurate notebook boundary](../Ui_improvment/batch_edit/US-03.1-Scan-A-Standard-Document_EP-03_Screen-53.jpg)
+
+### 54 — 10:04:06 — Unstable notebook boundary
+
+![Unstable notebook boundary](../Ui_improvment/batch_edit/US-03.1-Scan-A-Standard-Document_EP-03_Screen-54.jpg)
+
+### 55 — 10:04:55 — Capture modes and searching state
+
+![Capture modes and searching state](../Ui_improvment/batch_edit/US-03.1-Scan-A-Standard-Document_EP-03_Screen-55.jpg)
+
+### 56 — 10:05:13 — ID capture guidance
+
+![ID capture guidance](../Ui_improvment/batch_edit/US-03.4-Capture-IDs-And-Business-Cards_EP-03_Screen-56.jpg)
+
+### 57 — 10:05:58 — Book capture guidance
+
+![Book capture guidance](../Ui_improvment/batch_edit/US-03.2-Scan-An-Open-Book_EP-03_Screen-57.jpg)
+
+### 58 — 10:06:09 — Batch OCR entry state
+
+![Batch OCR entry state](../Ui_improvment/batch_edit/US-03.5-Batch-Edit-Captured-Pages_EP-03_Screen-58.jpg)
+
+### 59 — 10:06:44 — Enabled batch action
+
+![Enabled batch action](../Ui_improvment/batch_edit/US-03.5-Batch-Edit-Captured-Pages_EP-03_Screen-59.jpg)
+
+### 60 — 10:06:51 — Disabled batch action
+
+![Disabled batch action](../Ui_improvment/batch_edit/US-03.5-Batch-Edit-Captured-Pages_EP-03_Screen-60.jpg)
+
+Screens 58–60 also provide secondary evidence for EP-07 OCR. They show only an entry point and enabled/disabled presentation; they do not verify OCR quality, progress, cancellation, failure handling, or successful output.
+
 ---
 
 ## 10. Traceability notes
 
 - EP-02 is supported primarily by screenshots 01–02, 22–25, 35, and 40.
-- EP-03 is supported primarily by screenshots 09–11 and 27–33.
+- EP-03 is supported primarily by screenshots 09–11, 27–33, and 53–60.
 - EP-04 is supported primarily by screenshots 03, 12, 26, and 42.
 - EP-05 and EP-06 are supported primarily by screenshots 13–18 and 32–33.
-- EP-07 is supported primarily by screenshots 03, 08, 19–22, and 47.
+- EP-07 is supported primarily by screenshots 03, 08, 19–22, 47, and secondarily by 58–60.
 - EP-08 is supported primarily by screenshots 04, 08, 17, 26, and 41.
 - EP-09 is supported primarily by screenshots 18, 22, and 34–39.
 - EP-01 and EP-10 are supported primarily by screenshots 05–08 and 43–52.
