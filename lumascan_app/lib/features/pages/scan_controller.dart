@@ -342,6 +342,51 @@ class ScanController extends Notifier<ScanState> {
     ]);
   }
 
+  /// Rotates every page in [ids] a quarter turn. Pages keep their order and
+  /// unknown IDs are ignored. One undo step covers all of them. Like a single
+  /// rotation, it removes the marks on the rotated pages.
+  void rotatePages(Set<String> ids, {bool clockwise = true}) {
+    if (!_hasAny(ids)) return;
+    _commit([
+      for (final p in state.pages)
+        if (ids.contains(p.id))
+          _withRecipe(p, p.recipe.copyWith(quarterTurns: p.recipe.quarterTurns + (clockwise ? 1 : 3)))
+        else
+          p,
+    ]);
+  }
+
+  /// True when rotating the pages in [ids] would remove marks from any of
+  /// them, so the screen can warn once.
+  bool rotationDropsMarks(Set<String> ids) => state.pages.any((p) => ids.contains(p.id) && p.annotations.isNotEmpty);
+
+  /// Copies the filter, brightness and contrast of [recipe] to every page in
+  /// [ids]. Each page keeps its own crop, rotation and marks. One undo step.
+  void applyEnhancementToPages(Set<String> ids, EditRecipe recipe) {
+    if (!_hasAny(ids)) return;
+    _commit([
+      for (final p in state.pages)
+        if (ids.contains(p.id))
+          p.copyWith(
+            recipe: p.recipe.copyWith(filter: recipe.filter, brightness: recipe.brightness, contrast: recipe.contrast),
+          )
+        else
+          p,
+    ]);
+  }
+
+  /// Removes every page in [ids]. One undo step brings them all back in
+  /// their places; the original files are kept until the draft is cleared.
+  void removePages(Set<String> ids) {
+    if (!_hasAny(ids)) return;
+    _commit([
+      for (final p in state.pages)
+        if (!ids.contains(p.id)) p,
+    ]);
+  }
+
+  bool _hasAny(Set<String> ids) => state.pages.any((p) => ids.contains(p.id));
+
   /// Moves a page; [newIndex] is its position after removal from [oldIndex].
   void move(int oldIndex, int newIndex) {
     if (oldIndex == newIndex) return;
