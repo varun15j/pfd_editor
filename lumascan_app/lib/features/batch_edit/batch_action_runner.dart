@@ -7,6 +7,7 @@ import '../pages/scan_controller.dart';
 import 'batch_actions.dart';
 import 'batch_crop_queue.dart';
 import 'batch_enhance_screen.dart';
+import 'batch_reorder_screen.dart';
 import 'batch_selection.dart';
 
 /// Runs [action] on the selected pages. Every change that touches several
@@ -15,7 +16,7 @@ Future<void> runBatchAction(BuildContext context, WidgetRef ref, BatchAction act
   final controller = ref.read(scanControllerProvider.notifier);
   final pages = ref.read(scanControllerProvider).pages;
   final selected = selection.pagesIn(pages);
-  if (selected.isEmpty) return;
+  if (selected.isEmpty && action.needsSelection) return;
   final messenger = ScaffoldMessenger.of(context);
   final count = selected.length;
   final noun = 'page${count == 1 ? '' : 's'}';
@@ -56,6 +57,9 @@ Future<void> runBatchAction(BuildContext context, WidgetRef ref, BatchAction act
       if (ok != true) return;
       controller.removePages(selection.ids);
       showUndoToast(messenger, message: 'Deleted $count $noun', onUndo: controller.undo);
+    case BatchAction.reorder:
+      await Navigator.of(context)
+          .push(MaterialPageRoute<void>(builder: (_) => BatchReorderScreen(selectedIds: selection.ids)));
     case BatchAction.retake:
     case BatchAction.markup:
     case BatchAction.duplicate:

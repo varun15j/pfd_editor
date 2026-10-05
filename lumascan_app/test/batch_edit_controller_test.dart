@@ -115,4 +115,21 @@ void main() {
     expect([for (final p in draft.pages) p.id], ['p1', 'p2', 'p3']);
     expect(draft.pages.first.recipe.quarterTurns, 1);
   });
+
+  test('reorderPages applies a full new order as one undo step', () {
+    controller().reorderPages(['p3', 'p0', 'p2', 'p1']);
+    expect(ids(), ['p3', 'p0', 'p2', 'p1']);
+    expect(state().undoStack, hasLength(1));
+    controller().undo();
+    expect(ids(), ['p0', 'p1', 'p2', 'p3']);
+  });
+
+  test('reorderPages ignores an order that would lose, double or invent pages', () {
+    controller().reorderPages(['p1', 'p0', 'p2']);
+    controller().reorderPages(['p1', 'p1', 'p2', 'p3']);
+    controller().reorderPages(['p1', 'p0', 'p2', 'x']);
+    controller().reorderPages(['p0', 'p1', 'p2', 'p3']);
+    expect(ids(), ['p0', 'p1', 'p2', 'p3']);
+    expect(state().undoStack, isEmpty);
+  });
 }
