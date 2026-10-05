@@ -3,6 +3,7 @@ import 'dart:ui' show Tristate;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumascan/features/batch_edit/batch_review_screen.dart';
 import 'package:lumascan/features/crop/crop_screen.dart';
 import 'package:lumascan/features/export/export_sheet.dart';
 import 'package:lumascan/features/filters/filter_screen.dart';
@@ -51,6 +52,7 @@ void main() {
         textScale: s,
       );
     },
+    'Batch review': (t, b, s) => harness.pumpRoute(t, (_) => const BatchReviewScreen(), brightness: b, textScale: s),
     'Merge': (t, b, s) => harness.pumpRoute(t, (_) => const MergeScreen(), brightness: b, textScale: s),
     'Crop': (t, b, s) => harness.pumpRoute(
       t,
