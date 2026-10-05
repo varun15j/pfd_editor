@@ -5,6 +5,7 @@ import '../../ui/undo_toast.dart';
 import '../pages/page_actions.dart';
 import '../pages/scan_controller.dart';
 import 'batch_actions.dart';
+import 'batch_crop_queue.dart';
 import 'batch_enhance_screen.dart';
 import 'batch_selection.dart';
 
@@ -23,6 +24,11 @@ Future<void> runBatchAction(BuildContext context, WidgetRef ref, BatchAction act
     case BatchAction.enhance:
       await Navigator.of(context)
           .push(MaterialPageRoute<void>(builder: (_) => BatchEnhanceScreen(pageIds: [for (final p in selected) p.id])));
+    case BatchAction.crop:
+      final summary = await runCropQueue(Navigator.of(context), [for (final p in selected) p.id]);
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(SnackBar(content: Text(summary.message)));
     case BatchAction.rotate:
       final dropsMarks = controller.rotationDropsMarks(selection.ids);
       controller.rotatePages(selection.ids);

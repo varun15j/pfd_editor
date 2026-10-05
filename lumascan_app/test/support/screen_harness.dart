@@ -42,7 +42,7 @@ class ScreenHarness {
   late ProviderContainer container;
 
   /// Creates the draft. Call inside `tester.runAsync`, and `dispose` in a tearDown.
-  Future<void> setUp({int pageCount = 3}) async {
+  Future<void> setUp({int pageCount = 3, List overrides = const []}) async {
     tmp = Directory.systemTemp.createTempSync('lumascan_screens');
     final paper = img.Image(width: 300, height: 400)..clear(img.ColorRgb8(236, 232, 222));
     final paths = [
@@ -55,6 +55,7 @@ class ScreenHarness {
         pageStoreProvider.overrideWithValue(store),
         renderServiceProvider.overrideWithValue(_NoRender(store)),
         libraryStoreProvider.overrideWithValue(MemoryLibraryStore()),
+        ...overrides,
       ],
     );
     await container.read(scanControllerProvider.notifier).scan(ScanSource.camera);

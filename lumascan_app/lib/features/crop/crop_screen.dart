@@ -11,6 +11,22 @@ import '../../imaging/page_renderer.dart';
 import '../pages/marks_notice.dart';
 import '../pages/scan_controller.dart';
 
+/// Where a page sits in a guided crop queue: [index] counts from 0.
+@immutable
+class CropQueueStep {
+  const CropQueueStep({required this.index, required this.total});
+
+  final int index;
+  final int total;
+
+  bool get isFirst => index == 0;
+  bool get isLast => index == total - 1;
+}
+
+/// How a crop queue step ended. A system Back pops with null, which leaves
+/// the queue like [finish].
+enum CropStepResult { applied, skipped, back, finish }
+
 const _cornerNames = ['Top left', 'Top right', 'Bottom right', 'Bottom left'];
 const _edgeNames = ['Top', 'Right', 'Bottom', 'Left'];
 
@@ -26,9 +42,14 @@ const _maxZoom = 6.0;
 /// under the finger. The crop is stored in the recipe and the original image
 /// is never modified.
 class CropScreen extends ConsumerStatefulWidget {
-  const CropScreen({super.key, required this.pageId});
+  const CropScreen({super.key, required this.pageId, this.step});
 
   final String pageId;
+
+  /// Set when the page is one step of a guided crop queue (Batch Review). The
+  /// screen then shows the step, adds Back, Skip and Finish, and pops with a
+  /// [CropStepResult].
+  final CropQueueStep? step;
 
   @override
   ConsumerState<CropScreen> createState() => _CropScreenState();
@@ -39,6 +60,7 @@ class _CropScreenState extends ConsumerState<CropScreen> {
   final _contentKey = GlobalKey();
   final _viewerKey = GlobalKey();
   late CropQuad _quad;
+  late final CropQuad _initialQuad;
   late final Future<RenderedImage> _source;
   late final Future<CropQuad?> _detected;
   late final String _originalPath;
@@ -52,6 +74,7 @@ class _CropScreenState extends ConsumerState<CropScreen> {
     super.initState();
     final page = ref.read(scanControllerProvider).pageById(widget.pageId)!;
     _quad = page.recipe.crop;
+    _initialQuad = _quad;
     _originalPath = page.originalPath;
     _source = ref.read(renderServiceProvider).source(page);
     // Looked up once, so Reset can answer straight away.
@@ -98,7 +121,7 @@ class _CropScreenState extends ConsumerState<CropScreen> {
       controller.updateRecipe(page.id, next);
       if (dropsMarks) showMarksRemovedNotice(context, controller);
     }
-    Navigator.of(context).pop();
+    Navigator.of(context).pop(widget.step == null ? null : CropStepResult.applied);
   }
 
   void _moveCorner(int i, Offset delta, Size size) {
@@ -136,12 +159,21 @@ class _CropScreenState extends ConsumerState<CropScreen> {
   @override
   Widget build(BuildContext context) {
     final valid = _quad.isValid();
+    final step = widget.step;
     return Scaffold(
       backgroundColor: LumaColors.dark.background,
       appBar: AppBar(
         backgroundColor: LumaColors.dark.background,
         foregroundColor: Colors.white,
-        title: const Text('Crop'),
+        title: Text(step == null ? 'Crop' : 'Crop page ${step.index + 1} of ${step.total}'),
+        actions: [
+          if (step != null)
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+              onPressed: () => Navigator.of(context).pop(CropStepResult.finish),
+              child: const Text('Finish'),
+            ),
+        ],
       ),
       body: FutureBuilder<RenderedImage>(
         future: _source,
@@ -221,6 +253,13 @@ class _CropScreenState extends ConsumerState<CropScreen> {
                       icon: const Icon(Icons.crop_free),
                       label: const Text('Full page'),
                     ),
+                    if (step != null)
+                      TextButton.icon(
+                        style: TextButton.styleFrom(foregroundColor: Colors.white, minimumSize: const Size(48, 48)),
+                        onPressed: () => setState(() => _quad = _initialQuad),
+                        icon: const Icon(Icons.restore),
+                        label: const Text('Reset'),
+                      ),
                   ],
                 ),
               ),
@@ -238,21 +277,28 @@ class _CropScreenState extends ConsumerState<CropScreen> {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(foregroundColor: Colors.white, minimumSize: const Size(48, 48)),
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
+          child: step == null
+              ? Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(foregroundColor: Colors.white, minimumSize: const Size(48, 48)),
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton(onPressed: _save, child: const Text('Apply crop')),
+                    ),
+                  ],
+                )
+              : _QueueButtons(
+                  step: step,
+                  onBack: () => Navigator.of(context).pop(CropStepResult.back),
+                  onSkip: () => Navigator.of(context).pop(CropStepResult.skipped),
+                  onApply: _save,
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton(onPressed: _save, child: const Text('Apply crop')),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -544,4 +590,43 @@ class _QuadPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_QuadPainter old) => old.quad != quad || old.valid != valid;
+}
+
+/// Back, Skip and Apply for one step of a guided crop queue.
+class _QueueButtons extends StatelessWidget {
+  const _QueueButtons({required this.step, required this.onBack, required this.onSkip, required this.onApply});
+
+  final CropQueueStep step;
+  final VoidCallback onBack;
+  final VoidCallback onSkip;
+  final VoidCallback onApply;
+
+  @override
+  Widget build(BuildContext context) {
+    final outlined = OutlinedButton.styleFrom(foregroundColor: Colors.white, minimumSize: const Size(48, 48));
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(style: outlined, onPressed: step.isFirst ? null : onBack, child: const Text('Back')),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: OutlinedButton(style: outlined, onPressed: onSkip, child: const Text('Skip')),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 2,
+          child: FilledButton(
+            style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: onApply,
+            child: Text(
+              step.isLast ? 'Apply and finish' : 'Apply and next',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
