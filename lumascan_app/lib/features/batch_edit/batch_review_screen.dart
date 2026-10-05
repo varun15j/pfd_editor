@@ -6,6 +6,8 @@ import '../../domain/models.dart';
 import '../capture/add_pages_sheet.dart';
 import '../pages/page_image.dart';
 import '../pages/scan_controller.dart';
+import 'batch_action_bar.dart';
+import 'batch_action_runner.dart';
 import 'batch_selection.dart';
 
 /// Batch Review (BE-02, US-03.5): every page of the draft in a two-column
@@ -65,6 +67,12 @@ class _BatchReviewScreenState extends ConsumerState<BatchReviewScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: pages.isEmpty
+          ? null
+          : BatchActionBar(
+              selection: _selection,
+              onAction: (action) => runBatchAction(context, ref, action, _selection),
+            ),
     );
   }
 }
