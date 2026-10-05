@@ -10,18 +10,29 @@ import 'support/screen_harness.dart';
 void main() {
   group('availability', () {
     test('nothing selected explains what to select', () {
-      expect(availabilityOf(BatchAction.rotate, const BatchSelection()).reason, 'Select pages to rotate');
-      expect(availabilityOf(BatchAction.retake, const BatchSelection()).reason, 'Select one page to retake');
+      expect(availabilityOf(BatchAction.rotate, const BatchSelection(), pageCount: 3).reason, 'Select pages to rotate');
+      expect(
+        availabilityOf(BatchAction.retake, const BatchSelection(), pageCount: 3).reason,
+        'Select one page to retake',
+      );
     });
 
     test('single-page actions need exactly one page', () {
       const two = BatchSelection({'a', 'b'});
-      expect(availabilityOf(BatchAction.rotate, two).enabled, isTrue);
-      expect(availabilityOf(BatchAction.delete, two).enabled, isTrue);
-      expect(availabilityOf(BatchAction.retake, two).reason, 'Select one page to retake');
-      expect(availabilityOf(BatchAction.markup, two).reason, 'Select one page to mark up');
-      expect(availabilityOf(BatchAction.duplicate, two).reason, 'Select one page to duplicate');
-      expect(availabilityOf(BatchAction.duplicate, const BatchSelection({'a'})).enabled, isTrue);
+      expect(availabilityOf(BatchAction.rotate, two, pageCount: 3).enabled, isTrue);
+      expect(availabilityOf(BatchAction.delete, two, pageCount: 3).enabled, isTrue);
+      expect(availabilityOf(BatchAction.retake, two, pageCount: 3).reason, 'Select one page to retake');
+      expect(availabilityOf(BatchAction.markup, two, pageCount: 3).reason, 'Select one page to mark up');
+      expect(availabilityOf(BatchAction.duplicate, two, pageCount: 3).reason, 'Select one page to duplicate');
+      expect(availabilityOf(BatchAction.duplicate, const BatchSelection({'a'}), pageCount: 3).enabled, isTrue);
+    });
+
+    test('reorder works on the whole document, not the selection', () {
+      expect(availabilityOf(BatchAction.reorder, const BatchSelection(), pageCount: 3).enabled, isTrue);
+      expect(
+        availabilityOf(BatchAction.reorder, const BatchSelection(), pageCount: 1).reason,
+        'Add another page to reorder',
+      );
     });
 
     test('scope label names the count', () {

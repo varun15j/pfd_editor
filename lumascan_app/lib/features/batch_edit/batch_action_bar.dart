@@ -7,13 +7,14 @@ import 'batch_selection.dart';
 /// Persistent action bar under the Batch Review grid (BE-03). Unavailable
 /// actions stay visible; tapping one explains how to enable it.
 class BatchActionBar extends StatelessWidget {
-  const BatchActionBar({super.key, required this.selection, required this.onAction});
+  const BatchActionBar({super.key, required this.selection, required this.pageCount, required this.onAction});
 
   final BatchSelection selection;
+  final int pageCount;
   final ValueChanged<BatchAction> onAction;
 
   void _tap(BuildContext context, BatchAction action) {
-    final availability = availabilityOf(action, selection);
+    final availability = availabilityOf(action, selection, pageCount: pageCount);
     if (availability.enabled) {
       onAction(action);
     } else {
@@ -40,7 +41,7 @@ class BatchActionBar extends StatelessWidget {
                     label: action.label,
                     icon: action.icon,
                     semanticsLabel: selection.isEmpty ? action.label : scopeLabel(action, selection.count),
-                    availability: availabilityOf(action, selection),
+                    availability: availabilityOf(action, selection, pageCount: pageCount),
                     onTap: () => _tap(context, action),
                   ),
                 ),
@@ -71,7 +72,7 @@ class BatchActionBar extends StatelessWidget {
             for (final a in BatchAction.more)
               Builder(
                 builder: (context) {
-                  final availability = availabilityOf(a, selection);
+                  final availability = availabilityOf(a, selection, pageCount: pageCount);
                   return ListTile(
                     leading: Icon(a.icon),
                     title: Text(a.label),

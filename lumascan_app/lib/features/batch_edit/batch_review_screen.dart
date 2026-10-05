@@ -71,6 +71,7 @@ class _BatchReviewScreenState extends ConsumerState<BatchReviewScreen> {
           ? null
           : BatchActionBar(
               selection: _selection,
+              pageCount: pages.length,
               onAction: (action) => runBatchAction(context, ref, action, _selection),
             ),
     );

@@ -385,6 +385,17 @@ class ScanController extends Notifier<ScanState> {
     ]);
   }
 
+  /// Puts the pages in the order of [ids], as one undo step. Ignored unless
+  /// [ids] names every page exactly once, so no page can be lost or doubled.
+  void reorderPages(List<String> ids) {
+    final pages = state.pages;
+    if (ids.length != pages.length || ids.toSet().length != ids.length) return;
+    final byId = {for (final p in pages) p.id: p};
+    if (!ids.every(byId.containsKey)) return;
+    if ([for (final p in pages) p.id].join('/') == ids.join('/')) return;
+    _commit([for (final id in ids) byId[id]!]);
+  }
+
   bool _hasAny(Set<String> ids) => state.pages.any((p) => ids.contains(p.id));
 
   /// Moves a page; [newIndex] is its position after removal from [oldIndex].
