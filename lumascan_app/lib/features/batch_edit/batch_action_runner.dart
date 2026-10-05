@@ -7,6 +7,7 @@ import '../pages/scan_controller.dart';
 import 'batch_actions.dart';
 import 'batch_crop_queue.dart';
 import 'batch_enhance_screen.dart';
+import 'batch_ocr_screen.dart';
 import 'batch_reorder_screen.dart';
 import 'batch_selection.dart';
 
@@ -30,6 +31,9 @@ Future<void> runBatchAction(BuildContext context, WidgetRef ref, BatchAction act
       messenger
         ..clearSnackBars()
         ..showSnackBar(SnackBar(content: Text(summary.message)));
+    case BatchAction.ocr:
+      await Navigator.of(context)
+          .push(MaterialPageRoute<void>(builder: (_) => BatchOcrScreen(pageIds: [for (final p in selected) p.id])));
     case BatchAction.rotate:
       final dropsMarks = controller.rotationDropsMarks(selection.ids);
       controller.rotatePages(selection.ids);

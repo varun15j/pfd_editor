@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/features/batch_edit/batch_enhance_screen.dart';
+import 'package:lumascan/features/batch_edit/batch_ocr_screen.dart';
 import 'package:lumascan/features/batch_edit/batch_reorder_screen.dart';
 import 'package:lumascan/features/batch_edit/batch_review_screen.dart';
 import 'package:lumascan/features/crop/crop_screen.dart';
@@ -62,6 +63,12 @@ void main() {
       textScale: s,
     ),
     'Batch reorder': (t, b, s) => harness.pumpRoute(t, (_) => const BatchReorderScreen(), brightness: b, textScale: s),
+    'Batch OCR': (t, b, s) => harness.pumpRoute(
+      t,
+      (_) => BatchOcrScreen(pageIds: [for (final p in harness.pages) p.id]),
+      brightness: b,
+      textScale: s,
+    ),
     'Merge': (t, b, s) => harness.pumpRoute(t, (_) => const MergeScreen(), brightness: b, textScale: s),
     'Crop': (t, b, s) => harness.pumpRoute(
       t,
