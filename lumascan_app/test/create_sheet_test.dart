@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/domain/scanner_service.dart';
 import 'package:lumascan/domain/ui_prefs.dart';
+import 'package:lumascan/features/batch_capture/batch_capture_screen.dart';
 import 'package:lumascan/features/capture/scan_tips.dart';
 
+import 'support/fake_batch_camera.dart';
 import 'support/fake_photos.dart';
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
@@ -36,8 +40,21 @@ void main() {
     await tester.tap(find.byTooltip('Create'));
     await tester.pumpAndSettle();
     expect(find.text('Scan document'), findsOneWidget);
+    expect(find.text('Batch scan'), findsOneWidget);
     expect(find.text('Import photos'), findsOneWidget);
     expect(find.text('Edit a PDF'), findsOneWidget);
+  });
+
+  testWidgets('Batch scan from the sheet opens the batch camera', (tester) async {
+    final shots = Directory.systemTemp.createTempSync('lumascan_shots');
+    addTearDown(() => shots.deleteSync(recursive: true));
+    await pumpApp(tester, overrides: [batchCameraProvider.overrideWithValue(() => FakeBatchCamera(shots))]);
+    await tester.tap(find.byTooltip('Create'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Batch scan'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BatchCaptureScreen), findsOneWidget);
+    expect(find.bySemanticsLabel('Take photo'), findsOneWidget);
   });
 
   testWidgets('Import photos from the sheet opens the photo picker', (tester) async {

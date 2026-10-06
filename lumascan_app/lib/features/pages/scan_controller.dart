@@ -298,6 +298,54 @@ class ScanController extends Notifier<ScanState> {
     }
   }
 
+  /// Batch camera captures, chained so pages join the draft in shutter order
+  /// even when one file takes longer to move than the next.
+  Future<void> _captureIo = Future.value();
+
+  /// Adds one photo from the batch camera to the end of the draft, or, with
+  /// [replacing], puts it in that page's place (retake). The photo is moved,
+  /// not copied, so this is quick enough to run after every shutter press.
+  /// Each capture is committed on its own so a crash keeps every page taken
+  /// so far. Returns the new page, or null when it could not be saved.
+  Future<ScanPage?> addCapture(String photoPath, {String? replacing}) {
+    final result = _captureIo.then((_) async {
+      if (!ref.mounted) return null;
+      final store = ref.read(pageStoreProvider);
+      try {
+        final id = store.newId();
+        final page = ScanPage(id: id, originalPath: await store.adoptOriginal(photoPath, id), recipe: _newPageRecipe);
+        if (!ref.mounted) return null;
+        final replaced = replacing != null && state.pageById(replacing) != null;
+        _commit(replaced ? [for (final p in state.pages) p.id == replacing ? page : p] : [...state.pages, page]);
+        return page;
+      } catch (e) {
+        debugPrint('Could not save a captured page: $e');
+        return null;
+      }
+    });
+    _captureIo = result.then((_) {});
+    return result;
+  }
+
+  /// Sets the crop found on a freshly captured page. This finishes the
+  /// capture rather than being an edit of its own, so it adds no undo step,
+  /// and it applies to every undo snapshot of the page too. Ignored once the
+  /// user has cropped the page themselves.
+  void applyDetectedCrop(String pageId, CropQuad crop) {
+    final current = state.pageById(pageId);
+    if (current == null || !current.recipe.crop.isFull) return;
+    List<ScanPage> patch(List<ScanPage> pages) => [
+      for (final p in pages)
+        p.id == pageId && p.recipe.crop.isFull ? p.copyWith(recipe: p.recipe.copyWith(crop: crop)) : p,
+    ];
+    state = state.copyWith(
+      pages: List.unmodifiable(patch(state.pages)),
+      undoStack: [for (final s in state.undoStack) patch(s)],
+      redoStack: [for (final s in state.redoStack) patch(s)],
+    );
+    _persistDraft();
+  }
+
   /// Inserts a copy of [pageId], with the same edits, right after it. Both
   /// pages share the original image, which is never modified.
   void duplicate(String pageId) {
