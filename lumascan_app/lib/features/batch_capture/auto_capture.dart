@@ -31,13 +31,15 @@ enum AutoCaptureState {
 /// row.
 ///
 /// After a capture it waits for the next page, so the same page is never
-/// taken twice. Turning a book page or swapping a sheet disturbs the view
-/// for a moment: the outline is lost or jumps, or a hand and a turning page
-/// sweep over it. Only [disturbFrames] such frames in a row count as a new
-/// page; a single frame where the outline flickers out, or one dark frame,
-/// is the same page still lying there. Once disturbed, the new page must
-/// settle and stay still again before it is taken, so a page caught mid-turn
-/// is never taken either.
+/// taken twice. Turning a book page or swapping a sheet changes what the
+/// camera sees: a hand and a turning page sweep over the view, and a
+/// different page lies there afterwards. That is judged from a
+/// [sceneSignature] of the whole frame, not from the outline, because the
+/// outline can flicker out or jump between two guesses while nothing in
+/// front of the camera moves. Only [disturbFrames] changed frames in a row
+/// count as a new page. Once disturbed, the new page must settle and stay
+/// still again before it is taken, so a page caught mid-turn is never taken
+/// either.
 class AutoCaptureTracker {
   AutoCaptureTracker({
     this.stableFrames = 5,
@@ -46,6 +48,7 @@ class AutoCaptureTracker {
     this.disturbFrames = 2,
     this.steadyChange = 0.5,
     this.flipChange = 0.7,
+    this.sceneChange = 0.4,
   });
 
   /// Steady frames in a row needed before a capture.
@@ -69,8 +72,14 @@ class AutoCaptureTracker {
   /// clearly different page.
   final double flipChange;
 
+  /// Change of the whole view, from the captured frame or from the frame
+  /// before, that disturbs it.
+  final double sceneChange;
+
   CropQuad? _last;
   Float32List? _lastSignature;
+  Float32List? _lastScene;
+  Float32List? _capturedScene;
   bool _waiting = false;
   CropQuad? _capturedQuad;
   Float32List? _capturedSignature;
@@ -91,14 +100,19 @@ class AutoCaptureTracker {
   }
 
   /// Takes the page found in the next frame (null when none, or when the
-  /// frame is too dark to trust) and its content [signature], and returns
-  /// true when a photo should be taken now.
-  bool add(CropQuad? quad, [Float32List? signature]) {
-    final previous = _last, previousSignature = _lastSignature;
+  /// frame is too dark to trust), its content [signature] and the
+  /// [scene] signature of the whole frame, and returns true when a photo
+  /// should be taken now.
+  bool add(CropQuad? quad, [Float32List? signature, Float32List? scene]) {
+    final previous = _last, previousSignature = _lastSignature, previousScene = _lastScene;
     _last = quad;
     _lastSignature = quad == null ? null : signature;
+    _lastScene = scene;
     if (_waiting) {
-      _disturbed = _disturbs(quad, signature, previousSignature) ? _disturbed + 1 : 0;
+      final disturbed = scene != null && _capturedScene != null
+          ? _sceneChanged(scene, previousScene)
+          : _disturbs(quad, signature, previousSignature);
+      _disturbed = disturbed ? _disturbed + 1 : 0;
       if (_disturbed >= disturbFrames) _forgetCaptured();
     }
     if (quad == null) {
@@ -113,7 +127,14 @@ class AutoCaptureTracker {
     return !_waiting && _steady >= stableFrames;
   }
 
-  /// Whether this frame looks unlike the captured page lying still.
+  /// Whether the view changed: from the frame captured, or sharply from the
+  /// frame before (something moving across it).
+  bool _sceneChanged(Float32List scene, Float32List? previousScene) =>
+      signatureDiff(scene, _capturedScene!) >= sceneChange ||
+      (previousScene != null && signatureDiff(scene, previousScene) >= sceneChange);
+
+  /// Without scene signatures: whether this frame looks unlike the captured
+  /// page lying still.
   bool _disturbs(CropQuad? quad, Float32List? signature, Float32List? previousSignature) {
     if (quad == null) return true;
     final capturedQuad = _capturedQuad;
@@ -132,18 +153,21 @@ class AutoCaptureTracker {
     _waiting = true;
     _capturedQuad = _last;
     _capturedSignature = _lastSignature;
+    _capturedScene = _lastScene;
   }
 
   void _forgetCaptured() {
     _waiting = false;
     _capturedQuad = null;
     _capturedSignature = null;
+    _capturedScene = null;
     _disturbed = 0;
   }
 
   void reset() {
     _last = null;
     _lastSignature = null;
+    _lastScene = null;
     _steady = 0;
     _forgetCaptured();
   }
@@ -168,7 +192,13 @@ const signatureColumns = 6, signatureRows = 8;
 /// Values are centred on the page's mean and scaled by its contrast, so a
 /// change of exposure does not look like a new page. A blank page keeps a
 /// floor on the scale, so sensor noise is not blown up into content.
-Float32List pageSignature(RgbImage gray, CropQuad quad) {
+Float32List pageSignature(RgbImage gray, CropQuad quad) => _gridSignature(gray, quad, _inset);
+
+/// A [pageSignature] of the whole frame, edge to edge: what the camera
+/// sees, used to tell when something in front of it changed.
+Float32List sceneSignature(RgbImage gray) => _gridSignature(gray, CropQuad.full, 0);
+
+Float32List _gridSignature(RgbImage gray, CropQuad quad, double inset) {
   // Enough samples to cover every pixel of a cell, so a cell is the true
   // average of what is printed there and lines of text do not alias.
   final pageWidth = math.max((quad.tr.x - quad.tl.x).abs(), (quad.br.x - quad.bl.x).abs()) * gray.width;
@@ -181,9 +211,9 @@ Float32List pageSignature(RgbImage gray, CropQuad quad) {
     for (var column = 0; column < signatureColumns; column++) {
       var sum = 0;
       for (var j = 0; j < down; j++) {
-        final v = _inset + (1 - 2 * _inset) * (row + (j + 0.5) / down) / signatureRows;
+        final v = inset + (1 - 2 * inset) * (row + (j + 0.5) / down) / signatureRows;
         for (var i = 0; i < across; i++) {
-          final u = _inset + (1 - 2 * _inset) * (column + (i + 0.5) / across) / signatureColumns;
+          final u = inset + (1 - 2 * inset) * (column + (i + 0.5) / across) / signatureColumns;
           final x = _bilinear(quad.tl.x, quad.tr.x, quad.bl.x, quad.br.x, u, v);
           final y = _bilinear(quad.tl.y, quad.tr.y, quad.bl.y, quad.br.y, u, v);
           final px = (x * (gray.width - 1)).round().clamp(0, gray.width - 1);

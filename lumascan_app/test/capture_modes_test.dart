@@ -127,6 +127,27 @@ void main() {
       expect([tracker.add(_page, second), tracker.add(_page, second)], [false, true]);
     });
 
+    test('with the whole view unchanged, a jumping outline never takes the page again', () {
+      final tracker = AutoCaptureTracker(stableFrames: 3);
+      final view = _signature(5);
+      const other = CropQuad(NormPoint(0.05, 0.3), NormPoint(0.6, 0.25), NormPoint(0.65, 0.95), NormPoint(0.1, 0.95));
+      for (var i = 0; i < 3; i++) {
+        tracker.add(_page, _signature(1), view);
+      }
+      tracker.captured();
+      // The detector flips between two guesses, or loses the page, while
+      // nothing in front of the camera moves.
+      for (var i = 0; i < 30; i++) {
+        final quad = [_page, other, other, null][i % 4];
+        expect(tracker.add(quad, quad == null ? null : _signature(1), view), isFalse, reason: 'frame $i');
+      }
+      expect(tracker.state, AutoCaptureState.waitingForNext);
+
+      // A page is turned: the view changes, then settles on the next page.
+      expect(tracker.add(_page, _signature(2), _signature(6)), isFalse);
+      expect([for (var i = 0; i < 3; i++) tracker.add(_page, _signature(3), _signature(7))], [false, false, true]);
+    });
+
     test('a page taken away and put back counts as a new page', () {
       final tracker = AutoCaptureTracker(stableFrames: 3);
       for (var i = 0; i < 3; i++) {

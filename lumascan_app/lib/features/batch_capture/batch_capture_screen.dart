@@ -258,7 +258,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
       final analysis = await ref.read(frameAnalyzerProvider)(frame);
       if (!mounted || _mode != mode) return;
       final dark = analysis.tooDark;
-      final shoot = _tracker.add(dark ? null : analysis.quad, dark ? null : analysis.signature);
+      final shoot = _tracker.add(dark ? null : analysis.quad, dark ? null : analysis.signature, analysis.scene);
       setState(() => _frame = analysis);
       if (shoot && _autoCapture && mode.canAutoCapture && !_shooting && _retakeId == null) unawaited(_shoot());
     } catch (e) {

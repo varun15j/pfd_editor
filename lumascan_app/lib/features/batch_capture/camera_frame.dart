@@ -98,13 +98,17 @@ class CameraFrame {
 
 /// What one preview frame shows: the page in it, if any, upright and
 /// normalized to the frame, a coarse [pageSignature] of what is printed on
-/// it, and how bright the frame is (0..255).
+/// it, a [sceneSignature] of the whole frame, and how bright the frame is
+/// (0..255).
 @immutable
 class FrameAnalysis {
-  const FrameAnalysis({this.quad, this.signature, this.brightness = 128});
+  const FrameAnalysis({this.quad, this.signature, this.scene, this.brightness = 128});
 
   final CropQuad? quad;
   final Float32List? signature;
+
+  /// A [sceneSignature] of the whole frame.
+  final Float32List? scene;
   final double brightness;
 
   /// Too dark for auto capture to trust what it sees.
@@ -118,6 +122,7 @@ FrameAnalysis analyzeFrame(CameraFrame frame) {
   return FrameAnalysis(
     quad: quad,
     signature: quad == null ? null : pageSignature(gray, quad),
+    scene: sceneSignature(gray),
     brightness: meanLuma(gray),
   );
 }
