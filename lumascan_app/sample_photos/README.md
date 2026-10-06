@@ -27,4 +27,4 @@ Twenty phone photos of a printed black-and-white children's science book, held o
 
 They are harder than the math pages: two-page spreads with a curved gutter, the facing page and the page stack in view, fingers on the page (08, 13, 14, 15), and a busy background (cables, a lamp, cloth). In a debug build, tap **Add book pages** under Settings > Developer or in the debug panel.
 
-Page detection on 6 October 2026 (`detectPageQuad`, 640 px): about 5 of 20 are outlined well (03, 08, 12, 18, 20). 02 gets no outline, and most others cut across both pages or keep only a strip of one. Two-page spreads need their own handling: pick one page at the gutter, or keep the spread.
+Page detection on 6 October 2026 (`detectPageQuad`, 640 px): about 5 of 20 are outlined well (03, 08, 12, 18, 20). Most others cut across both pages. Thin strips of a page (05, 14, 16) were accepted as pages until the detector learned to reject shapes narrower than 0.28 of their length, so those photos now import uncropped; 13 is still a strip, just above the limit. Two-page spreads need their own handling: pick one page at the gutter, or keep the spread.

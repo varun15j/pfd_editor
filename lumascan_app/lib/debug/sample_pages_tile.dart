@@ -6,7 +6,7 @@ import '../features/pages/scan_controller.dart';
 import 'debug_panel.dart';
 import 'sample_pages.dart';
 
-/// Adds a bundled set of sample photos ([set]) to the draft through the normal
+/// Adds a bundled set of sample photos ([set]) as a new document through the normal
 /// photo import, with auto-crop, and opens the draft: pages to try batch
 /// edit and page detection on. Shown in the debug panel and in Settings >
 /// Developer (debug builds only).
@@ -33,7 +33,11 @@ class _SamplePagesTileState extends ConsumerState<SamplePagesTile> {
     final messenger = ScaffoldMessenger.maybeOf(debugNavigatorKey.currentContext ?? context);
     try {
       final photos = await loadSamplePages(set: widget.set);
-      final result = await ref.read(scanControllerProvider.notifier).importPhotos(photos, autoCrop: true);
+      final scan = ref.read(scanControllerProvider.notifier);
+      // Like any new scan, the samples start a document of their own; the
+      // current one stays on Home.
+      await scan.startNewDocument();
+      final result = await scan.importPhotos(photos, autoCrop: true);
       if (!mounted) return;
       widget.onStart?.call();
       messenger?.showSnackBar(SnackBar(content: Text('Added ${result.added} sample pages')));

@@ -58,9 +58,23 @@ CropQuad? detectPageQuad(RgbImage src, {int workSize = 320, double minArea = 0.1
 
   NormPoint norm((double, double) p) => NormPoint(p.$1 / (w - 1), p.$2 / (h - 1)).clamp();
   final quad = _ordered([for (final c in corners) norm(c)]);
-  if (!quad.isValid(minArea: minArea)) return null;
+  if (!quad.isValid(minArea: minArea) || !_pageShaped(quad, src)) return null;
   final page = focusOnePage(src, quad);
-  return page.isValid(minArea: minArea / 2) ? page : quad;
+  return page.isValid(minArea: minArea / 2) && _pageShaped(page, src) ? page : quad;
+}
+
+/// Narrowest page shape accepted: the short side at least this share of the
+/// long side. Paper is 0.7 (A4) to 0.6 (a paperback page), and a tilted page
+/// photographed at an angle can look about half as wide; a thinner shape is
+/// a strip of a page, such as the edge of an open book's facing page.
+const _minPageAspect = 0.28;
+
+bool _pageShaped(CropQuad q, RgbImage src) {
+  double dist(NormPoint a, NormPoint b) =>
+      math.sqrt(math.pow((a.x - b.x) * src.width, 2) + math.pow((a.y - b.y) * src.height, 2));
+  final across = (dist(q.tl, q.tr) + dist(q.bl, q.br)) / 2;
+  final down = (dist(q.tl, q.bl) + dist(q.tr, q.br)) / 2;
+  return math.min(across, down) >= _minPageAspect * math.max(across, down);
 }
 
 /// Paper is close to grey; skin, wood and coloured covers are not.
