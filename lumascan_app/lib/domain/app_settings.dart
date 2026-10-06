@@ -27,6 +27,30 @@ enum FileNamePattern {
   String get example => format(DateTime(2026, 10, 3, 14, 30));
 }
 
+/// Photo size the camera takes (More capture settings).
+enum CaptureResolution {
+  standard('Standard', 'About 2 MP. Smallest files, quickest shots'),
+  high('High', 'About 8 MP. Sharp small print; recommended'),
+  maximum('Maximum', 'Full sensor. Largest files, slower between shots');
+
+  const CaptureResolution(this.label, this.hint);
+  final String label;
+  final String hint;
+}
+
+/// How long a page must stay still before auto capture takes it.
+enum AutoCaptureSteadiness {
+  quick('Quick', 3),
+  normal('Normal', 5),
+  careful('Careful', 8);
+
+  const AutoCaptureSteadiness(this.label, this.frames);
+  final String label;
+
+  /// Steady preview frames in a row needed before the photo is taken.
+  final int frames;
+}
+
 /// Choices the user makes in Settings, kept on the device. Each field says in
 /// its comment whether changing it touches files that already exist.
 @immutable
@@ -39,6 +63,10 @@ class AppSettings {
     this.fileNamePattern = FileNamePattern.dateTime,
     this.onboardingSeen = false,
     this.analytics,
+    this.captureResolution = CaptureResolution.high,
+    this.shutterSound = false,
+    this.captureHaptics = true,
+    this.autoCaptureSteadiness = AutoCaptureSteadiness.normal,
   });
 
   /// Looks only. Does not touch any file.
@@ -70,6 +98,20 @@ class AppSettings {
   /// depends on the answer.
   final bool? analytics;
 
+  /// Size of the photos the camera takes from now on. Pages already taken
+  /// keep theirs.
+  final CaptureResolution captureResolution;
+
+  /// Play a click when a photo is taken. Some phones always play their own
+  /// shutter sound, whatever this says.
+  final bool shutterSound;
+
+  /// Vibrate briefly when a photo is taken.
+  final bool captureHaptics;
+
+  /// How long auto capture waits for the page to be still.
+  final AutoCaptureSteadiness autoCaptureSteadiness;
+
   AppSettings copyWith({
     ThemeMode? themeMode,
     DocumentFilter? defaultFilter,
@@ -78,6 +120,10 @@ class AppSettings {
     FileNamePattern? fileNamePattern,
     bool? onboardingSeen,
     Object? analytics = _keep,
+    CaptureResolution? captureResolution,
+    bool? shutterSound,
+    bool? captureHaptics,
+    AutoCaptureSteadiness? autoCaptureSteadiness,
   }) => AppSettings(
     themeMode: themeMode ?? this.themeMode,
     defaultFilter: defaultFilter ?? this.defaultFilter,
@@ -86,6 +132,10 @@ class AppSettings {
     fileNamePattern: fileNamePattern ?? this.fileNamePattern,
     onboardingSeen: onboardingSeen ?? this.onboardingSeen,
     analytics: identical(analytics, _keep) ? this.analytics : analytics as bool?,
+    captureResolution: captureResolution ?? this.captureResolution,
+    shutterSound: shutterSound ?? this.shutterSound,
+    captureHaptics: captureHaptics ?? this.captureHaptics,
+    autoCaptureSteadiness: autoCaptureSteadiness ?? this.autoCaptureSteadiness,
   );
 
   static const Object _keep = Object();
@@ -98,6 +148,10 @@ class AppSettings {
     'fileNamePattern': fileNamePattern.name,
     'onboardingSeen': onboardingSeen,
     if (analytics != null) 'analytics': analytics,
+    'captureResolution': captureResolution.name,
+    'shutterSound': shutterSound,
+    'captureHaptics': captureHaptics,
+    'autoCaptureSteadiness': autoCaptureSteadiness.name,
   };
 
   /// Unknown or missing values fall back to the defaults, so a settings file
@@ -110,6 +164,11 @@ class AppSettings {
     fileNamePattern: FileNamePattern.values.asNameMap()[json['fileNamePattern']] ?? FileNamePattern.dateTime,
     onboardingSeen: json['onboardingSeen'] as bool? ?? false,
     analytics: json['analytics'] as bool?,
+    captureResolution: CaptureResolution.values.asNameMap()[json['captureResolution']] ?? CaptureResolution.high,
+    shutterSound: json['shutterSound'] as bool? ?? false,
+    captureHaptics: json['captureHaptics'] as bool? ?? true,
+    autoCaptureSteadiness:
+        AutoCaptureSteadiness.values.asNameMap()[json['autoCaptureSteadiness']] ?? AutoCaptureSteadiness.normal,
   );
 
   @override
@@ -121,7 +180,11 @@ class AppSettings {
       other.keepOriginals == keepOriginals &&
       other.fileNamePattern == fileNamePattern &&
       other.onboardingSeen == onboardingSeen &&
-      other.analytics == analytics;
+      other.analytics == analytics &&
+      other.captureResolution == captureResolution &&
+      other.shutterSound == shutterSound &&
+      other.captureHaptics == captureHaptics &&
+      other.autoCaptureSteadiness == autoCaptureSteadiness;
 
   @override
   int get hashCode => Object.hash(
@@ -132,5 +195,9 @@ class AppSettings {
     fileNamePattern,
     onboardingSeen,
     analytics,
+    captureResolution,
+    shutterSound,
+    captureHaptics,
+    autoCaptureSteadiness,
   );
 }

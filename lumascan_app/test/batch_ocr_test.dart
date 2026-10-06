@@ -39,6 +39,9 @@ class _FakeOcr implements OcrEngine {
     if (text == null) throw StateError('unreadable');
     return text;
   }
+
+  @override
+  Future<String> recognizeFile(String path) async => '';
 }
 
 List<ScanPage> _pages(int n) => [for (var i = 0; i < n; i++) ScanPage(id: 'p$i', originalPath: '/p$i.jpg')];
@@ -102,7 +105,10 @@ void main() {
     tearDown(harness.dispose);
 
     testWidgets('without an engine it explains why and leaves pages alone', (tester) async {
-      await tester.runAsync(() => harness.setUp(pageCount: 2));
+      await tester.runAsync(
+        () =>
+            harness.setUp(pageCount: 2, overrides: [ocrEngineProvider.overrideWithValue(const UnavailableOcrEngine())]),
+      );
       await harness.pumpRoute(tester, (_) => const BatchReviewScreen());
 
       await tester.tap(find.text('OCR'));

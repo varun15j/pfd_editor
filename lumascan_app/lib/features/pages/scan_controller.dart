@@ -312,19 +312,50 @@ class ScanController extends Notifier<ScanState> {
   /// not copied, so this is quick enough to run after every shutter press.
   /// Each capture is committed on its own so a crash keeps every page taken
   /// so far. Returns the new page, or null when it could not be saved.
-  Future<ScanPage?> addCapture(String photoPath, {String? replacing}) {
+  ///
+  /// [plain] keeps the photo as it is, with no filter (Photo mode).
+  Future<ScanPage?> addCapture(String photoPath, {String? replacing, bool plain = false}) async {
+    final pages = await addCaptureSplit(photoPath, const [CropQuad.full], replacing: replacing, plain: plain);
+    return pages?.first;
+  }
+
+  /// Like [addCapture], but makes one page per crop in [crops], all sharing
+  /// the one photo (Book mode: the left and the right page of a spread).
+  /// With [replacing], the new pages take that page's place.
+  Future<List<ScanPage>?> addCaptureSplit(
+    String photoPath,
+    List<CropQuad> crops, {
+    String? replacing,
+    bool plain = false,
+  }) {
     final result = _captureIo.then((_) async {
       if (!ref.mounted) return null;
       final store = ref.read(pageStoreProvider);
       try {
         final id = store.newId();
-        final page = ScanPage(id: id, originalPath: await store.adoptOriginal(photoPath, id), recipe: _newPageRecipe);
+        final original = await store.adoptOriginal(photoPath, id);
+        final recipe = plain ? const EditRecipe() : _newPageRecipe;
+        final added = [
+          for (var i = 0; i < crops.length; i++)
+            ScanPage(
+              id: i == 0 ? id : store.newId(),
+              originalPath: original,
+              recipe: crops[i].isFull ? recipe : recipe.copyWith(crop: crops[i]),
+            ),
+        ];
         if (!ref.mounted) return null;
         final replaced = replacing != null && state.pageById(replacing) != null;
-        _commit(replaced ? [for (final p in state.pages) p.id == replacing ? page : p] : [...state.pages, page]);
+        _commit(
+          replaced
+              ? [
+                  for (final p in state.pages)
+                    if (p.id == replacing) ...added else p,
+                ]
+              : [...state.pages, ...added],
+        );
         // Working copies and the grid thumbnail are made in the background.
-        ref.read(renderServiceProvider).prepare([page]);
-        return page;
+        ref.read(renderServiceProvider).prepare(added);
+        return added;
       } catch (e) {
         debugPrint('Could not save a captured page: $e');
         return null;
@@ -334,16 +365,32 @@ class ScanController extends Notifier<ScanState> {
     return result;
   }
 
+  /// Keeps the text read from a page (OCR Doc mode). Like a detected crop it
+  /// finishes the capture, so it adds no undo step.
+  void setPageText(String pageId, String text) {
+    if (state.pageById(pageId) == null) return;
+    List<ScanPage> patch(List<ScanPage> pages) => [for (final p in pages) p.id == pageId ? p.copyWith(text: text) : p];
+    state = state.copyWith(
+      pages: List.unmodifiable(patch(state.pages)),
+      undoStack: [for (final s in state.undoStack) patch(s)],
+      redoStack: [for (final s in state.redoStack) patch(s)],
+    );
+    _persistDraft();
+  }
+
   /// Sets the crop found on a freshly captured page. This finishes the
   /// capture rather than being an edit of its own, so it adds no undo step,
   /// and it applies to every undo snapshot of the page too. Ignored once the
   /// user has cropped the page themselves.
-  void applyDetectedCrop(String pageId, CropQuad crop) {
+  ///
+  /// [expected] is the crop the page was given when it was taken (a half of
+  /// a book spread); the found crop applies only while the page still has it.
+  void applyDetectedCrop(String pageId, CropQuad crop, {CropQuad expected = CropQuad.full}) {
     final current = state.pageById(pageId);
-    if (current == null || !current.recipe.crop.isFull) return;
+    if (current == null || current.recipe.crop != expected) return;
     List<ScanPage> patch(List<ScanPage> pages) => [
       for (final p in pages)
-        p.id == pageId && p.recipe.crop.isFull ? p.copyWith(recipe: p.recipe.copyWith(crop: crop)) : p,
+        p.id == pageId && p.recipe.crop == expected ? p.copyWith(recipe: p.recipe.copyWith(crop: crop)) : p,
     ];
     state = state.copyWith(
       pages: List.unmodifiable(patch(state.pages)),

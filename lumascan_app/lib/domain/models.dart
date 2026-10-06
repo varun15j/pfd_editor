@@ -217,6 +217,7 @@ class ScanPage {
     required this.originalPath,
     this.recipe = const EditRecipe(),
     this.annotations = const [],
+    this.text,
   });
 
   final String id;
@@ -230,11 +231,16 @@ class ScanPage {
   /// because they would no longer line up.
   final List<Annotation> annotations;
 
-  ScanPage copyWith({EditRecipe? recipe, List<Annotation>? annotations}) => ScanPage(
+  /// Text read from the page (OCR Doc mode), or null when it has not been
+  /// read. Kept with the page so it can be copied later.
+  final String? text;
+
+  ScanPage copyWith({EditRecipe? recipe, List<Annotation>? annotations, String? text}) => ScanPage(
         id: id,
         originalPath: originalPath,
         recipe: recipe ?? this.recipe,
         annotations: annotations ?? this.annotations,
+        text: text ?? this.text,
       );
 
   /// [originalPath] is stored by file name only, because the app's private
@@ -245,6 +251,7 @@ class ScanPage {
         'file': path.basename(originalPath),
         'recipe': recipe.toJson(),
         if (annotations.isNotEmpty) 'annotations': [for (final a in annotations) a.toJson()],
+        if (text != null) 'text': text,
       };
 
   static ScanPage fromJson(Map<String, Object?> json, {required String originalsDir}) => ScanPage(
@@ -252,6 +259,7 @@ class ScanPage {
         originalPath: path.join(originalsDir, json['file']! as String),
         recipe: EditRecipe.fromJson((json['recipe'] as Map?)?.cast<String, Object?>() ?? const {}),
         annotations: Annotation.listFromJson(json['annotations']),
+        text: json['text'] as String?,
       );
 }
 

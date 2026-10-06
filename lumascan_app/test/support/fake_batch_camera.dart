@@ -3,8 +3,10 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:image/image.dart' as img;
+import 'package:lumascan/domain/app_settings.dart';
 import 'package:lumascan/domain/scanner_service.dart';
 import 'package:lumascan/features/batch_capture/batch_camera.dart';
+import 'package:lumascan/features/batch_capture/camera_frame.dart';
 
 /// A camera that writes a small JPEG into [dir] for every shot. [deny] makes
 /// [open] fail as if camera access were refused. Set [gate] to hold the next
@@ -23,12 +25,20 @@ class FakeBatchCamera implements BatchCamera {
   bool closed = false;
   bool torch = false;
   bool _ready = false;
+  CaptureResolution? resolution;
+
+  /// Where preview frames go while streaming; tests call [sendFrame].
+  void Function(CameraFrame)? onFrame;
+
+  /// Sends a preview frame, as the camera would.
+  void sendFrame(CameraFrame frame) => onFrame?.call(frame);
 
   static final _jpg = img.encodeJpg(img.Image(width: 30, height: 40)..clear(img.ColorRgb8(236, 232, 222)));
 
   @override
-  Future<void> open() async {
+  Future<void> open({CaptureResolution resolution = CaptureResolution.high}) async {
     opens++;
+    this.resolution = resolution;
     if (deny) throw const ScannerPermissionDenied(permanently: true);
     _ready = true;
   }
@@ -40,7 +50,16 @@ class FakeBatchCamera implements BatchCamera {
   bool get hasTorch => true;
 
   @override
-  Widget buildPreview() => const SizedBox.expand(key: ValueKey('camera-preview'));
+  Widget buildPreview({Widget? overlay}) => SizedBox.expand(key: const ValueKey('camera-preview'), child: overlay);
+
+  @override
+  Future<void> setResolution(CaptureResolution resolution) async => this.resolution = resolution;
+
+  @override
+  Future<void> startFrames(void Function(CameraFrame frame) onFrame) async => this.onFrame = onFrame;
+
+  @override
+  Future<void> stopFrames() async => onFrame = null;
 
   @override
   Future<String> takePicture() async {

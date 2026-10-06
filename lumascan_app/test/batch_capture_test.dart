@@ -175,10 +175,14 @@ void main() {
       expect(harness.pages.single.recipe.crop, FakePhotoAnalyzer.quad);
     });
 
-    testWidgets('Auto crop off keeps the whole photo', (tester) async {
+    testWidgets('Auto crop off in Camera settings keeps the whole photo', (tester) async {
       await open(tester);
-      await tester.tap(find.bySemanticsLabel('Auto crop On'));
-      await tester.pump();
+      await tester.tap(find.byTooltip('Camera settings'));
+      await harness.settle(tester);
+      await tester.tap(find.text('Auto crop'));
+      await harness.settle(tester);
+      await tester.tap(find.byTooltip('Close'));
+      await harness.settle(tester);
       await shoot(tester);
       expect(harness.pages.single.recipe.crop.isFull, isTrue);
     });
@@ -312,19 +316,18 @@ void main() {
 
     testWidgets('Camera settings switches stay in step with the quick controls', (tester) async {
       await open(tester);
+      expect(find.bySemanticsLabel('Auto On'), findsOneWidget);
       await tester.tap(find.byTooltip('Camera settings'));
       await harness.settle(tester);
       expect(find.text('Camera settings'), findsOneWidget);
 
-      await tester.tap(find.text('Auto crop').last);
+      await tester.tap(find.text('Auto capture'));
       await tester.tap(find.text('Alignment grid'));
       await harness.settle(tester);
       await tester.tap(find.byTooltip('Close'));
       await harness.settle(tester);
 
-      expect(find.bySemanticsLabel('Auto crop Off'), findsOneWidget);
-      await shoot(tester);
-      expect(harness.pages.single.recipe.crop.isFull, isTrue);
+      expect(find.bySemanticsLabel('Auto Off'), findsOneWidget);
     });
 
     testWidgets('blocked camera access explains itself and links to Settings', (tester) async {
