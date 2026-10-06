@@ -257,12 +257,10 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
       }
       final analysis = await ref.read(frameAnalyzerProvider)(frame);
       if (!mounted || _mode != mode) return;
-      final shoot = _tracker.add(analysis.tooDark ? null : analysis.quad);
+      final dark = analysis.tooDark;
+      final shoot = _tracker.add(dark ? null : analysis.quad, dark ? null : analysis.signature);
       setState(() => _frame = analysis);
-      if (shoot && _autoCapture && mode.canAutoCapture && !_shooting && _retakeId == null) {
-        _tracker.captured();
-        unawaited(_shoot());
-      }
+      if (shoot && _autoCapture && mode.canAutoCapture && !_shooting && _retakeId == null) unawaited(_shoot());
     } catch (e) {
       debugPrint('Preview analysis failed: $e');
     }
@@ -300,6 +298,9 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     }
     final replacing = _retakeId;
     final mode = _mode;
+    // Whether tapped or automatic, this page is taken: auto capture now
+    // waits for a different page instead of taking the same one again.
+    if (mode.findsPage) _tracker.captured();
     setState(() {
       _shooting = true;
       _flashSerial++;
@@ -333,7 +334,9 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
 
   Future<ScanPage?> _save(String path, String? replacing, CameraMode mode) async {
     final List<ScanPage>? pages;
-    if (mode == CameraMode.book) {
+    // Book mode makes two pages only when both are in view; held over one
+    // page, with the other cut off, it makes just that page.
+    if (mode == CameraMode.book && showsSpread(_frame.quad)) {
       pages = await _controller.addCaptureSplit(path, const [leftHalf, rightHalf], replacing: replacing);
     } else {
       final page = await _controller.addCapture(path, replacing: replacing, plain: mode == CameraMode.photo);
@@ -360,7 +363,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     final all = ref.read(scanControllerProvider).pages;
     final first = all.indexWhere((p) => p.id == pages!.first.id) + 1;
     _showToast(switch (mode) {
-      CameraMode.book => 'Pages $first and ${first + 1} captured',
+      _ when pages.length == 2 => 'Pages $first and ${first + 1} captured',
       _ when replacing != null => 'Page $first replaced',
       _ => 'Page $first captured',
     });
@@ -1538,7 +1541,7 @@ class _PreviewOverlay extends StatelessWidget {
           CustomPaint(
             painter: _QuadPainter(quad!, color: accent, steady: steady),
           ),
-        if (mode == CameraMode.book) ...[
+        if (mode == CameraMode.book && showsSpread(quad)) ...[
           Center(child: Container(width: 2, color: Colors.white70)),
           Align(
             alignment: const Alignment(-0.5, 0.75),

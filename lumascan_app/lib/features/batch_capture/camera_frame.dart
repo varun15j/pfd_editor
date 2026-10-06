@@ -9,6 +9,7 @@ import '../../domain/models.dart';
 import '../../imaging/book_split.dart';
 import '../../imaging/page_detector.dart';
 import '../../imaging/rgb_image.dart';
+import 'auto_capture.dart';
 
 /// How the bytes of a [CameraFrame] are laid out.
 enum FramePixels {
@@ -96,12 +97,14 @@ class CameraFrame {
 }
 
 /// What one preview frame shows: the page in it, if any, upright and
-/// normalized to the frame, and how bright it is (0..255).
+/// normalized to the frame, a coarse [pageSignature] of what is printed on
+/// it, and how bright the frame is (0..255).
 @immutable
 class FrameAnalysis {
-  const FrameAnalysis({this.quad, this.brightness = 128});
+  const FrameAnalysis({this.quad, this.signature, this.brightness = 128});
 
   final CropQuad? quad;
+  final Float32List? signature;
   final double brightness;
 
   /// Too dark for auto capture to trust what it sees.
@@ -111,7 +114,12 @@ class FrameAnalysis {
 /// Pure Dart, so it can run in an isolate.
 FrameAnalysis analyzeFrame(CameraFrame frame) {
   final gray = frame.uprightGray();
-  return FrameAnalysis(quad: detectPageQuad(gray, workSize: 160, minArea: 0.2), brightness: meanLuma(gray));
+  final quad = detectPageQuad(gray, workSize: 160, minArea: 0.2);
+  return FrameAnalysis(
+    quad: quad,
+    signature: quad == null ? null : pageSignature(gray, quad),
+    brightness: meanLuma(gray),
+  );
 }
 
 typedef FrameAnalyzer = Future<FrameAnalysis> Function(CameraFrame frame);

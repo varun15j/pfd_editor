@@ -57,6 +57,8 @@ Priority P0 = required for assigned release; P1 = useful after the core flow; P2
 | CAP-03 | P0 / R1 | Multipage session | Add, inspect, retake and remove pages before saving; previously committed pages survive app restart |
 | CAP-04 | P0 / R1 | Import photos/files | System pickers support JPEG/PNG and platform-decodable HEIC; normalize orientation; copy selected inputs to private storage; clearly report unsupported/corrupt inputs |
 | CAP-05 | P1 / R1 | Capture controls | Flash/torch where available, grid, auto/manual, supported lens selection; incompatible controls disabled with reason |
+| CAP-06 | P0 / R1 | No duplicate auto captures | After a capture, auto capture waits until the page is turned or swapped (two or more disturbed frames in a row) and settles again; one lost or dark frame never re-triggers; manual taps count as captures |
+| CAP-07 | P0 / R1 | One-page focus | A second page partly in view and cut off by the frame is left out of the outline and saved crop in Docs, Book and OCR Doc; a whole spread stays together; Book mode makes one page when only one is in view |
 | EDIT-01 | P0 / R1 | Perspective crop and rotation | Four corner handles, zoom loupe, reset and 90° rotation; reject crossed/degenerate quadrilaterals; original remains recoverable |
 | EDIT-02 | P0 / R1 | Document filters | Original, Auto, Clean Color, Grayscale, B&W, B&W Soft, High Contrast and Whiteboard; thumbnail preview and strength control where meaningful |
 | EDIT-03 | P0 / R1 | Photo filters and adjustments | Original, Natural, Vivid, Warm, Cool, Mono; exposure, contrast, saturation, warmth and sharpness; reset and before/after |

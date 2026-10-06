@@ -65,6 +65,16 @@ class _FakeQr implements QrReader {
 
 CameraFrame _frame() => CameraFrame.gray(4, 4, Uint8List(16));
 
+/// A page signature with bright cells at [spot] on an even page, so
+/// different spots are clearly different pages.
+Float32List _signature(int spot) {
+  final s = Float32List(signatureColumns * signatureRows)..fillRange(0, signatureColumns * signatureRows, -0.1);
+  for (var i = 0; i < 8; i++) {
+    s[(spot * 11 + i) % s.length] = 4;
+  }
+  return s;
+}
+
 void main() {
   group('AutoCaptureTracker', () {
     test('asks for a photo once the page holds still, then waits for the next page', () {
@@ -79,24 +89,115 @@ void main() {
         expect(tracker.add(_page), isFalse, reason: 'same page again');
       }
 
-      // The page is turned: a clearly different outline arms it again.
+      // A new sheet is put down elsewhere: the outline jumps and stays.
       const next = CropQuad(NormPoint(0.05, 0.3), NormPoint(0.6, 0.25), NormPoint(0.65, 0.95), NormPoint(0.1, 0.95));
-      expect(tracker.add(next), isFalse);
+      expect([tracker.add(next), tracker.add(next)], [false, false]);
       expect(tracker.state, AutoCaptureState.steadying);
-      expect([tracker.add(next), tracker.add(next)], [false, true]);
+      expect(tracker.add(next), isTrue);
     });
 
-    test('movement restarts the count, and losing the page re-arms it', () {
+    test('the outline flickering out does not take the same page again', () {
+      final tracker = AutoCaptureTracker(stableFrames: 3);
+      final page = _signature(1);
+      for (var i = 0; i < 3; i++) {
+        tracker.add(_page, page);
+      }
+      tracker.captured();
+      for (var round = 0; round < 4; round++) {
+        expect(tracker.add(null), isFalse, reason: 'one lost or dark frame');
+        for (var i = 0; i < 5; i++) {
+          expect(tracker.add(_page, page), isFalse, reason: 'same page, round $round');
+        }
+      }
+      expect(tracker.state, AutoCaptureState.waitingForNext);
+      expect(tracker.progress, 0);
+    });
+
+    test('a page turned under a still outline is taken once it settles', () {
+      final tracker = AutoCaptureTracker(stableFrames: 3);
+      final first = _signature(1), turning = _signature(2), second = _signature(3);
+      for (var i = 0; i < 3; i++) {
+        tracker.add(_page, first);
+      }
+      tracker.captured();
+
+      // The page sweeps over the view; the book's outline stays put.
+      expect([tracker.add(_page, turning), tracker.add(_page, second)], [false, false]);
+      expect(tracker.state, AutoCaptureState.steadying);
+      expect([tracker.add(_page, second), tracker.add(_page, second)], [false, true]);
+    });
+
+    test('a page taken away and put back counts as a new page', () {
+      final tracker = AutoCaptureTracker(stableFrames: 3);
+      for (var i = 0; i < 3; i++) {
+        tracker.add(_page);
+      }
+      tracker.captured();
+      tracker.add(null);
+      tracker.add(null);
+      expect(tracker.state, AutoCaptureState.searching);
+      expect([for (var i = 0; i < 3; i++) tracker.add(_page)], [false, false, true]);
+    });
+
+    test('movement restarts the count', () {
       final tracker = AutoCaptureTracker(stableFrames: 3);
       tracker.add(_page);
       tracker.add(_page);
       const moved = CropQuad(NormPoint(0.3, 0.15), NormPoint(0.9, 0.15), NormPoint(0.9, 0.85), NormPoint(0.3, 0.85));
       expect(tracker.add(moved), isFalse);
       expect(tracker.progress, closeTo(1 / 3, 1e-9));
+    });
 
-      tracker.captured();
-      tracker.add(null);
-      expect(tracker.state, AutoCaptureState.searching);
+    test('a page caught mid-turn is not steady', () {
+      final tracker = AutoCaptureTracker(stableFrames: 3);
+      tracker.add(_page, _signature(1));
+      tracker.add(_page, _signature(1));
+      expect(tracker.add(_page, _signature(2)), isFalse);
+      expect(tracker.progress, closeTo(1 / 3, 1e-9));
+    });
+  });
+
+  group('page signature', () {
+    // A grey desk with a white page on it; the page carries a dark block
+    // whose place makes the content.
+    RgbImage photo({double dx = 0, double gain = 1, (double, double)? block = (0.2, 0.2)}) {
+      final image = RgbImage(150, 200);
+      for (var y = 0; y < 200; y++) {
+        for (var x = 0; x < 150; x++) {
+          final u = (x / 150 - 0.2 - dx) / 0.6, v = (y / 200 - 0.15) / 0.7;
+          var value = 70.0;
+          if (u >= 0 && u <= 1 && v >= 0 && v <= 1) {
+            value = 230;
+            if (block != null && (u - block.$1).abs() < 0.15 && (v - block.$2).abs() < 0.15) value = 40;
+          }
+          final g = (value * gain).round().clamp(0, 255);
+          final o = (y * 150 + x) * 3;
+          image.data
+            ..[o] = g
+            ..[o + 1] = g
+            ..[o + 2] = g;
+        }
+      }
+      return image;
+    }
+
+    CropQuad shifted(double dx) => CropQuad(
+      NormPoint(_page.tl.x + dx, _page.tl.y),
+      NormPoint(_page.tr.x + dx, _page.tr.y),
+      NormPoint(_page.br.x + dx, _page.br.y),
+      NormPoint(_page.bl.x + dx, _page.bl.y),
+    );
+
+    test('stays the same when the camera moves or the exposure changes', () {
+      final still = pageSignature(photo(), _page);
+      final moved = pageSignature(photo(dx: 0.05, gain: 0.8), shifted(0.05));
+      expect(signatureDiff(still, moved), lessThan(0.3));
+    });
+
+    test('changes when different content is on the page', () {
+      final first = pageSignature(photo(), _page);
+      final other = pageSignature(photo(block: (0.75, 0.7)), _page);
+      expect(signatureDiff(first, other), greaterThan(0.7));
     });
   });
 
@@ -179,7 +280,7 @@ void main() {
       shots.deleteSync(recursive: true);
     });
 
-    Future<void> open(WidgetTester tester, {List overrides = const []}) async {
+    Future<void> open(WidgetTester tester, {List overrides = const [], FrameAnalyzer? analyzer}) async {
       shots = Directory.systemTemp.createTempSync('lumascan_shots');
       camera = FakeBatchCamera(shots);
       await tester.runAsync(
@@ -188,7 +289,7 @@ void main() {
           overrides: [
             batchCameraProvider.overrideWithValue(() => camera),
             photoAnalyzerProvider.overrideWithValue(FakePhotoAnalyzer()),
-            frameAnalyzerProvider.overrideWithValue((frame) async => const FrameAnalysis(quad: _page)),
+            frameAnalyzerProvider.overrideWithValue(analyzer ?? (frame) async => const FrameAnalysis(quad: _page)),
             spreadSplitterProvider.overrideWithValue((path) async => (_left, _right)),
             appSettingsStoreProvider.overrideWithValue(MemoryAppSettingsStore()),
             ...overrides,
@@ -244,6 +345,28 @@ void main() {
       expect(find.text('Turn to the next page'), findsOneWidget);
     });
 
+    testWidgets('a flickering outline does not retake the page; a turned page is taken', (tester) async {
+      // What the preview shows, frame by frame.
+      final seen = [
+        for (var i = 0; i < 6; i++) FrameAnalysis(quad: _page, signature: _signature(1)),
+        const FrameAnalysis(),
+        for (var i = 0; i < 6; i++) FrameAnalysis(quad: _page, signature: _signature(1)),
+        const FrameAnalysis(quad: _page, brightness: 10),
+        for (var i = 0; i < 6; i++) FrameAnalysis(quad: _page, signature: _signature(1)),
+        FrameAnalysis(quad: _page, signature: _signature(2)),
+        for (var i = 0; i < 7; i++) FrameAnalysis(quad: _page, signature: _signature(3)),
+      ];
+      var next = 0;
+      await open(tester, analyzer: (frame) async => seen[next < seen.length ? next++ : seen.length - 1]);
+
+      await frames(tester, 20);
+      expect(camera.shots, 1, reason: 'one lost frame and one dark frame are still the same page');
+      expect(find.text('Turn to the next page'), findsOneWidget);
+
+      await frames(tester, 8);
+      expect(camera.shots, 2, reason: 'the turned page settles and is taken');
+    });
+
     testWidgets('with Auto off the page outline shows but nothing is taken', (tester) async {
       await open(tester);
       await tester.tap(find.bySemanticsLabel('Auto On'));
@@ -263,6 +386,22 @@ void main() {
       expect(harness.pages[0].originalPath, harness.pages[1].originalPath, reason: 'one spread photo kept');
       expect(harness.pages[0].recipe.crop, _left);
       expect(harness.pages[1].recipe.crop, _right);
+    });
+
+    testWidgets('Book held over one page makes just that page', (tester) async {
+      // The left page alone: the right one is cut off, so the outline was
+      // trimmed to the left page and does not reach across the middle.
+      const onePage = CropQuad(NormPoint(0.05, 0.1), NormPoint(0.55, 0.1), NormPoint(0.55, 0.9), NormPoint(0.05, 0.9));
+      await open(tester, analyzer: (frame) async => const FrameAnalysis(quad: onePage));
+      await tester.tap(find.bySemanticsLabel('Auto On'));
+      await tester.pump();
+      await mode(tester, 'Book');
+      await frames(tester, 2);
+      expect(find.text('LEFT PAGE'), findsNothing);
+
+      await shoot(tester, 'Capture left and right book pages');
+      expect(harness.pages, hasLength(1));
+      expect(find.text('Page 1 captured'), findsOneWidget);
     });
 
     testWidgets('Photo keeps the plain photo', (tester) async {

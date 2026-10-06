@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import '../domain/models.dart';
+import 'page_focus.dart';
 import 'rgb_image.dart';
 
 /// Finds the paper page in a photo and returns its four corners, or null when
@@ -22,6 +23,8 @@ import 'rgb_image.dart';
 ///    convex hull, so fingers or tears that bite into an edge do not pull a
 ///    corner inwards, and are then nudged off any background the hull
 ///    bridged over.
+/// 4. A second page that is only partly in view, joined to the page at a
+///    gutter or a sheet edge, is cut off ([focusOnePage]).
 ///
 /// Known limit: paper touching the page with no gap (a stack of loose sheets,
 /// the facing page of a notebook) can be taken in with it. The quad is a
@@ -55,7 +58,9 @@ CropQuad? detectPageQuad(RgbImage src, {int workSize = 320, double minArea = 0.1
 
   NormPoint norm((double, double) p) => NormPoint(p.$1 / (w - 1), p.$2 / (h - 1)).clamp();
   final quad = _ordered([for (final c in corners) norm(c)]);
-  return quad.isValid(minArea: minArea) ? quad : null;
+  if (!quad.isValid(minArea: minArea)) return null;
+  final page = focusOnePage(src, quad);
+  return page.isValid(minArea: minArea / 2) ? page : quad;
 }
 
 /// Paper is close to grey; skin, wood and coloured covers are not.

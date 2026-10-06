@@ -18,14 +18,19 @@ const rightHalf = CropQuad(NormPoint(0.5, 0), NormPoint(1, 0), NormPoint(1, 1), 
   // The gutter can cut the paper in two, so a region that does not reach
   // across the middle is one page, not the spread: use the whole photo.
   final found = detectPageQuad(photo, minArea: 0.2);
-  final spread = found != null && found.tl.x < 0.4 && found.bl.x < 0.4 && found.tr.x > 0.6 && found.br.x > 0.6
-      ? found
-      : CropQuad.full;
+  final spread = found != null && showsSpread(found) ? found : CropQuad.full;
   final s = spineFraction(photo, spread);
   final top = _lerp(spread.tl, spread.tr, s);
   final bottom = _lerp(spread.bl, spread.br, s);
   return (CropQuad(spread.tl, top, bottom, spread.bl), CropQuad(top, spread.tr, spread.br, bottom));
 }
+
+/// Whether the page found in Book mode is an open spread, both pages in
+/// view, rather than one page with the other cut off or out of view. It is
+/// a spread when it reaches across the middle of the frame, or when no page
+/// was found at all (then the frame is split in halves).
+bool showsSpread(CropQuad? found) =>
+    found == null || (found.tl.x < 0.4 && found.bl.x < 0.4 && found.tr.x > 0.6 && found.br.x > 0.6);
 
 /// Where the spine is across [spread], from 0 (left edge) to 1 (right
 /// edge). Searches the middle third only, so a dark desk beside the book is
