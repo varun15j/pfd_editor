@@ -260,7 +260,9 @@ void main() {
     Future<void> tapSave(WidgetTester tester) async {
       await tester.tap(find.text('Save PDF'));
       await tester.pump();
-      for (var i = 0; i < 8; i++) {
+      // New pages get their working copies made in the background, which
+      // shares the CPU with the export, so allow it real time to finish.
+      for (var i = 0; i < 40; i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
         await tester.pump();
       }

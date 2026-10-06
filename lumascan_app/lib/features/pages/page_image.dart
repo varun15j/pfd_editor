@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -89,29 +90,31 @@ class _PageImageState extends ConsumerState<PageImage> {
         if (image == null) {
           return const Center(child: SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2)));
         }
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            if (widget.showMarks && widget.page.annotations.isNotEmpty)
-              // The image and its marks share one box sized like the image,
-              // so the marks stay on the page under any fit.
-              FittedBox(
-                fit: widget.fit,
-                clipBehavior: Clip.hardEdge,
-                child: SizedBox(
-                  width: image.width.toDouble(),
-                  height: image.height.toDouble(),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.file(File(image.path), fit: BoxFit.fill, gaplessPlayback: true),
-                      StaticMarks(widget.page.annotations),
-                    ],
-                  ),
-                ),
-              )
-            else
-              Image.file(File(image.path), fit: widget.fit, gaplessPlayback: true),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final decodeWidth = _decodeWidth(image, constraints, MediaQuery.devicePixelRatioOf(context));
+            Widget picture(BoxFit fit) =>
+                Image.file(File(image.path), fit: fit, gaplessPlayback: true, cacheWidth: decodeWidth);
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                if (widget.showMarks && widget.page.annotations.isNotEmpty)
+                  // The image and its marks share one box sized like the image,
+                  // so the marks stay on the page under any fit.
+                  FittedBox(
+                    fit: widget.fit,
+                    clipBehavior: Clip.hardEdge,
+                    child: SizedBox(
+                      width: image.width.toDouble(),
+                      height: image.height.toDouble(),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [picture(BoxFit.fill), StaticMarks(widget.page.annotations)],
+                      ),
+                    ),
+                  )
+                else
+                  picture(widget.fit),
             if (snap.connectionState != ConnectionState.done)
               const Align(
                 alignment: Alignment.topRight,
@@ -122,7 +125,24 @@ class _PageImageState extends ConsumerState<PageImage> {
               ),
           ],
         );
+          },
+        );
       },
     );
+  }
+
+  /// The width to decode [image] at: the pixels it covers on screen, so a
+  /// small grid cell never holds a larger bitmap than it shows. Null keeps
+  /// the file's own size.
+  int? _decodeWidth(RenderedImage image, BoxConstraints box, double pixelRatio) {
+    if (!box.hasBoundedWidth || !box.hasBoundedHeight || image.width <= 0 || image.height <= 0) return null;
+    final aspect = image.width / image.height;
+    final shown = switch (widget.fit) {
+      BoxFit.cover => math.max(box.maxWidth, box.maxHeight * aspect),
+      BoxFit.contain || BoxFit.scaleDown => math.min(box.maxWidth, box.maxHeight * aspect),
+      _ => box.maxWidth,
+    };
+    final width = (shown * pixelRatio).ceil();
+    return width > 0 && width < image.width ? width : null;
   }
 }

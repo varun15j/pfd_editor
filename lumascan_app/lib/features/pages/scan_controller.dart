@@ -218,6 +218,7 @@ class ScanController extends Notifier<ScanState> {
       }
       await scanner.cleanUp();
       _commit([...state.pages, ...added]);
+      ref.read(renderServiceProvider).prepare(added);
       return ScanAdded(added.length);
     } on ScannerPermissionDenied catch (e) {
       return ScanPermissionBlocked(permanently: e.permanently);
@@ -264,7 +265,10 @@ class ScanController extends Notifier<ScanState> {
         }
         _pageAdded();
       }
-      if (added.isNotEmpty && ref.mounted) _commit([...state.pages, ...added]);
+      if (added.isNotEmpty && ref.mounted) {
+        _commit([...state.pages, ...added]);
+        ref.read(renderServiceProvider).prepare(added);
+      }
       return PhotoImportResult(added: added.length, unreadable: unreadable);
     } finally {
       if (ref.mounted) state = state.copyWith(busy: false, adding: null);
@@ -286,6 +290,7 @@ class ScanController extends Notifier<ScanState> {
       await scanner.cleanUp();
       if (!ref.mounted) return const ScanCancelled();
       _commit([for (final p in state.pages) p.id == pageId ? page : p]);
+      ref.read(renderServiceProvider).prepare([page]);
       return const ScanAdded(1);
     } on ScannerPermissionDenied catch (e) {
       return ScanPermissionBlocked(permanently: e.permanently);
