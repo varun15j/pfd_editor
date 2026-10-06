@@ -5,10 +5,14 @@ import 'dart:ui' as ui;
 
 /// Upright RGBA pixels, four bytes per pixel.
 class RgbaPixels {
-  const RgbaPixels(this.bytes, this.width, this.height);
+  const RgbaPixels(this.bytes, this.width, this.height, {this.sourceBytes = 0, this.stageMicros = const {}});
   final Uint8List bytes;
   final int width;
   final int height;
+
+  /// Size of the file decoded, and the time spent reading and decoding it.
+  final int sourceBytes;
+  final Map<String, int> stageMicros;
 }
 
 /// Decodes [path] with the platform's image decoder, upright (EXIF
@@ -18,7 +22,10 @@ class RgbaPixels {
 /// which is about ten times faster than decoding the full photo in Dart and
 /// never holds the full-size bitmap in Dart memory.
 Future<RgbaPixels> decodeUpright(String path, int maxDimension) async {
-  final buffer = await ui.ImmutableBuffer.fromUint8List(await File(path).readAsBytes());
+  final sw = Stopwatch()..start();
+  final encoded = await File(path).readAsBytes();
+  final readMicros = sw.elapsedMicroseconds;
+  final buffer = await ui.ImmutableBuffer.fromUint8List(encoded);
   ui.ImageDescriptor? descriptor;
   ui.Codec? codec;
   ui.Image? image;
@@ -32,7 +39,14 @@ Future<RgbaPixels> decodeUpright(String path, int maxDimension) async {
     image = (await codec.getNextFrame()).image;
     final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
     if (data == null) throw const FormatException('The image could not be read');
-    return RgbaPixels(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes), image.width, image.height);
+    return RgbaPixels(
+      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+      image.width,
+      image.height,
+      sourceBytes: encoded.length,
+      // The platform decoder shrinks while it decodes, so both are "decode".
+      stageMicros: {'read': readMicros, 'decode': sw.elapsedMicroseconds - readMicros},
+    );
   } finally {
     image?.dispose();
     codec?.dispose();

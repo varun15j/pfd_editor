@@ -9,23 +9,36 @@ import '../domain/models.dart';
 import 'filters.dart';
 import 'geometry.dart';
 import 'rgb_image.dart';
+import 'stage_times.dart';
 
 /// Render pipeline from LLD section 7:
 /// decode → orientation → perspective warp → quarter turns → filter →
 /// brightness and contrast → encode.
-RgbImage renderRecipe(Uint8List original, EditRecipe recipe, {int? maxDimension}) {
-  var image = RgbImage.decode(original, maxDimension: maxDimension);
-  image = warpPerspective(image, recipe.crop);
-  image = rotateQuarterTurns(image, recipe.quarterTurns);
-  image = applyFilter(image, recipe.filter);
-  return adjustBrightnessContrast(image, brightness: recipe.brightness, contrast: recipe.contrast);
+///
+/// [times], when given, gets the time spent in each step.
+RgbImage renderRecipe(Uint8List original, EditRecipe recipe, {int? maxDimension, StageTimes? times}) {
+  final t = times ?? StageTimes();
+  var image = RgbImage.decode(original, maxDimension: maxDimension, times: t);
+  image = t.time('crop', () => rotateQuarterTurns(warpPerspective(image, recipe.crop), recipe.quarterTurns));
+  image = t.time('filter', () => applyFilter(image, recipe.filter));
+  return t.time(
+    'adjust',
+    () => adjustBrightnessContrast(image, brightness: recipe.brightness, contrast: recipe.contrast),
+  );
 }
 
 class RenderedImage {
-  const RenderedImage(this.path, this.width, this.height);
+  const RenderedImage(this.path, this.width, this.height, {this.sourceBytes = 0, this.stageMicros = const {}});
   final String path;
   final int width;
   final int height;
+
+  /// Size of the file it was made from, when it was just made.
+  final int sourceBytes;
+
+  /// Time per step when it was just made (see [StageTimes]); empty when it
+  /// was read back from disk.
+  final Map<String, int> stageMicros;
 }
 
 /// Renders a page to a JPEG file on a background isolate.
@@ -37,10 +50,11 @@ Future<RenderedImage> renderToFile({
   int quality = 85,
 }) {
   return Isolate.run(() {
-    final bytes = File(originalPath).readAsBytesSync();
-    final image = renderRecipe(bytes, recipe, maxDimension: maxDimension);
-    _writeJpg(image, outPath, quality);
-    return RenderedImage(outPath, image.width, image.height);
+    final t = StageTimes();
+    final bytes = t.time('read', () => File(originalPath).readAsBytesSync());
+    final image = renderRecipe(bytes, recipe, maxDimension: maxDimension, times: t);
+    _writeJpg(image, outPath, quality, t);
+    return RenderedImage(outPath, image.width, image.height, sourceBytes: bytes.length, stageMicros: t.micros);
   });
 }
 
@@ -71,8 +85,10 @@ Future<WorkingCopies> makeWorkingCopies({
   required int smallSize,
 }) {
   return Isolate.run(() {
-    final preview = RgbImage.decode(File(originalPath).readAsBytesSync(), maxDimension: previewSize);
-    return _writeWorkingCopies(preview, previewPath, smallPath, smallSize);
+    final t = StageTimes();
+    final bytes = t.time('read', () => File(originalPath).readAsBytesSync());
+    final preview = RgbImage.decode(bytes, maxDimension: previewSize, times: t);
+    return _writeWorkingCopies(preview, previewPath, smallPath, smallSize, t, bytes.length);
   });
 }
 
@@ -85,46 +101,66 @@ Future<WorkingCopies> writeWorkingCopies({
   required String previewPath,
   required String smallPath,
   required int smallSize,
+  Map<String, int> stageMicros = const {},
+  int sourceBytes = 0,
 }) {
   final pixels = TransferableTypedData.fromList([rgba]);
   return Isolate.run(() {
-    final bytes = pixels.materialize().asUint8List();
-    final rgb = Uint8List(width * height * 3);
-    for (var i = 0, j = 0; j < rgb.length; i += 4, j += 3) {
-      rgb[j] = bytes[i];
-      rgb[j + 1] = bytes[i + 1];
-      rgb[j + 2] = bytes[i + 2];
-    }
-    return _writeWorkingCopies(RgbImage(width, height, rgb), previewPath, smallPath, smallSize);
+    final t = StageTimes()..micros.addAll(stageMicros);
+    final rgb = t.time('convert', () {
+      final bytes = pixels.materialize().asUint8List();
+      final rgb = Uint8List(width * height * 3);
+      for (var i = 0, j = 0; j < rgb.length; i += 4, j += 3) {
+        rgb[j] = bytes[i];
+        rgb[j + 1] = bytes[i + 1];
+        rgb[j + 2] = bytes[i + 2];
+      }
+      return rgb;
+    });
+    return _writeWorkingCopies(RgbImage(width, height, rgb), previewPath, smallPath, smallSize, t, sourceBytes);
   });
 }
 
-WorkingCopies _writeWorkingCopies(RgbImage preview, String previewPath, String smallPath, int smallSize) {
+WorkingCopies _writeWorkingCopies(
+  RgbImage preview,
+  String previewPath,
+  String smallPath,
+  int smallSize,
+  StageTimes t,
+  int sourceBytes,
+) {
   final scale = smallSize / math.max(preview.width, preview.height);
   final small = scale >= 1
       ? preview
-      : RgbImage.fromImage(
-          img.copyResize(
-            preview.toImage(),
-            width: math.max(1, (preview.width * scale).round()),
-            height: math.max(1, (preview.height * scale).round()),
-            interpolation: img.Interpolation.average,
+      : t.time(
+          'resize',
+          () => RgbImage.fromImage(
+            img.copyResize(
+              preview.toImage(),
+              width: math.max(1, (preview.width * scale).round()),
+              height: math.max(1, (preview.height * scale).round()),
+              interpolation: img.Interpolation.average,
+            ),
           ),
         );
-  _writeJpg(preview, previewPath, 90);
-  _writeJpg(small, smallPath, 85);
+  _writeJpg(preview, previewPath, 90, t);
+  _writeJpg(small, smallPath, 85, t);
   return WorkingCopies(
-    RenderedImage(previewPath, preview.width, preview.height),
+    RenderedImage(previewPath, preview.width, preview.height, sourceBytes: sourceBytes, stageMicros: t.micros),
     RenderedImage(smallPath, small.width, small.height),
   );
 }
 
 /// Writes through a temp file and a rename, so a crash never leaves a
 /// half-written picture that would be reused on the next launch.
-void _writeJpg(RgbImage image, String path, int quality) {
-  final tmp = File('$path.part');
-  tmp.writeAsBytesSync(image.encodeJpg(quality: quality), flush: true);
-  tmp.renameSync(path);
+void _writeJpg(RgbImage image, String path, int quality, [StageTimes? times]) {
+  final t = times ?? StageTimes();
+  final jpg = t.time('encode', () => image.encodeJpg(quality: quality));
+  t.time('write', () {
+    final tmp = File('$path.part');
+    tmp.writeAsBytesSync(jpg, flush: true);
+    tmp.renameSync(path);
+  });
 }
 
 /// Reads a JPEG this app wrote earlier, without decoding its pixels. Returns
