@@ -40,6 +40,8 @@ Future<void> runPageAction(BuildContext context, WidgetRef ref, PageAction actio
           messenger.showSnackBar(
             SnackBar(
               content: Text('Page ${index + 1} retaken'),
+              // An action would otherwise keep it up until dismissed.
+              persist: false,
               action: SnackBarAction(label: 'Undo', onPressed: controller.undo),
             ),
           );
@@ -75,6 +77,8 @@ Future<void> runPageAction(BuildContext context, WidgetRef ref, PageAction actio
       messenger.showSnackBar(
         SnackBar(
           content: Text('Page ${index + 1} deleted'),
+          // An action would otherwise keep it up until dismissed.
+          persist: false,
           action: SnackBarAction(label: 'Undo', onPressed: controller.undo),
         ),
       );

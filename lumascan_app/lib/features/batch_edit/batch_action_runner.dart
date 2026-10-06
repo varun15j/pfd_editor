@@ -19,6 +19,9 @@ Future<void> runBatchAction(BuildContext context, WidgetRef ref, BatchAction act
   final selected = selection.pagesIn(pages);
   if (selected.isEmpty && action.needsSelection) return;
   final messenger = ScaffoldMessenger.of(context);
+  // The last action's undo toast would otherwise sit over the next screen,
+  // such as the markup tools.
+  messenger.hideCurrentSnackBar();
   final count = selected.length;
   final noun = 'page${count == 1 ? '' : 's'}';
 

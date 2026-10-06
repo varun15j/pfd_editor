@@ -65,6 +65,13 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
   Widget build(BuildContext context) {
     final count = widget.pageIds.length;
     final job = _job;
+    // Pages are named by their place in the document, not in the selection.
+    final order = [for (final p in ref.watch(scanControllerProvider).pages) p.id];
+    int? numberOf(String id) {
+      final i = order.indexOf(id);
+      return i < 0 ? null : i + 1;
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Recognize text')),
       body: FutureBuilder<OcrCapability>(
@@ -75,7 +82,7 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
           if (job != null) {
             return ListenableBuilder(
               listenable: job,
-              builder: (context, _) => _JobView(job: job),
+              builder: (context, _) => _JobView(job: job, numberOf: numberOf),
             );
           }
           return _Intro(
@@ -161,14 +168,16 @@ class _Intro extends StatelessWidget {
 }
 
 class _JobView extends StatelessWidget {
-  const _JobView({required this.job});
+  const _JobView({required this.job, required this.numberOf});
 
   final BatchOcrJob job;
+  final int? Function(String pageId) numberOf;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final current = job.currentNumber;
+    final running = job.results.where((r) => r.status == OcrPageStatus.running).firstOrNull;
+    final current = running == null ? null : numberOf(running.pageId) ?? job.currentNumber;
     final failed = job.withStatus(OcrPageStatus.failed).length + job.withStatus(OcrPageStatus.cancelled).length;
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -208,7 +217,7 @@ class _JobView extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 16),
-        for (final (i, r) in job.results.indexed) _ResultTile(number: i + 1, result: r),
+        for (final (i, r) in job.results.indexed) _ResultTile(number: numberOf(r.pageId) ?? i + 1, result: r),
       ],
     );
   }

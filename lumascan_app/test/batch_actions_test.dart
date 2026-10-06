@@ -68,6 +68,18 @@ void main() {
       expect([for (final p in state().pages) p.recipe.quarterTurns], [0, 0, 0]);
     });
 
+    testWidgets('the next action clears the last undo toast', (tester) async {
+      await open(tester);
+      await tester.tap(find.bySemanticsLabel(RegExp(r'^Rotate \d selected')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.textContaining('Rotated'), findsOneWidget);
+
+      await tester.tap(find.text('Enhance'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Rotated'), findsNothing);
+    });
+
     testWidgets('a disabled action says how to enable it', (tester) async {
       await open(tester);
       await tester.tap(find.text('Clear'));

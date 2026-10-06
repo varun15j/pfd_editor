@@ -9,6 +9,8 @@ void showMarksRemovedNotice(BuildContext context, ScanController controller) {
     ..showSnackBar(
       SnackBar(
         content: const Text('Markup removed because the page changed'),
+        // An action would otherwise keep it up until dismissed.
+        persist: false,
         action: SnackBarAction(label: 'Undo', onPressed: controller.undo),
       ),
     );

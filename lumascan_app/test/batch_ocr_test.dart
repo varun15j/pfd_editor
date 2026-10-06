@@ -149,5 +149,19 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('open'), findsOneWidget);
     });
+
+    testWidgets('results name pages by their place in the document', (tester) async {
+      final engine = _FakeOcr(readiness: OcrReadiness.ready);
+      await tester.runAsync(
+        () => harness.setUp(pageCount: 5, overrides: [ocrEngineProvider.overrideWithValue(engine)]),
+      );
+      final ids = [for (final p in harness.pages) p.id];
+      engine.texts = {ids[4]: 'Grocery'};
+      await harness.pumpRoute(tester, (_) => BatchOcrScreen(pageIds: [ids[4]]));
+
+      await tester.tap(find.text('Recognize text on 1 page'));
+      await tester.pumpAndSettle();
+      expect(find.text('Page 5: Text found'), findsOneWidget);
+    });
   });
 }
