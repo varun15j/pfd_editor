@@ -270,6 +270,13 @@ As a user holding the camera over one page, I want the outline and the crop to c
 - Book mode makes two pages only when the outline reaches across the middle of the frame (both pages in view); held over one page, it makes one page and hides the LEFT PAGE / RIGHT PAGE guides.
 - The user can still adjust the crop by hand in page review.
 
+**US-03.11 — Do not keep a page held too long twice**  
+As a user who holds a page in front of the camera for half a minute or more before turning it, I want it taken once, not again and again.
+
+- Slow movement of the hand and changing light never count as a new page; only a turn or swap does.
+- With auto capture on, the text on each new page is read and compared with the page before: page number first, then the first and last lines and the words, allowing for misread letters.
+- A page auto capture took again is removed, with "Same page as page N, not kept"; undo brings it back. Pages taken with the shutter are always kept.
+
 ---
 
 ## EP-04 — Import and alternate acquisition

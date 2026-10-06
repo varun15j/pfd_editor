@@ -388,6 +388,38 @@ void main() {
       expect(camera.shots, 2, reason: 'the turned page settles and is taken');
     });
 
+    const pageText = 'Tough Newspaper\nYour strongest blow cannot budge this fearless newspaper!\nWhat happens:\n28';
+
+    testWidgets('a page held so long it is taken again is not kept twice', (tester) async {
+      // The same page taken twice by auto capture: lifted, put back down.
+      final seen = [
+        for (var i = 0; i < 6; i++) FrameAnalysis(quad: _page, signature: _signature(1)),
+        FrameAnalysis(quad: _page, signature: _signature(2)),
+        for (var i = 0; i < 7; i++) FrameAnalysis(quad: _page, signature: _signature(3)),
+      ];
+      var next = 0;
+      await open(
+        tester,
+        analyzer: (frame) async => seen[next < seen.length ? next++ : seen.length - 1],
+        overrides: [ocrEngineProvider.overrideWithValue(_FakeOcr(photoText: pageText))],
+      );
+
+      await frames(tester, 6);
+      await frames(tester, 8);
+      expect(camera.shots, 2);
+      expect(harness.pages, hasLength(1), reason: 'the text reads as the same page');
+      expect(find.text('Same page as page 1, not kept'), findsOneWidget);
+    });
+
+    testWidgets('the same page taken with the shutter is always kept', (tester) async {
+      await open(tester, overrides: [ocrEngineProvider.overrideWithValue(_FakeOcr(photoText: pageText))]);
+      await tester.tap(find.bySemanticsLabel('Auto On'));
+      await tester.pump();
+      await shoot(tester, 'Take photo');
+      await shoot(tester, 'Take photo');
+      expect(harness.pages, hasLength(2));
+    });
+
     testWidgets('with Auto off the page outline shows but nothing is taken', (tester) async {
       await open(tester);
       await tester.tap(find.bySemanticsLabel('Auto On'));

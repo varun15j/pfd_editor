@@ -40,6 +40,14 @@ enum AutoCaptureState {
 /// count as a new page. Once disturbed, the new page must settle and stay
 /// still again before it is taken, so a page caught mid-turn is never taken
 /// either.
+///
+/// A page held in the hand for half a minute or more drifts slowly, and the
+/// light on it changes. Each frame then differs only a little from the one
+/// before, but over many frames the view moves far from the captured one.
+/// So while waiting, every quiet frame (one that changed less than
+/// [quietChange] from the frame before) becomes the new reference: only a
+/// sharp change, such as a hand or a page sweeping over the view, ever adds
+/// up to a new page. Slow drift never does.
 class AutoCaptureTracker {
   AutoCaptureTracker({
     this.stableFrames = 5,
@@ -49,6 +57,7 @@ class AutoCaptureTracker {
     this.steadyChange = 0.5,
     this.flipChange = 0.7,
     this.sceneChange = 0.4,
+    this.quietChange = 0.15,
   });
 
   /// Steady frames in a row needed before a capture.
@@ -75,6 +84,11 @@ class AutoCaptureTracker {
   /// Change of the whole view, from the captured frame or from the frame
   /// before, that disturbs it.
   final double sceneChange;
+
+  /// Largest change from the frame before that counts as the same view
+  /// drifting, not something moving across it. Quiet frames replace the
+  /// captured frame as the reference, so drift never adds up to a new page.
+  final double quietChange;
 
   CropQuad? _last;
   Float32List? _lastSignature;
@@ -113,7 +127,11 @@ class AutoCaptureTracker {
           ? _sceneChanged(scene, previousScene)
           : _disturbs(quad, signature, previousSignature);
       _disturbed = disturbed ? _disturbed + 1 : 0;
-      if (_disturbed >= disturbFrames) _forgetCaptured();
+      if (_disturbed >= disturbFrames) {
+        _forgetCaptured();
+      } else if (!disturbed) {
+        _followDrift(quad, signature, scene, previous, previousSignature, previousScene);
+      }
     }
     if (quad == null) {
       _steady = 0;
@@ -132,6 +150,30 @@ class AutoCaptureTracker {
   bool _sceneChanged(Float32List scene, Float32List? previousScene) =>
       signatureDiff(scene, _capturedScene!) >= sceneChange ||
       (previousScene != null && signatureDiff(scene, previousScene) >= sceneChange);
+
+  /// Moves the captured reference along with a view that is only drifting:
+  /// a page held in the hand, or light slowly changing on it.
+  void _followDrift(
+    CropQuad? quad,
+    Float32List? signature,
+    Float32List? scene,
+    CropQuad? previous,
+    Float32List? previousSignature,
+    Float32List? previousScene,
+  ) {
+    if (scene != null && previousScene != null && signatureDiff(scene, previousScene) < quietChange) {
+      _capturedScene = scene;
+    }
+    if (quad != null &&
+        previous != null &&
+        drift(quad, previous) <= maxDrift &&
+        signature != null &&
+        previousSignature != null &&
+        signatureDiff(signature, previousSignature) < quietChange) {
+      _capturedQuad = quad;
+      _capturedSignature = signature;
+    }
+  }
 
   /// Without scene signatures: whether this frame looks unlike the captured
   /// page lying still.
