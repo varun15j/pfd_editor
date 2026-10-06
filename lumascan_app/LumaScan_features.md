@@ -43,6 +43,7 @@ Already implemented or represented in the current Flutter app:
 - Multi-page drafts with reorder, delete, undo, and add-more.
 - Original, Magic Color, Grayscale, and B&W filters.
 - Apply-filter-to-all while preserving page-specific crop and rotation.
+- Reopen drafts or saved documents to re-crop/resize and replace a previous filter; saves create non-destructive recipe revisions from the retained original.
 - PDF export with A4, Letter, or fit-to-image sizing and quality options.
 - Open and edit an existing PDF.
 - Pen, highlight, text, erase, signature, page organization, and save-as-new-PDF.
@@ -83,7 +84,7 @@ The main navigation uses Home, Library, and Settings. A prominent centered Scan 
 
 - Full-screen camera with a clear document boundary and four visible corner anchors.
 - Persistent Auto/Manual segmented control.
-- Document-mode picker: Auto, Document, Receipt, ID, Book, Whiteboard, Business card.
+- Camera-mode picker: Docs, Book, Text, OCR Doc, QR and Photo. Docs is the compact document shortcut; Book preserves paired left/right pages and print layout; Text is live low-latency recognition; OCR Doc is full-resolution accuracy OCR with searchable output; QR previews and confirms decoded actions.
 - Auto mode detects type without blocking capture.
 - Status language is short and actionable: **Find a document**, **Hold steady**, **Move closer**, **Capturing**, **Page 3 saved**.
 - Haptic and visual confirmation after each page.

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>LumaScan · iOS batch workflow</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="LumaScan flow home"><span class="brand-mark">L</span><span>LumaScan<small>iOS interaction map</small></span></a>
+    <nav aria-label="Flow lanes">
+      <button class="nav-pill active" data-filter="all">Full flow</button>
+      <button class="nav-pill" data-filter="capture">Capture</button>
+      <button class="nav-pill" data-filter="batch">Batch edit</button>
+      <button class="nav-pill" data-filter="export">Export</button>
+    </nav>
+    <a class="board-link" href="../UI_UX_screen/lumascan-batch-edit-flow.svg">Open SVG board ↗</a>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">MIXED HTML · CSS · SVG PROTOTYPE</p>
+        <h1>From loose pages<br>to one polished PDF.</h1>
+        <p class="lede">A Figma-style flow rendered in the browser: native iOS patterns, responsive HTML components, and reusable SVG artwork inside the mobile screens.</p>
+        <div class="hero-actions"><a class="primary" href="prototype.html">Run clickable prototype</a><a class="secondary" href="../UI_UX_screen/lumascan-capture-modes-flow.svg">Capture modes SVG</a><a class="secondary" href="#flow">Explore the flow</a><button class="secondary" id="toggle-notes">Hide annotations</button></div>
+      </div>
+      <div class="hero-object" aria-label="Master SVG board preview">
+        <object data="../UI_UX_screen/lumascan-batch-edit-flow.svg" type="image/svg+xml"><a href="../UI_UX_screen/lumascan-batch-edit-flow.svg">Open the SVG flow board</a></object>
+        <span>Master flow board · SVG</span>
+      </div>
+    </section>
+
+    <section class="flow-head" id="flow">
+      <div><p class="eyebrow">PRIMARY JOURNEY</p><h2>Batch scan and edit</h2></div>
+      <div class="legend"><span><i class="dot teal"></i>Action</span><span><i class="dot blue"></i>Review</span><span><i class="dot amber"></i>Decision</span></div>
+    </section>
+
+    <section class="flow-grid" aria-label="LumaScan iOS screen flow">
+      <article class="flow-step" id="library-flow" data-lane="capture">
+        <header><span class="step-number">01</span><div><h3>Library</h3><p>Start a new batch</p></div></header>
+        <div class="phone light"><div class="dynamic-island"></div><div class="status"><b>9:41</b><span>●●● ᯤ ▰</span></div>
+          <div class="screen scroll"><div class="welcome"><p>Good morning</p><h4>Your documents</h4></div>
+            <button class="scan-hero"><span class="scan-icon">⌗</span><span><b>New scan</b><small>Camera · auto edges · multi-page</small></span><i>›</i></button>
+            <p class="section-label">QUICK ACTIONS</p><div class="quick-grid"><button><i>↑</i><span>Import</span></button><button><i>▣</i><span>ID copy</span></button><button><i>▶</i><span>Video</span></button></div>
+            <div class="list-head"><b>Recent</b><span>See all</span></div><div class="doc-row"><object data="assets/document-preview.svg" type="image/svg+xml"></object><span><b>Algebra notes</b><small>12 pages · Today</small></span><i>•••</i></div><div class="doc-row"><object data="assets/document-preview.svg" type="image/svg+xml"></object><span><b>Receipts</b><small>8 pages · Yesterday</small></span><i>•••</i></div>
+          </div><div class="home-indicator"></div>
+        </div>
+        <aside class="annotation"><b>Entry state</b><span>Primary action stays visually dominant.</span></aside>
+      </article>
+
+      <article class="flow-step" data-lane="capture">
+        <header><span class="step-number">02</span><div><h3>Multi-page capture</h3><p>Detect and collect</p></div></header>
+        <div class="phone dark"><div class="dynamic-island"></div><div class="status"><b>9:41</b><span>●●● ᯤ ▰</span></div>
+          <div class="screen capture" id="camera-preview"><object class="camera-svg" data="assets/camera-document.svg" type="image/svg+xml"></object>
+            <div class="camera-top"><span class="camera-top-spacer" aria-hidden="true"></span><span class="camera-guidance">Hold steady</span><button id="camera-settings-button" aria-label="Open camera settings">•••</button></div>
+            <div class="camera-quick-controls" aria-label="Camera quick controls"><button class="camera-control active" data-camera-toggle="batch" aria-pressed="true"><i>▣</i><span>Batch</span><b>On</b></button><button class="camera-control" data-camera-toggle="flash" aria-pressed="false"><i>⚡</i><span>Flash</span><b>Off</b></button><button class="camera-control active" data-camera-toggle="auto" aria-pressed="true"><i>◎</i><span>Auto</span><b>On</b></button></div>
+            <div class="capture-mode-overlay" id="capture-mode-overlay" aria-live="polite"></div><div class="capture-count"><b>4</b><span>pages captured</span></div><div class="mode-switch" aria-label="Capture modes"><button class="active" data-capture-mode="Docs">Docs</button><button data-capture-mode="Book">Book</button><button data-capture-mode="Text">Text</button><button data-capture-mode="OCR Doc">OCR Doc</button><button data-capture-mode="QR">QR</button><button data-capture-mode="Photo">Photo</button></div>
+            <div class="capture-bottom"><button class="thumb-button" id="open-captured-photos" aria-label="Open preview of 4 captured photos"><object data="assets/document-preview.svg" type="image/svg+xml"></object><i>4</i></button><button class="shutter" aria-label="Capture page"></button><button class="done camera-discard" id="discard-capture" aria-label="Discard all captured photos and changes">×</button></div>
+            <div class="camera-settings captured-photos-dialog" id="captured-photos-dialog" aria-hidden="true"><button class="settings-scrim" id="captured-photos-scrim" aria-label="Close captured photos preview"></button><section><span class="grabber"></span><div class="camera-sheet-title"><div><b>Captured photos</b><small>4 pages in this scan</small></div><button id="close-captured-photos" aria-label="Close captured photos preview">×</button></div><div class="captured-photos-grid"><button><object data="assets/document-preview.svg" type="image/svg+xml"></object><i>1</i></button><button><object data="assets/document-preview.svg" type="image/svg+xml"></object><i>2</i></button><button><object data="assets/document-preview.svg" type="image/svg+xml"></object><i>3</i></button><button><object data="assets/document-preview.svg" type="image/svg+xml"></object><i>4</i></button></div><a class="screen-primary captured-review-link" href="#flow">Review all 4 pages</a><button class="screen-secondary" id="continue-scanning">Continue scanning</button></section></div>
+            <div class="camera-settings discard-dialog" id="discard-dialog" aria-hidden="true"><button class="settings-scrim" id="discard-scrim" aria-label="Keep captured photos"></button><section><span class="grabber"></span><div class="discard-icon">×</div><h4>Discard the photos?</h4><p>Are you sure you want to discard the photos? All captured photos and changes will be permanently removed and cannot be restored.</p><button class="discard-confirm" id="confirm-discard">Discard photos</button><button class="discard-keep" id="cancel-discard">Keep photos</button></section></div>
+            <div class="camera-settings" id="camera-settings" aria-hidden="true"><button class="settings-scrim" id="settings-scrim" aria-label="Close camera settings"></button><section><span class="grabber"></span><div class="camera-sheet-title"><div><b>Camera settings</b><small>Capture options only</small></div><button id="close-camera-settings" aria-label="Close camera settings">×</button></div><label><span><i>▣</i><em><b>Batch mode</b><small>Keep capturing without review</small></em></span><input type="checkbox" data-camera-check="batch" checked><u></u></label><label><span><i>⚡</i><em><b>Flashlight</b><small>Continuous light while scanning</small></em></span><input type="checkbox" data-camera-check="flash"><u></u></label><label><span><i>◎</i><em><b>Auto capture</b><small>Capture when edges are stable</small></em></span><input type="checkbox" data-camera-check="auto" checked><u></u></label><label><span><i>#</i><em><b>Alignment grid</b><small>Show a 3 × 3 guide</small></em></span><input type="checkbox" data-camera-check="grid"><u></u></label><button class="camera-more-row"><span><i>⚙</i><em><b>More capture settings</b><small>Resolution, shutter sound and save original</small></em></span><strong>›</strong></button></section></div>
+          </div><div class="home-indicator"></div>
+        </div>
+        <aside class="annotation"><b>Camera preview</b><span>Batch, flash, auto capture and settings—not edit tools.</span></aside>
+      </article>
+
+      <article class="flow-step" data-lane="batch">
+        <header><span class="step-number">03</span><div><h3>Select pages</h3><p>Choose the edit scope</p></div></header>
+        <div class="phone light"><div class="dynamic-island"></div><div class="status"><b>9:41</b><span>●●● ᯤ ▰</span></div>
+          <div class="screen"><div class="ios-nav"><button>Cancel</button><b>4 selected</b><button>All 12</button></div><div class="page-grid">
+            <button class="page selected"><object data="assets/document-preview.svg" type="image/svg+xml"></object><i>✓</i></button><button class="page selected"><object data="assets/document-preview.svg" type="image/svg+xml"></object><i>✓</i></button><button class="page"><object data="assets/document-preview.svg" type="image/svg+xml"></object></button><button class="page selected"><object data="assets/document-preview.svg" type="image/svg+xml"></object><i>✓</i></button><button class="page"><object data="assets/document-preview.svg" type="image/svg+xml"></object></button><button class="page selected"><object data="assets/document-preview.svg" type="image/svg+xml"></object><i>✓</i></button>
+          </div><div class="batch-bar"><button data-sheet="enhance"><i>✦</i><span>Enhance</span></button><button data-sheet="rotate"><i>↻</i><span>Rotate</span></button><button data-sheet="organize"><i>↕</i><span>Organize</span></button><button data-sheet="more"><i>•••</i><span>More</span></button></div></div><div class="home-indicator"></div>
+        </div>
+        <aside class="annotation"><b>Selection state</b><span>Tap a batch action to update the sheet below.</span></aside>
+      </article>
+
+      <article class="flow-step" data-lane="batch">
+        <header><span class="step-number">04</span><div><h3>Action sheet</h3><p>Contextual batch tools</p></div></header>
+        <div class="phone light"><div class="dynamic-island"></div><div class="status"><b>9:41</b><span>●●● ᯤ ▰</span></div>
+          <div class="screen sheet-screen"><div class="blurred-pages"><div></div><div></div><div></div></div><div class="sheet"><span class="grabber"></span><p class="sheet-kicker">EDIT 4 PAGES</p><h4 id="sheet-title">Enhance selected</h4><p id="sheet-copy">Choose a filter and preview it before applying.</p><div id="sheet-options" class="sheet-options"><button><i>✦</i><span><b>Auto enhance</b><small>Balanced color and contrast</small></span><em>›</em></button><button><i>◐</i><span><b>Choose filter</b><small>Color, grayscale or B&amp;W</small></span><em>›</em></button><button><i>⌁</i><span><b>Remove marks</b><small>Clean page background</small></span><em>›</em></button></div><button class="cancel-sheet">Cancel</button></div></div><div class="home-indicator"></div>
+        </div>
+        <aside class="annotation"><b>Modal state</b><span>Sheet preserves selected-page context.</span></aside>
+      </article>
+
+      <article class="flow-step" data-lane="batch">
+        <header><span class="step-number">05</span><div><h3>Live enhance</h3><p>Preview before apply</p></div></header>
+        <div class="phone light"><div class="dynamic-island"></div><div class="status"><b>9:41</b><span>●●● ᯤ ▰</span></div>
+          <div class="screen"><div class="ios-nav"><button>‹ Back</button><b>Enhance</b><button>Apply</button></div><div class="preview-wrap"><object data="assets/document-preview.svg" type="image/svg+xml"></object><span class="compare-line"><i>↔</i></span><span class="before">Before</span><span class="after">After</span></div><p class="section-label">FILTER</p><div class="filter-strip"><button class="active"><i>✦</i><b>Auto</b></button><button><i>◒</i><b>Color</b></button><button><i>◐</i><b>Gray</b></button><button><i>◑</i><b>B&amp;W</b></button></div><div class="slider-row"><span>Strength</span><b>72%</b><input type="range" value="72" aria-label="Filter strength"></div><button class="screen-primary">Apply to 4 pages</button></div><div class="home-indicator"></div>
+        </div>
+        <aside class="annotation"><b>Preview state</b><span>Non-destructive recipe; scope is named.</span></aside>
+      </article>
+
+      <article class="flow-step" data-lane="batch">
+        <header><span class="step-number">06</span><div><h3>Organize</h3><p>Reorder and remove</p></div></header>
+        <div class="phone light"><div class="dynamic-island"></div><div class="status"><b>9:41</b><span>●●● ᯤ ▰</span></div>
+          <div class="screen"><div class="ios-nav"><button>‹ Back</button><b>Organize</b><button>Done</button></div><div class="tip">Hold and drag, or use Move for VoiceOver</div><div class="organize-list"><div><b>1</b><object data="assets/document-preview.svg" type="image/svg+xml"></object><span>Page 1</span><i>≡</i></div><div><b>2</b><object data="assets/document-preview.svg" type="image/svg+xml"></object><span>Page 2</span><i>≡</i></div><div class="selected"><b>3</b><object data="assets/document-preview.svg" type="image/svg+xml"></object><span>Page 3</span><i>≡</i></div><div><b>4</b><object data="assets/document-preview.svg" type="image/svg+xml"></object><span>Page 4</span><i>≡</i></div></div><div class="organize-actions"><button>Duplicate</button><button>Move to end</button><button class="danger">Delete</button></div></div><div class="home-indicator"></div>
+        </div>
+        <aside class="annotation"><b>Organize state</b><span>Drag is optional; destructive action is explicit.</span></aside>
+      </article>
+
+      <article class="flow-step" data-lane="export">
+        <header><span class="step-number">07</span><div><h3>Export</h3><p>Configure output</p></div></header>
+        <div class="phone light"><div class="dynamic-island"></div><div class="status"><b>9:41</b><span>●●● ᯤ ▰</span></div>
+          <div class="screen"><div class="ios-nav"><button>‹ Back</button><b>Export 4 pages</b><button></button></div><p class="section-label">FORMAT</p><div class="format-grid"><button class="active"><i>PDF</i><span>Document</span></button><button><i>JPG</i><span>4 images</span></button><button><i>PNG</i><span>Lossless</span></button></div><p class="section-label">QUALITY</p><div class="radio-list"><label><input type="radio" name="quality"><span><b>Small file</b><small>About 1.9 MB</small></span></label><label class="active"><input type="radio" name="quality" checked><span><b>Recommended</b><small>Clear text · about 4.8 MB</small></span></label><label><input type="radio" name="quality"><span><b>Best quality</b><small>Print-ready · about 11.2 MB</small></span></label></div><label class="toggle-row"><span><b>Searchable text</b><small>Keep recognized text selectable</small></span><input type="checkbox" checked><i></i></label><div class="file-summary"><span>Algebra-notes.pdf</span><b>4.8 MB</b></div><button class="screen-primary">Export PDF</button></div><div class="home-indicator"></div>
+        </div>
+        <aside class="annotation"><b>Configuration state</b><span>Estimate changes with options.</span></aside>
+      </article>
+
+      <article class="flow-step" data-lane="export">
+        <header><span class="step-number">08</span><div><h3>Complete</h3><p>Share or save</p></div></header>
+        <div class="phone light"><div class="dynamic-island"></div><div class="status"><b>9:41</b><span>●●● ᯤ ▰</span></div>
+          <div class="screen success"><object data="assets/export-success.svg" type="image/svg+xml"></object><h4>Your PDF is ready</h4><p>4 pages · 4.7 MB · Searchable</p><div class="result-card"><span><b>Algebra-notes.pdf</b><small>Saved to LumaScan</small></span><i>✓</i></div><button class="screen-primary">Share PDF</button><button class="screen-secondary">Save to Files</button><button class="text-button">Back to document</button></div><div class="home-indicator"></div>
+        </div>
+        <aside class="annotation"><b>Success state</b><span>Actual output and next actions are clear.</span></aside>
+      </article>
+    </section>
+
+    <section class="state-map">
+      <div><p class="eyebrow">COMPONENT CONTRACT</p><h2>One feature, every state.</h2><p>Each batch operation uses the same lifecycle so users always know what happened and what to do next.</p></div>
+      <ol><li><b>Idle</b><span>No selection</span></li><li><b>Selecting</b><span>Count + cancel</span></li><li><b>Previewing</b><span>Before/after</span></li><li><b>Processing</b><span>Progress + cancel</span></li><li><b>Completed</b><span>Result + next action</span></li><li class="warning"><b>Needs review</b><span>Keep successful pages</span></li></ol>
+    </section>
+  </main>
+  <footer><span>LumaScan · iOS batch workflow</span><span>HTML components + CSS phone frames + SVG objects</span></footer>
+</body>
+</html>

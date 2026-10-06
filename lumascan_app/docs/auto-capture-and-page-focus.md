@@ -1,6 +1,6 @@
 # Auto capture page change and one-page focus
 
-Covers US-03.6 and US-03.7, use cases UC-11 and UC-12, and requirements CAP-06 and CAP-07 (see `epics-user-stories.md` and `requirements.md`). Added to the continuous camera on 2026-10-06.
+Covers US-03.9 and US-03.10, use cases UC-11 and UC-12, and requirements CAP-09 and CAP-10 (see `epics-user-stories.md` and `requirements.md`). Added to the continuous camera on 2026-10-06.
 
 ## Problem
 

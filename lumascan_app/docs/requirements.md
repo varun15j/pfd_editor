@@ -54,16 +54,20 @@ Priority P0 = required for assigned release; P1 = useful after the core flow; P2
 |---|---|---|---|
 | CAP-01 | P0 / R1 | Document camera with manual and auto capture | Camera opens after permission; manual shutter works even when no rectangle is found; auto mode captures only after a stable qualifying page; shows captured page count |
 | CAP-02 | P0 / R1 | Quality guidance | Detect likely blur, low light, glare and clipped edges; explain retake suggestion; allow explicit user override; never claim perfect quality |
-| CAP-03 | P0 / R1 | Multipage session | Add, inspect, retake and remove pages before saving; previously committed pages survive app restart |
+| CAP-03 | P0 / R1 | Multipage session | Add, inspect, retake and remove pages before saving; previously committed pages survive app restart; the camera discard control requires explicit confirmation before permanently deleting the current capture session |
 | CAP-04 | P0 / R1 | Import photos/files | System pickers support JPEG/PNG and platform-decodable HEIC; normalize orientation; copy selected inputs to private storage; clearly report unsupported/corrupt inputs |
 | CAP-05 | P1 / R1 | Capture controls | Flash/torch where available, grid, auto/manual, supported lens selection; incompatible controls disabled with reason |
-| CAP-06 | P0 / R1 | No duplicate auto captures | After a capture, auto capture waits until the page is turned or swapped (two or more disturbed frames in a row) and settles again; one lost or dark frame never re-triggers; manual taps count as captures |
-| CAP-07 | P0 / R1 | One-page focus | A second page partly in view and cut off by the frame is left out of the outline and saved crop in Docs, Book and OCR Doc; a whole spread stays together; Book mode makes one page when only one is in view |
+| CAP-06 | P0 / R1 | Camera-preview control states | Quick controls and the settings sheet keep Batch mode, flashlight and Auto capture synchronized; Batch mode shows thumbnail/count and preserves accepted pages when disabled; the bottom-right cross is destructive and opens an explicit irreversible-discard confirmation; capture modes are separate from post-capture edit tools; every state is announced accessibly |
+| CAP-07 | P0 / R1 | Book photo capture | Detect an open spread and spine; produce paired left/right pages in configured reading order; retain the original spread and pairing/layout metadata; offer manual spine/corner correction; export individual pages or an explicitly selected facing-page/booklet layout |
+| CAP-08 | P0 / R1 | Capture mode selector | Camera uses the shortcut label Docs and exposes Docs, Book, Text, OCR Doc, QR and Photo; selected mode changes guidance, overlay and processing pipeline while preserving accepted pages |
+| CAP-09 | P0 / R1 | No duplicate auto captures | After a capture, auto capture waits until the page is turned or swapped (two or more disturbed frames in a row) and settles again; one lost or dark frame never re-triggers; manual taps count as captures |
+| CAP-10 | P0 / R1 | One-page focus | A second page partly in view and cut off by the frame is left out of the outline and saved crop in Docs, Book and OCR Doc; a whole spread stays together; Book mode makes one page when only one is in view |
 | EDIT-01 | P0 / R1 | Perspective crop and rotation | Four corner handles, zoom loupe, reset and 90° rotation; reject crossed/degenerate quadrilaterals; original remains recoverable |
-| EDIT-02 | P0 / R1 | Document filters | Original, Auto, Clean Color, Grayscale, B&W, B&W Soft, High Contrast and Whiteboard; thumbnail preview and strength control where meaningful |
+| EDIT-02 | P0 / R1 | Document filters | Original, Auto, Clean Color, Grayscale, B&W, B&W Soft, High Contrast and Whiteboard; every preset control shows a thumbnail rendered from the current page so users see the expected effect before applying it; strength control appears where meaningful |
 | EDIT-03 | P0 / R1 | Photo filters and adjustments | Original, Natural, Vivid, Warm, Cool, Mono; exposure, contrast, saturation, warmth and sharpness; reset and before/after |
 | EDIT-04 | P0 / R1 | Batch edits and undo | Apply enhancement settings to selected/all pages; never copy crop geometry to unrelated pages; undo last action during editing; saved original remains available |
 | EDIT-05 | P2 / R3 | Advanced cleanup | Shadow reduction, stain cleanup, book dewarp and finger removal each require an evaluated engine; preserve stamps/signatures; manual review before save |
+| EDIT-06 | P0 / R1 | Re-edit drafts and saved documents | Opening any draft or locally saved document exposes Crop/resize and Filter on every page; users can change crop geometry, rotation, preset and strength after prior edits or export; each save creates a new recipe revision against the immutable source, autosaves atomically and supports reset/history without cumulative image degradation |
 | ID-01 | P0 / R1 | ID capture templates | Generic card front/back, single-sided card, passport data page, custom document; front/back slots named clearly; no hardcoded government validation rules |
 | ID-02 | P0 / R1 | ID copy layout | Front/back fit on one A4/Letter page or separate pages; user can swap sides and retake independently; passport is not forced into card ratio |
 | ID-03 | P1 / R1 | Copy-purpose watermark | User enters purpose/date label; preview placement and opacity; export leaves essential fields legible; no automatic collection of ID fields |
@@ -71,6 +75,9 @@ Priority P0 = required for assigned release; P1 = useful after the core flow; P2
 | OCR-02 | P0 / R1 | Correct and reuse text | Copy selected/all text, edit transcript, undo edits and export TXT; edits do not silently change image pixels |
 | OCR-03 | P0 / R1 | Searchable PDF | Invisible text layer is aligned with page geometry; select/search works in two independent PDF readers; original image is visible |
 | OCR-04 | P1 / R3 | Additional languages | Display capability-driven language list; expose unsupported combinations before processing; validate mixed-language samples |
+| OCR-05 | P0 / R1 | Live Text mode | Recognize and track visible text regions with low latency; let users tap/copy text or choose a safe structured action; fall back to still-image OCR when live scanning is unavailable |
+| OCR-06 | P0 / R1 | OCR Doc mode | Run accuracy-first OCR on the full-resolution corrected page; preserve blocks/lines/words and coordinates, reading order and user corrections; create an aligned searchable-PDF text layer while retaining the page image |
+| QR-01 | P0 / R1 | QR capture mode | Restrict detection to QR in QR mode; show a tracked boundary and decoded summary; deduplicate repeated reads; require explicit user action before opening URLs, joining Wi-Fi or invoking another payload action |
 | LIB-01 | P0 / R1 | Local document library | Rename, sort, search title/OCR, favorite, folders and tags; recent scans persist without account |
 | LIB-02 | P0 / R1 | Trash and restore | Delete moves document to trash; restore preserves assets/order; permanent deletion explains scope and requires confirmation; propose 30-day trash retention |
 | LIB-03 | P0 / R1 | Save/resume drafts | Leaving workflow saves committed captures and edit state; reopening offers Resume draft; no silently lost completed pages |
@@ -95,6 +102,19 @@ Priority P0 = required for assigned release; P1 = useful after the core flow; P2
 ## 5. Filter behavior
 
 All filters are recipes stored against an immutable original. Preview is lower resolution; export rerenders from the original. “Original” removes enhancement but keeps the user's crop unless Reset all edits is chosen.
+
+The same editor and recipe model are used for newly captured pages, resumed drafts and saved library documents. Saving or exporting does not flatten the only editable copy: reopening a saved document restores its latest crop and filter controls, while the immutable source and earlier recipe revisions remain available according to retention policy. Imported PDFs can offer this behavior only for pages for which LumaScan owns or has retained a raster source; capability limits must be explained rather than silently rasterizing unrelated PDF content.
+
+### Filter-preview thumbnail loading
+
+- Each filter tile contains a visual thumbnail of the current page with that filter applied; text and selected-state styling supplement the image and remain accessible.
+- Prioritize the full document preview. Begin thumbnail work only after the current page preview reaches ready state; thumbnails must never delay opening the editor or interacting with the main preview.
+- Render only visible or near-visible tiles first. Queue remaining carousel thumbnails during idle time, with a small concurrency limit appropriate to device memory and thermal state.
+- Use a reduced-resolution source suitable for the rendered tile size. Do not decode or process the full-resolution original separately for every filter tile.
+- Cache by `pageRevisionId + geometryHash + filterId + filterVersion + representativeStrength + thumbnailSize`. Reuse cached results when reopening the page and invalidate only keys affected by a recipe, filter-version or size change.
+- Cancel or ignore stale thumbnail jobs when the user changes page, crop, revision or leaves the editor. Generation IDs prevent an older result from replacing the current page's thumbnail.
+- Show a lightweight neutral placeholder or shimmer until a thumbnail is ready. Failure of one thumbnail leaves the filter selectable, shows a retry/fallback state and does not block the editor.
+- Generate representative preset previews at the preset's recommended strength; live strength changes update the large preview first and do not regenerate every tile on each slider movement.
 
 | Category | Presets / tools | Design intent |
 |---|---|---|
