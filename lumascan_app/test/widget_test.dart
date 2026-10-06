@@ -7,22 +7,16 @@ import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/app/theme.dart';
 import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/domain/models.dart';
-import 'package:lumascan/domain/scanner_service.dart';
 import 'package:lumascan/domain/ui_prefs.dart';
 import 'package:lumascan/features/capture/scan_tips.dart';
 import 'package:lumascan/ui/state_views.dart';
 
+import 'support/fake_batch_camera.dart';
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
 
-class _BlockedScanner implements ScannerService {
-  @override
-  Future<List<String>> scan({required ScanSource source, int maxPages = 100}) async =>
-      throw const ScannerPermissionDenied(permanently: true);
-
-  @override
-  Future<void> cleanUp() async {}
-}
+/// A camera whose access is turned off; it never takes a photo.
+FakeBatchCamera _blockedCamera() => FakeBatchCamera(Directory.systemTemp, deny: true);
 
 class _BrokenLibraryStore extends MemoryLibraryStore {
   @override
@@ -85,22 +79,22 @@ void main() {
       await pumpApp(
         tester,
         prefs: tipsSeen(),
-        overrides: [scannerServiceProvider.overrideWithValue(_BlockedScanner())],
+        overrides: [batchCameraProvider.overrideWithValue(() => _blockedCamera())],
       );
       await tester.tap(find.bySemanticsLabel('Scan'));
       await tester.pumpAndSettle();
       expect(find.text('Camera access needed'), findsOneWidget);
       expect(find.text('Open Settings'), findsOneWidget);
-      await tester.tap(find.text('Not now'));
+      await tester.tap(find.bySemanticsLabel('Discard all captured photos and changes'));
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.text('Camera access needed'), findsNothing);
     });
 
     testWidgets('scanning from the Create sheet uses the same camera flow', (tester) async {
       await pumpApp(
         tester,
         prefs: tipsSeen(),
-        overrides: [scannerServiceProvider.overrideWithValue(_BlockedScanner())],
+        overrides: [batchCameraProvider.overrideWithValue(() => _blockedCamera())],
       );
       await tester.tap(find.byTooltip('Create'));
       await tester.pumpAndSettle();

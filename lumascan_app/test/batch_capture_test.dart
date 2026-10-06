@@ -124,6 +124,23 @@ void main() {
       await harness.settle(tester);
     }
 
+    Future<void> openPhotos(WidgetTester tester) async {
+      await tester.tap(find.bySemanticsLabel(RegExp(r'^Open preview of \d+ captured photos?$')));
+      await harness.settle(tester);
+    }
+
+    Future<void> review(WidgetTester tester) async {
+      await openPhotos(tester);
+      await tester.tap(find.textContaining(RegExp(r'^Review all \d+ pages?$')));
+      await harness.settle(tester);
+    }
+
+    Future<void> retake(WidgetTester tester, int page) async {
+      await openPhotos(tester);
+      await tester.tap(find.bySemanticsLabel('Retake page $page'));
+      await harness.settle(tester);
+    }
+
     testWidgets('each shot is saved and the camera is ready again, with no confirmation', (tester) async {
       await open(tester);
       expect(find.byKey(const ValueKey('camera-preview')), findsOneWidget);
@@ -134,7 +151,8 @@ void main() {
       expect(harness.pages, hasLength(3));
       expect(find.byKey(const ValueKey('camera-preview')), findsOneWidget);
       expect(find.byType(AlertDialog), findsNothing);
-      expect(find.bySemanticsLabel('3 pages. Open batch review'), findsOneWidget);
+      expect(find.bySemanticsLabel('3 pages captured'), findsOneWidget);
+      expect(find.bySemanticsLabel('Open preview of 3 captured photos'), findsOneWidget);
     });
 
     testWidgets('quick taps while a photo is being taken are queued, not lost', (tester) async {
@@ -159,19 +177,18 @@ void main() {
 
     testWidgets('Auto crop off keeps the whole photo', (tester) async {
       await open(tester);
-      await tester.tap(find.byTooltip('Auto crop on'));
+      await tester.tap(find.bySemanticsLabel('Auto crop On'));
       await tester.pump();
       await shoot(tester);
       expect(harness.pages.single.recipe.crop.isFull, isTrue);
     });
 
-    testWidgets('Retake swaps the previous photo for the next one', (tester) async {
+    testWidgets('Retake from Captured photos swaps that photo for the next one', (tester) async {
       await open(tester);
       await shoot(tester, times: 2);
       final before = [for (final p in harness.pages) p.id];
 
-      await tester.tap(find.text('Retake'));
-      await tester.pump();
+      await retake(tester, 2);
       expect(find.text('Retaking page 2. Take the new photo.'), findsOneWidget);
 
       await shoot(tester);
@@ -189,20 +206,18 @@ void main() {
     testWidgets('Retake can be cancelled', (tester) async {
       await open(tester);
       await shoot(tester);
-      await tester.tap(find.text('Retake'));
-      await tester.pump();
+      await retake(tester, 1);
       await tester.tap(find.text('Cancel').first);
       await tester.pump();
       await shoot(tester);
       expect(harness.pages, hasLength(2));
     });
 
-    testWidgets('Review opens Batch Review over the camera, and Back resumes it', (tester) async {
+    testWidgets('Review all opens Batch Review over the camera, and Back resumes it', (tester) async {
       await open(tester);
       await shoot(tester, times: 2);
 
-      await tester.tap(find.text('Review'));
-      await harness.settle(tester);
+      await review(tester);
       expect(find.byType(BatchReviewScreen), findsOneWidget);
       expect(find.text('2 selected'), findsOneWidget);
       expect(camera.pauses, 1);
@@ -218,8 +233,7 @@ void main() {
     testWidgets('Return to camera from Batch Review keeps shooting into the same draft', (tester) async {
       await open(tester, pageCount: 1);
       await shoot(tester);
-      await tester.tap(find.text('Review'));
-      await harness.settle(tester);
+      await review(tester);
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Return to camera'));
@@ -233,8 +247,7 @@ void main() {
     testWidgets('Review document from Batch Review closes the camera', (tester) async {
       await open(tester);
       await shoot(tester);
-      await tester.tap(find.text('Review'));
-      await harness.settle(tester);
+      await review(tester);
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Review document'));
@@ -242,6 +255,76 @@ void main() {
 
       expect(find.byType(BatchCaptureScreen), findsNothing);
       expect(camera.closed, isTrue);
+    });
+
+    testWidgets('Continue scanning closes Captured photos and keeps the camera open', (tester) async {
+      await open(tester);
+      await shoot(tester, times: 2);
+      await openPhotos(tester);
+      expect(find.text('Captured photos'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp(r'^Retake page \d$')), findsNWidgets(2));
+
+      await tester.tap(find.text('Continue scanning'));
+      await harness.settle(tester);
+      expect(find.text('Captured photos'), findsNothing);
+      await shoot(tester);
+      expect(harness.pages, hasLength(3));
+    });
+
+    testWidgets('the cross asks first, and Discard photos removes this visit\'s photos', (tester) async {
+      await open(tester, pageCount: 1);
+      final kept = harness.pages.single.id;
+      await shoot(tester, times: 2);
+
+      await tester.tap(find.bySemanticsLabel('Discard all captured photos and changes'));
+      await harness.settle(tester);
+      expect(find.text('Discard the photos?'), findsOneWidget);
+      await tester.tap(find.text('Keep photos'));
+      await harness.settle(tester);
+      expect(find.byType(BatchCaptureScreen), findsOneWidget);
+      expect(harness.pages, hasLength(3));
+
+      await tester.tap(find.bySemanticsLabel('Discard all captured photos and changes'));
+      await harness.settle(tester);
+      await tester.tap(find.text('Discard photos'));
+      await harness.settle(tester);
+      expect(find.byType(BatchCaptureScreen), findsNothing);
+      expect([for (final p in harness.pages) p.id], [kept]);
+    });
+
+    testWidgets('the cross closes straight away when no photo was taken', (tester) async {
+      await open(tester);
+      await tester.tap(find.bySemanticsLabel('Discard all captured photos and changes'));
+      await harness.settle(tester);
+      expect(find.text('Discard the photos?'), findsNothing);
+      expect(find.byType(BatchCaptureScreen), findsNothing);
+    });
+
+    testWidgets('Batch off opens Batch Review after each photo', (tester) async {
+      await open(tester);
+      await tester.tap(find.bySemanticsLabel('Batch On'));
+      await tester.pump();
+      expect(find.bySemanticsLabel('Batch Off'), findsOneWidget);
+
+      await shoot(tester);
+      expect(find.byType(BatchReviewScreen), findsOneWidget);
+    });
+
+    testWidgets('Camera settings switches stay in step with the quick controls', (tester) async {
+      await open(tester);
+      await tester.tap(find.byTooltip('Camera settings'));
+      await harness.settle(tester);
+      expect(find.text('Camera settings'), findsOneWidget);
+
+      await tester.tap(find.text('Auto crop').last);
+      await tester.tap(find.text('Alignment grid'));
+      await harness.settle(tester);
+      await tester.tap(find.byTooltip('Close'));
+      await harness.settle(tester);
+
+      expect(find.bySemanticsLabel('Auto crop Off'), findsOneWidget);
+      await shoot(tester);
+      expect(harness.pages.single.recipe.crop.isFull, isTrue);
     });
 
     testWidgets('blocked camera access explains itself and links to Settings', (tester) async {

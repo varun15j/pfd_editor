@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../domain/scanner_service.dart';
-import '../batch_capture/batch_capture_screen.dart';
 import '../pdf_editor/open_pdf.dart';
 
 /// The centre Create button's sheet: every way to start a document in one
@@ -32,14 +31,8 @@ class CreateSheet extends StatelessWidget {
     (
       Icons.document_scanner_outlined,
       'Scan document',
-      'Use the camera; edges are found for you',
+      'Take page after page; edges are found for you',
       (context, ref) => scanThenReview(context, ref, ScanSource.camera),
-    ),
-    (
-      Icons.burst_mode_outlined,
-      'Batch scan',
-      'Take many pages in a row, no stops between shots',
-      (context, ref) => openBatchCapture(context, ref),
     ),
     (
       Icons.photo_library_outlined,

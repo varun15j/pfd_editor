@@ -111,7 +111,9 @@ void main() {
 
       await tester.tap(find.bySemanticsLabel('Take photo'));
       await harness.settle(tester);
-      await tester.tap(find.text('Review'));
+      await tester.tap(find.bySemanticsLabel('Open preview of 3 captured photos'));
+      await harness.settle(tester);
+      await tester.tap(find.text('Review all 3 pages'));
       await harness.settle(tester);
 
       expect(harness.pages, hasLength(3));
