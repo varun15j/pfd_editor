@@ -218,6 +218,7 @@ class ScanController extends Notifier<ScanState> {
       }
       await scanner.cleanUp();
       _commit([...state.pages, ...added]);
+      ref.read(renderServiceProvider).prepare(added);
       return ScanAdded(added.length);
     } on ScannerPermissionDenied catch (e) {
       return ScanPermissionBlocked(permanently: e.permanently);
@@ -264,7 +265,10 @@ class ScanController extends Notifier<ScanState> {
         }
         _pageAdded();
       }
-      if (added.isNotEmpty && ref.mounted) _commit([...state.pages, ...added]);
+      if (added.isNotEmpty && ref.mounted) {
+        _commit([...state.pages, ...added]);
+        ref.read(renderServiceProvider).prepare(added);
+      }
       return PhotoImportResult(added: added.length, unreadable: unreadable);
     } finally {
       if (ref.mounted) state = state.copyWith(busy: false, adding: null);
@@ -286,6 +290,7 @@ class ScanController extends Notifier<ScanState> {
       await scanner.cleanUp();
       if (!ref.mounted) return const ScanCancelled();
       _commit([for (final p in state.pages) p.id == pageId ? page : p]);
+      ref.read(renderServiceProvider).prepare([page]);
       return const ScanAdded(1);
     } on ScannerPermissionDenied catch (e) {
       return ScanPermissionBlocked(permanently: e.permanently);
@@ -317,6 +322,8 @@ class ScanController extends Notifier<ScanState> {
         if (!ref.mounted) return null;
         final replaced = replacing != null && state.pageById(replacing) != null;
         _commit(replaced ? [for (final p in state.pages) p.id == replacing ? page : p] : [...state.pages, page]);
+        // Working copies and the grid thumbnail are made in the background.
+        ref.read(renderServiceProvider).prepare([page]);
         return page;
       } catch (e) {
         debugPrint('Could not save a captured page: $e');
