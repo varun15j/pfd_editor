@@ -161,14 +161,19 @@ As a user, I want to narrow the library by type and date and order it predictabl
 
 ### Features
 
-- Camera permission guidance and camera preview.
+- Camera permission guidance and camera preview with a horizontally scrollable Docs, Book, Text, OCR Doc, QR and Photo mode selector.
 - Auto edge detection, perspective correction, and automatic capture.
-- Manual shutter and flash controls.
+- Manual shutter, flashlight/torch control, and visible on/off state.
+- Camera-preview quick controls for Batch mode, Auto capture, and flashlight, synchronized with a capture-settings sheet.
+- Optional 3 × 3 alignment grid, capture-mode selector, accepted-page thumbnail, and Batch-mode page counter.
 - Document, book, ID card, business card, QR, and high-speed modes.
 - Book-mode center divider and paired-page capture.
 - High-speed continuous capture with pause/resume and page counter.
 - Stability/page-change prompts and manual-capture fallback.
 - Optional post-capture border adjustment and automatic straightening.
+- Book-spread capture with spine guidance, left/right page pairing, reading direction, original-spread retention and print-layout choices.
+- Two distinct text modes: low-latency live Text and full-resolution accuracy-first OCR Doc.
+- QR-only detection mode with tracked reticle, decoded summary, duplicate suppression and user-confirmed payload actions.
 
 ### User stories and acceptance criteria
 
@@ -183,9 +188,11 @@ As a user, I want the app to detect the page and capture it automatically.
 **US-03.2 — Scan an open book**  
 As a student, I want one photo of an open book to become two corrected pages.
 
-- Book mode displays a center divider before capture.
-- Each side can be cropped and corrected independently.
-- Output page order follows the configured reading direction.
+- Book mode displays labeled Left page / Right page regions and a detected center-spine guide before capture.
+- One accepted spread creates two paired pages while retaining the immutable original-spread image.
+- Each side can be cropped and corrected independently; low-confidence spine detection opens manual spine placement rather than guessing.
+- Output order follows the configured left-to-right or right-to-left reading direction.
+- The document stores spread pairing so export can produce individual pages, facing-page spreads or an explicitly requested booklet-print layout without losing order.
 
 **US-03.3 — Scan multiple pages quickly**  
 As a high-volume user, I want continuous capture and pause controls.
@@ -201,6 +208,44 @@ As a field user, I want a mode tuned for small structured documents.
 - ID mode guides front/back acquisition and preserves correct pairing.
 - Business-card mode frames the card and can hand recognized contact data to the review flow.
 - Sensitive document handling follows the application privacy policy.
+
+**US-03.5 — Control the camera preview**
+As a user preparing a scan, I want the important capture options on the camera preview so that I can change capture behavior without entering an editing workflow.
+
+- The preview provides quick controls for Batch mode, flashlight/torch, and Auto capture, each with a text or semantic on/off state rather than color alone.
+- The settings sheet repeats and stays synchronized with those quick controls, and also provides an optional alignment grid and a path to additional capture preferences.
+- Batch mode on keeps the preview open after each accepted page and displays the accepted-page thumbnail and page count. Turning it off preserves already captured pages and returns the next accepted page to review.
+- Auto capture on waits for a stable qualifying page and updates the guidance message. Auto capture off keeps edge guidance but requires the shutter.
+- Flashlight is disabled with an accessible reason when the active camera does not provide a torch; changing lenses re-evaluates availability.
+- The Document, ID card, and Photo choices describe capture modes only. Crop, filters, markup, and other post-capture edit commands do not appear in the camera preview.
+- The bottom-right cross is a destructive discard control, not Done, Save or Back. Tapping it opens a blocking confirmation that asks whether to discard the photos and states that the photos and current capture changes cannot be restored.
+- “Keep photos” closes the confirmation with no state change. Only “Discard photos” clears the current capture session and returns to Library; both actions have explicit accessible labels.
+- The settings sheet closes via its close control, backdrop, system back action, or Escape in the HTML reference without changing saved toggle values.
+- Preview controls meet the 48 logical-pixel target, announce name/role/state, support 200% text size, and remain reachable above safe areas.
+
+**US-03.6 — Scan live text**
+As a user, I want to point the camera at text and quickly copy or use recognized content without first creating a document.
+
+- Text mode highlights stable recognized regions and minimizes flicker by tracking regions across frames.
+- Users can tap a region to copy text or choose a safe structured action for a URL, phone number, email, date or address.
+- Text processing stays on-device by default and never opens a URL or invokes an external action without a user tap.
+- Unsupported live-scanner devices offer still-image OCR rather than a nonfunctional mode.
+
+**US-03.7 — Capture a document for accurate OCR**
+As a user, I want a high-quality document image plus editable and searchable text that preserves the page layout.
+
+- OCR Doc mode captures and perspective-corrects a full-resolution page before accuracy-oriented recognition.
+- Results retain blocks, lines, words, bounding geometry, reading order, confidence and user corrections.
+- Searchable PDF export aligns an invisible text layer with the visible page image; the original image remains recoverable.
+- Model download, progress, cancellation, low-confidence review and retry states are visible.
+
+**US-03.8 — Scan a QR code safely**
+As a user, I want the camera to read a QR code and explain its payload before I act on it.
+
+- QR mode restricts recognition to QR codes, displays a tracked reticle and suppresses repeated identical reads.
+- The result identifies URL, Wi-Fi, contact, email, phone, SMS or plain-text payloads when the engine provides structured data.
+- The app shows the destination or action and requires explicit confirmation; it never automatically opens a link or joins a network.
+- Unreadable codes keep the preview active and provide distance, focus or lighting guidance.
 
 ---
 
@@ -253,6 +298,7 @@ As a user, I want quick specialized acquisition without entering the full scan w
 - Batch selection and batch transformations where safe.
 - Undo/redo within the editing session.
 - Save/exit safeguards for unsaved changes.
+- Reopen both drafts and saved library documents with Crop/resize and Filter still available.
 
 ### User stories and acceptance criteria
 
@@ -277,6 +323,14 @@ As a user, I want to fix page order and remove mistakes.
 - Deletion of one or many pages is undoable or confirmed.
 - The last remaining page cannot be removed without confirming document deletion or cancellation.
 
+**US-05.4 — Re-crop a draft or saved document**
+As a user, I want to reopen any editable document and adjust its crop area again so that I can fix boundaries discovered later.
+
+- Draft and saved-document page editors expose Crop/resize in the persistent toolbar.
+- Opening Crop starts from the latest saved quad and provides detected-edges, full-image, manual corner/edge adjustment, rotation and reset.
+- Saving creates a recipe revision against the retained source, autosaves atomically and does not compound resampling artifacts.
+- If the original source is unavailable, the UI clearly explains the limitation before editing.
+
 ---
 
 ## EP-06 — Image enhancement and annotation
@@ -290,6 +344,7 @@ As a user, I want to fix page order and remove mistakes.
 - Resize/page-size control.
 - Apply to current page, selected pages, or all pages.
 - Non-destructive edit history where feasible.
+- Filter changes remain available after draft autosave, document save and PDF export.
 
 ### User stories and acceptance criteria
 
@@ -299,6 +354,14 @@ As an occasional user, I want automatic enhancement presets.
 - The current preset is visibly selected.
 - Preview updates quickly and can be compared with the original.
 - Applying a preset to all pages requires an explicit scope selection.
+
+**US-06.4 — Change a previously applied filter**
+As a user, I want to reopen a draft or saved document and replace its previous enhancement without rescanning.
+
+- The editor offers Original, Auto Color, Enhanced Color, Bright, Grayscale and B&W, with the current recipe visibly selected.
+- A filter can be reset independently of crop and rotation; Reset all edits is a separate confirmed action.
+- Preview and final export render from the immutable source plus the latest recipe, not from an already filtered derivative.
+- Saving updates the editable document revision and preserves earlier revisions for undo/history according to retention policy.
 
 **US-06.2 — Remove unwanted marks**  
 As a user, I want to erase background clutter without damaging nearby text.
@@ -530,13 +593,14 @@ As a user, I want AI assistance only when enabled and appropriate.
 
 ### UC-02 — Scan a multi-page book or batch
 
-1. User selects Book or High-speed mode.
-2. Book mode shows a center divider; high-speed mode starts continuous capture.
-3. Each accepted capture increments the page count and adds a thumbnail.
-4. The user pauses, resumes, or manually triggers capture when prompted.
-5. The user opens review, removes bad pages, retakes pages, and fixes ordering.
-6. The user applies a filter to selected pages or the whole document.
-7. The document is saved as one PDF.
+1. User opens the camera preview and enables Batch mode from a quick control or the synchronized settings sheet.
+2. User chooses Book/Document as supported, optionally enables the alignment grid, and chooses Auto capture or manual shutter.
+3. Book mode shows a center divider; Batch mode keeps the camera open for continuous capture.
+4. Each accepted capture increments the visible page count and updates the thumbnail.
+5. The user pauses, disables Batch mode, or manually triggers capture when prompted; pages already accepted are preserved.
+6. The user opens review, removes bad pages, retakes pages, and fixes ordering.
+7. The user applies a filter to selected pages or the whole document.
+8. The document is saved as one PDF.
 
 ### UC-03 — Scan an ID or business card
 

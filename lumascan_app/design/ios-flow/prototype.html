@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>LumaScan · clickable iOS prototype</title>
+  <link rel="stylesheet" href="prototype.css">
+  <link rel="stylesheet" href="prototype-interactions.css">
+  <script src="prototype.js" defer></script>
+</head>
+<body>
+  <header class="prototype-bar">
+    <a class="prototype-brand" href="index.html"><i>L</i><span>LumaScan<small>Clickable prototype</small></span></a>
+    <div class="prototype-tools"><button id="restart">↺ Restart</button><button id="hotspots" aria-pressed="false">◎ Show hotspots</button><a href="UI_UX_COMPONENT_ANIMATION_CHECKLIST.md">Coverage checklist ↗</a><a href="index.html">Flow board ↗</a></div>
+  </header>
+  <main>
+    <aside class="navigator" aria-label="Prototype screens">
+      <p>SCREENS</p><ol id="screen-list"></ol>
+      <div class="prototype-help"><b>How to use</b><span>Tap real controls in the phone. Swipe left/right or use arrow keys to move through the main flow.</span></div>
+    </aside>
+    <section class="stage">
+      <div class="stage-heading"><p id="step-label">STEP 01 / 09</p><h1 id="screen-name">Library</h1><span id="screen-purpose">Start a scan</span></div>
+      <div class="device" id="device" aria-label="Interactive LumaScan iPhone prototype">
+        <div class="island"></div><div class="device-status"><b>9:41</b><span>●●● ᯤ ▰</span></div>
+        <div id="prototype-screen" class="prototype-screen" aria-live="polite"></div>
+        <div class="gesture-bar"></div>
+      </div>
+      <div class="flow-controls"><button id="previous" aria-label="Previous screen">←</button><span id="flow-progress"></span><button id="next" aria-label="Next screen">→</button></div>
+    </section>
+    <aside class="inspector">
+      <p>INTERACTION NOTES</p><h2 id="note-title">Library entry</h2><p id="note-copy">Start with New scan. Every visible primary action is clickable.</p>
+      <div class="state-card"><span>Prototype state</span><b id="state-summary">Ready</b></div>
+      <div class="event-log"><span>LAST ACTION</span><b id="event-log">Prototype loaded</b></div>
+      <a href="../UI_UX_screen/lumascan-batch-edit-flow.svg">Open master SVG board ↗</a>
+    </aside>
+  </main>
+</body>
+</html>

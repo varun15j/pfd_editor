@@ -37,21 +37,24 @@ Dependencies point down only. Widgets never open files, call packages or write t
 
 | Subsystem | Responsibility | MVP implementation | Later |
 |---|---|---|---|
-| Capture | Produce page images with optional corner quads | cunning_document_scanner (ML Kit / Vision) | Custom CameraX / AVFoundation surface (ADR-008) |
+| Capture | Produce page images with mode-specific geometry and metadata | Existing Docs flow uses cunning_document_scanner; planned custom surface exposes Docs/Book/Text/OCR Doc/QR/Photo | CameraX / AVFoundation adapters and evaluated book dewarp |
 | Library | Documents, pages, folders, trash, search | Drift + private asset store | Full-text OCR search |
 | Image editing | Crop, rotate, filters as recipes on immutable originals | Dart/native render per LLD section 7 | Advanced cleanup, dewarp |
 | Annotation | Ink, highlight, text, signature overlays | App-owned overlay, flattened at export | Stamping into imported PDFs |
 | PDF output | Build and export scan PDFs | `pdf` package | Encryption via R1.1 engine |
 | PDF input | View, search, reorder and merge PDFs | pdfrx | Write engine from spike (ADR-014) |
-| OCR | Text with geometry per page | Not in MVP | google_mlkit_text_recognition / Vision |
+| OCR | Live text plus accuracy OCR with geometry per page | Planned on-device ML Kit Text Recognition / Vision behind OcrAdapter | Additional scripts and evaluated handwriting |
 | Jobs | Long-running export, OCR, video work | Dart isolates with progress streams | Native job ledger (LLD section 12) |
 
 ## 3. Cross-cutting principles
 
 - **Offline and private:** no account, no network upload, no document content in telemetry.
 - **Non-destructive:** originals are immutable; edits are versioned recipes and annotation rows.
+- **Re-editable after save:** drafts and saved documents use the same page editor. Save/export records a recipe revision and derived output; it never replaces the only retained editable source. Crop and filter can therefore be changed later without cumulative degradation.
 - **Adapters and capabilities:** every engine sits behind an interface and advertises what it supports, so packages can be swapped and missing features disabled with a reason.
 - **Crash safe:** committed pages survive process death; exports write to a temp file and rename atomically.
+
+The custom capture-mode architecture, book split/dewarp approach, OCR coordinate calculations, QR safety flow and quality metrics are specified in [Capture modes algorithms](capture-modes-algorithms.md).
 
 ## 4. Data flow: scan to PDF
 

@@ -29,7 +29,7 @@ Flutter implementation must respect safe areas, landscape, screen-reader order a
 | ID | Screen / route | Layout and main actions | States / requirement links |
 |---|---|---|---|
 | S01 | Library `/library` | Greeting/title, search, scan/import shortcuts, folder chips, recent documents, bottom navigation | Populated, empty, searching, trash; LIB-01..03 |
-| S02 | Capture `/capture` | Dark camera, flash/auto controls, edge frame and guidance, Document/ID/Photo/Video modes, shutter, thumbnail count, Done | Permission denied, acquiring, stable, blur, low light, busy, paused; CAP-01..05 |
+| S02 | Capture `/capture` | Dark camera, flash/auto controls, edge frame and guidance, horizontally scrollable Docs/Book/Text/OCR Doc/QR/Photo modes, shutter, thumbnail count, discard cross and confirmation | Permission denied, acquiring, stable, blur, low light, busy, paused, model unavailable, no spine, QR undecodable, discard confirmation; CAP-01..08, OCR-05/06, QR-01 |
 | S03 | Crop `/draft/:id/crop/:pageId` | Full page with four corner handles, rotate/reset, corner nudge controls, Apply crop | Manual fallback, invalid quad, rendering; EDIT-01 |
 | S04 | Enhance `/draft/:id/filters/:pageId` | Large page, before/after, horizontal filter thumbnails, strength, apply-to-all and Save | Preview loading, original, dirty recipe, unavailable advanced filter; EDIT-02/04/05 |
 | S05 | ID copy `/id/:draftId` | Template selector, labeled front/back slots, retake/swap, paper/layout, optional copy-purpose text, composite preview | Front required, back required, ready; ID-01..03 |
@@ -49,7 +49,13 @@ Top title “Your paper, organized.” New scan is the primary action; Import is
 
 ### S02 — Capture
 
-Top controls: Close, flash/torch and Auto/Manual. Center guidance uses a text chip such as “Hold steady” or “Move closer,” paired with a contour overlay. Bottom controls retain at least 48-pixel targets. Capture appends a page and updates the thumbnail/count. Done is unavailable at zero pages. Mode changes preserve existing drafts; ID/Photo/Video navigate to their own workflows. Permissions explain why access is needed and provide Import and Settings paths.
+Top controls: guidance and camera settings. Quick controls expose Batch mode, flashlight/torch and Auto capture with explicit on/off state; the settings sheet repeats those synchronized controls and adds the optional 3 × 3 alignment grid plus a route to resolution, shutter-sound and keep-original preferences. Center guidance uses a mode-specific text chip paired with the relevant overlay. Bottom controls retain at least 48-pixel targets. The horizontally scrollable mode selector uses **Docs** as the document shortcut: Docs, Book, Text, OCR Doc, QR and Photo. These select acquisition behavior only; crop, filters and markup remain post-capture tools.
+
+Book shows Left page / Right page regions and a spine guide. One accepted spread produces paired pages in reading order while retaining the original spread and layout metadata. Text shows tracked live text highlights for quick selection/copy. OCR Doc captures a full-resolution corrected page, then shows OCR progress and review. QR shows a square reticle, tracked code boundary and decoded payload summary; it never executes the payload automatically. Photo removes document correction guidance. Detailed pipelines and formulas: [Capture modes algorithms](./capture-modes-algorithms.md).
+
+Capture appends a page and updates the thumbnail/count. The complete bottom-left page thumbnail—including image, page icon and numeric badge—is one minimum-48-pixel touch target. Tapping anywhere on it opens an in-camera Captured photos preview rather than requiring a tap precisely on the number. The preview shows every accepted page and provides Close, Continue scanning and Review all actions. Batch mode keeps the preview open after an accepted page; disabling it preserves accepted pages and sends the next page to review. The page count is hidden outside Batch mode. Auto capture waits for a stable qualifying page; when disabled, detection guidance remains but only the shutter accepts a page. Flashlight is disabled with an accessible reason when unsupported.
+
+The bottom-right cross is a destructive discard action, not Done, Save or Back. Tapping it opens a blocking confirmation: “Are you sure you want to discard the photos?” The dialog explains that every photo and unsaved capture change in the current session will be permanently removed and cannot be restored. “Keep photos” closes the dialog without changing the session. “Discard photos” clears the current session only after explicit confirmation, then returns to Library. The cross uses a destructive color plus an accessible label; color alone does not communicate risk. At zero pages it may return without a confirmation because there is nothing to discard. Mode changes preserve existing drafts. Permissions explain why access is needed and provide Import and Settings paths. Reference interaction: `design/ios-flow/index.html`.
 
 ### S03 — Crop
 
@@ -60,6 +66,10 @@ Prototype corner handles and nudge buttons adjust a sample quadrilateral overlay
 ### S04 — Enhance
 
 Document filters are visibly separate from photo styles. Selected preset gets border, check and accessible selected state. Strength appears only for presets that support blending; Original disables it. Before/after compares the same crop. Apply to all affects enhancement only. Save returns to Pages with a short confirmation. Advanced cleanup is marked “Planned” unless a real engine capability is available.
+
+Every filter tile includes a current-page effect thumbnail above its label so the user can compare Original, Auto Color, Enhanced Color, Bright, Grayscale and B&W before selection. The main page preview loads first. Tiles initially use neutral placeholders, then visible thumbnails fade in; off-screen tiles are generated lazily. Thumbnail loading never disables filter selection or blocks navigation, and selected state is conveyed by border/check plus accessibility state rather than by the image alone.
+
+S08 is also the persistent re-entry editor for a resumed draft or saved document. Its bottom toolbar always exposes **Crop** and **Filter**, followed by Rotate, Pages and More. A status strip identifies `Draft · autosaved` or `Saved · changes autosave` and links to edit history. Crop opens S03 from the latest recipe and offers Detected edges, Full image, manual handles, rotation and Reset. Filter opens S04 with Original, Auto Color, Enhanced Color, Bright, Grayscale and B&W. Save returns to S08, confirms that the original was retained, and updates the document revision; export does not remove these controls.
 
 ### S05 — ID copy
 

@@ -6,7 +6,7 @@ Source: [LumaScan UI/UX task and PR plan](https://claude.ai/code/artifact/12ce43
 
 ## Summary
 
-The spec's UI/UX work fits into **17 PRs in 8 groups**, shipped in 4 waves. Each PR covers screens that share code, so review stays small and nothing waits on a backend.
+The spec's UI/UX work fits into **19 PRs in 8 groups**, shipped in 4 waves. Each PR covers screens that share code, so review stays small and nothing waits on a backend. Camera-preview controls are isolated in C3; Book, Text, OCR Doc and QR engines are grouped in C4. Both require the custom-camera ADR, while the HTML/SVG interaction reference is available now.
 
 - Each PR gets its own feature branch, cut from the latest `design/prototype-polish-hld`. Each PR targets that branch, and no PR is force-pushed once it is open.
 - Every PR ships with widget tests, `flutter analyze` clean, and the accessibility checks from section 6 of the spec (labels, 48 dp targets, 200% font scale).
@@ -22,7 +22,7 @@ The app has a working one-draft scan flow and a PDF editor, but no document libr
 | --- | --- | --- |
 | Navigation (IA) | One home screen (`pages_screen.dart`) that is also the draft | No Home / Files / Create / Tools / Settings shell |
 | EP-02 Library | Exported PDFs are written to `exports/`, but nothing lists them | No list or grid, search, sort, filter, folders or tags |
-| EP-03 Capture | Native scanner (ML Kit / VisionKit) with camera permission dialogs | No mode picker; book, ID, QR and high-speed modes depend on the custom camera decision |
+| EP-03 Capture | Native scanner (ML Kit / VisionKit) with camera permission dialogs; HTML/SVG six-mode camera reference | No custom preview engines; Docs, Book, Text, OCR Doc, QR and Photo depend on the custom-camera decision |
 | EP-04 Import | "Import from photos" button; Dart page detector (PR #4) not wired in | No ordered multi-select, auto-crop toggle or add-pages sheet |
 | EP-05 Review | Page list with crop, rotate and delete; undo; four-corner crop | No large preview with filmstrip, no loupe, no edge handles |
 | EP-06 Enhance | Filter screen with Apply to all; PDF editor has pen, highlight, text and signature | No before/after compare, scope picker or manual sliders |
@@ -32,7 +32,7 @@ The app has a working one-draft scan flow and a PDF editor, but no document libr
 
 ## PR plan
 
-Seventeen PRs, each one branch off `design/prototype-polish-hld`. Size: S is about 1 day, M 2 to 3 days and L about a week. A PR can start once everything in its Depends on column has merged.
+Nineteen PRs, each one branch off `design/prototype-polish-hld`. Size: S is about 1 day, M 2 to 3 days and L about a week. A PR can start once everything in its Depends on column has merged.
 
 | PR | Group | Scope | Stories | Branch | Depends on | Size | Wave | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -43,9 +43,11 @@ Seventeen PRs, each one branch off `design/prototype-polish-hld`. Size: S is abo
 | B3 | Library | Folders and tags: create, rename, delete, assign; inline name validation; deleting a folder keeps its documents | US-02.3 | `claude/ui-folders-tags` | B1 | M | 3 | Not started |
 | C1 | Capture | Create sheet and capture entry: scan, import photos, edit PDF; camera-permission guide with import fallback; scan tips | US-03.1, UC-01 | `claude/ui-create-sheet` | A1 | S | 2 | Not started |
 | C2 | Capture | Photo import: ordered multi-select, auto-crop toggle using the Dart detector, bad images reported, add pages to an existing document | US-04.1, US-04.2 | `claude/ui-photo-import` | C1, PR #4 | M | 3 | Not started |
-| D1 | Review | Page review: large preview with filmstrip, synced page counter, disabled first/last arrows, undo/redo, unsaved-exit guard | US-05.2, US-05.3 | `claude/ui-page-review` | A1 | L | 2 | Not started |
-| D2 | Review | Crop precision: magnifier loupe, edge handles, handles that stay visible when zoomed, detector quad as the starting crop | US-05.1 | `claude/ui-crop-precision` | D1 | M | 3 | Not started |
-| D3 | Review | Enhance: preset carousel with clear selection, press-and-hold before/after, scope picker (this page, selected, all), brightness and contrast sliders | US-06.1 | `claude/ui-enhance` | D1 | M | 3 | Not started |
+| C3 | Capture | Custom camera preview controls: Batch mode, flashlight, auto capture, alignment grid, capture-mode selector, page counter and capture-settings sheet | US-03.1, US-03.3, US-03.5, UC-01, UC-02 | `claude/ui-camera-preview-controls` | C1, custom-camera ADR | M | 3 | Blocked on ADR |
+| C4 | Capture | Capture engines and review states for Book, live Text, OCR Doc and QR; preserve book pairing/layout; on-device OCR and safe QR actions | US-03.2, US-03.6, US-03.7, US-03.8 | `claude/feature-capture-modes` | C3, OCR/barcode adapters | L | 4 | Blocked on ADR |
+| D1 | Review | Persistent document editor for drafts and saved documents: large preview, filmstrip, always-visible Crop and Filter, synced page counter, undo/redo and edit history | US-05.2, US-05.3, US-05.4 | `claude/ui-page-review` | A1, A2 | L | 2 | Not started |
+| D2 | Review | Re-editable crop: reopen latest quad after save/export, magnifier loupe, edge handles, detected/full-image reset, immutable-source revision save | US-05.1, US-05.4 | `claude/ui-crop-precision` | D1 | M | 3 | Not started |
+| D3 | Review | Re-editable filters: Original, Auto Color, Enhanced Color, Bright, Grayscale, B&W; current recipe, before/after, scope, reset and revision save | US-06.1, US-06.4 | `claude/ui-enhance` | D1 | M | 3 | Not started |
 | D4 | Review | Markup polish: shared colour and thickness picker, selected-tool state, scrollable toolbar; markup on scanned pages | US-06.3 | `claude/ui-markup` | D1 | M | 4 | Not started |
 | E1 | Save/share | Save flow: name the document (default pattern), quality with estimated size, save progress, success only after the file is written | US-09.1, US-09.2 | `claude/ui-save-flow` | A2 | M | 3 | Not started |
 | E2 | Save/share | Send PDF: original or smaller copy, name and size shown before handoff, system share fallback; share-link entry hidden until a backend exists | US-09.4, UC-09 | `claude/ui-send-pdf` | E1 | S | 4 | Not started |
@@ -60,8 +62,8 @@ Seventeen PRs, each one branch off `design/prototype-polish-hld`. Size: S is abo
 | --- | --- | --- |
 | 1 | A1 design system and bottom-nav shell, A2 local document store and autosave | - |
 | 2 | B1 Home/Files, C1 Create sheet, D1 page review, F1 Settings | A1 (B1 also needs A2) |
-| 3 | B2 search/sort/filter, B3 folders/tags, C2 photo import, D2 crop loupe, D3 enhance, E1 save flow | Its wave 2 parent (E1 needs only A2) |
-| 4 | D4 markup, E2 send PDF, F2 onboarding/consent, G1 tools hub and merge, H1 accessibility sweep | Its parent (H1 needs all others) |
+| 3 | B2 search/sort/filter, B3 folders/tags, C2 photo import, C3 camera preview controls, D2 crop loupe, D3 enhance, E1 save flow | Its wave 2 parent (C3 also needs the custom-camera ADR; E1 needs only A2) |
+| 4 | C4 Book/Text/OCR/QR engines, D4 markup, E2 send PDF, F2 onboarding/consent, G1 tools hub and merge, H1 accessibility sweep | Its parent (C4 needs C3; H1 needs all others) |
 
 PRs in the same wave don't depend on each other, so they can be built in parallel threads. Each wave starts once the PRs it depends on have merged.
 
@@ -116,12 +118,38 @@ Each PR is done when every task below is ticked, its widget tests pass and `flut
 - [ ] Unreadable images listed in a message without cancelling the good ones
 - [ ] Add pages sheet (camera or photos) on an existing document; new pages land at the end and can be moved
 
+### C3 Camera preview controls
+
+- [ ] Build a custom camera-preview overlay using the approved CameraX/AVFoundation adapter; do not present post-capture editing tools in the preview
+- [ ] Add synchronized quick controls and settings-sheet switches for Batch mode, flashlight/torch, and auto capture
+- [ ] Add an optional 3 × 3 alignment grid and a Document / ID card / Photo mode selector; disable unsupported modes with a reason
+- [ ] Show the accepted-page thumbnail and page count only while Batch mode is enabled; turning Batch mode off must preserve pages already captured
+- [ ] Replace the bottom-right Back/Done control with a destructive cross; tapping it opens a blocking confirmation that names the captured-photo count and states that discarded photos and capture changes cannot be restored
+- [ ] Implement “Keep photos” as a no-op dismissal and “Discard photos” as the only action that clears the current capture session before returning to Library; cover both paths with widget tests
+- [ ] Update guidance when Auto capture changes: stability guidance when on, manual-shutter guidance when off
+- [ ] Disable flashlight when the active camera has no torch, report the reason accessibly, and preserve the user's preference for the next compatible session
+- [ ] Add widget/state tests for every toggle combination, settings-sheet dismissal, 200% text scale, screen-reader names/states and app-background recovery
+- [ ] Match the interaction reference in `design/ios-flow/index.html`; use it as behavior guidance rather than production camera code
+
+### C4 Book, Text, OCR Doc and QR capture engines
+
+- [ ] Rename the Document camera shortcut to Docs and expose the ordered selector: Docs, Book, Text, OCR Doc, QR, Photo
+- [ ] Book: detect/adjust outer spread and spine, create paired left/right pages, retain the original spread, respect reading direction and store layout metadata
+- [ ] Book: add manual spine/corner review plus individual-page, facing-spread and explicit booklet-print export tests
+- [ ] Text: run low-latency on-device recognition with tracked highlights, copy and user-confirmed structured actions; fall back on unsupported devices
+- [ ] OCR Doc: run full-resolution accuracy OCR after correction, persist geometry/reading order/confidence, and align the searchable PDF text layer
+- [ ] QR: configure QR-only recognition, track the reticle, deduplicate payloads and require confirmation before URL/Wi-Fi/contact actions
+- [ ] Add model-unavailable, no-spine, low-confidence OCR, QR-undecodable, cancellation and thermal-throttling states
+- [ ] Measure boundary error, book split/order accuracy, OCR CER/WER, text/QR latency and correction time using the plan in `docs/capture-modes-algorithms.md`
+
 ### D1 Page review
 
 - [ ] Large page preview with a horizontal filmstrip; tapping a thumbnail selects and centres it
 - [ ] Page counter that always matches the selected page; first and last arrows disabled at the ends
 - [ ] Retake, rotate, duplicate and delete in one toolbar; undo and redo in the app bar
 - [ ] Ask before leaving with unsaved changes; removing the last page asks whether to discard the document
+- [ ] Use the same editor for a resumed draft and a saved library document; keep Crop and Filter visible in the persistent toolbar
+- [ ] Show Draft/autosaved or Saved/changes autosave status and provide edit-history access
 
 ### D2 Crop precision
 
@@ -129,13 +157,16 @@ Each PR is done when every task below is ticked, its widget tests pass and `flut
 - [ ] Edge handles that move a whole side
 - [ ] Handles stay the same size when zoomed in
 - [ ] Start from the detected page quad, with a Reset to detected button
+- [ ] Reopen the latest saved crop recipe after save/export; include Full image and Reset without modifying the source asset
+- [ ] Save a new recipe revision atomically and show a clear unavailable-source state if originals were explicitly removed
 
 ### D3 Enhance
 
-- [ ] Preset carousel (Original, Auto colour, Grayscale, B&W, Whiteboard) with the selected one marked by both a check and a border
+- [ ] Preset carousel (Original, Auto Color, Enhanced Color, Bright, Grayscale, B&W) with the current saved recipe marked by both a check and a border
 - [ ] Press and hold to see the original
 - [ ] Scope picker (this page, selected pages, all pages) before applying
 - [ ] Brightness and contrast sliders with a reset
+- [ ] Reopen filters from saved documents and drafts, reset filter independently of crop, and render every revision from the immutable original
 
 ### D4 Markup polish
 
@@ -190,13 +221,13 @@ These spec items need a backend or an open decision first, so they are left out 
 - **Sign-in, cloud sync, upload progress and share links** (US-01.2, US-01.4, US-09.3): no backend chosen yet.
 - **Plans, paywall and restore purchases** (EP-10, US-10.1, US-10.2): depend on the revenue decision. A1 adds the premium badge so it can be used later.
 - **OCR, text editing and search inside page text** (EP-07, part of US-02.2): no OCR engine chosen.
-- **Book, ID card, business card, QR and high-speed modes** (US-03.2 to US-03.4): the native scanner doesn't offer them, so they depend on the custom-camera decision.
+- **Business-card and advanced high-speed behaviors** (US-03.3/03.4): C4 now covers Book, Text, OCR Doc and QR; remaining specialized modes still require later custom-camera work.
 - **Compress, password protect and watermark** (US-08.2, US-08.4, US-08.5): need the PDF write engine from ADR-014, or they would save pages as images.
 - **AI features** (US-10.5): P2 in the spec.
 
 Decisions that change this plan:
 
 - [ ] Is the `design/premium` v2 board the visual target for A1, or the PC prototype?
-- [ ] Built-in scanner first, or a custom camera? A custom camera adds a Capture group of about 4 PRs.
+- [ ] Built-in scanner first, or a custom camera? C3 and C4 define the approved custom-camera UI and first engine group; later specialized capture modes may add further PRs.
 - [ ] Revenue model: decides which tools get the premium badge.
 - [ ] ADR-014 write engine: unlocks compress, protect and watermark as a second Tools PR.
