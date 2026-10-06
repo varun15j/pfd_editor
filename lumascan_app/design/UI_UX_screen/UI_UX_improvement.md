@@ -43,6 +43,7 @@ Source references below use section names and stable story/screen IDs so they re
 | UX-04 | Tutorial overlays obscure task context | Medium | Screens 27, 36–37 |
 | UX-05 | Saving, uploading, and sharing need distinct states | High | Screens 34–39; EP-09 |
 | UX-06 | Navigation and visual-system definitions conflict | High | Feature direction, screen design, screenshot specification |
+| UX-10 | App stays on the splash screen although the Flutter UI is built and idle | High | App start and resume; Android debug build on a real device |
 
 ## 4. Product, epic, and story findings
 
@@ -224,12 +225,50 @@ These are proposed changes to the specification, not findings that the current a
 
 **Completion criteria:** Screen routes, navigation diagrams, component names, color tokens, spacing, typography, target sizes, and accessibility criteria agree across the specification and design documents. Define light/dark, loading, disabled, focused, selected, and error states for shared components.
 
+### UX-10 — App stays on the splash screen after the window is recreated
+
+**Status:** Open. Root cause analysis (RCA) done on 6 October 2026. The fix is not yet confirmed.
+
+**Scenario (seen twice, both with the same signature):**
+
+1. A debug build is started from Android Studio on a real phone: model CPH2661, Android 16 (API 36), Flutter 3.47.6 / Dart 3.13.5, Impeller renderer on. The branch is `claude/project-thread-d2sa4n` (Batch scan).
+2. The app opens and draws its first frame normally (09:33:29 on the device).
+3. The screen turns off or the app leaves the foreground (window surface released at 09:33:52).
+4. The app returns to the foreground. Android creates a new `MainActivity` window in the same process (09:34:01). The phone also rotates to landscape and back (09:34:06 to 09:34:10).
+5. From then on the phone shows only the launch (splash) screen, and the app never moves on to Home.
+
+**What was checked (evidence):**
+
+- **Process and window:** `adb shell dumpsys activity` shows `MainActivity` resumed, focused and visible. The app is running, not crashed.
+- **Android side:** `adb logcat` repeats `VRI[MainActivity]: performTraversals: cancelAndRedraw ... predraw_io.flutter.embedding.android.FlutterActivityAndFragmentDelegate$2` about every 11 ms. The Flutter embedding holds back drawing the Android window until Flutter reports a frame for the new view, so the splash theme stays on screen.
+- **Dart side, through the Dart VM service of the running debug session:**
+  - The `main` isolate is runnable and not paused: the last pause event is `Resume`.
+  - The isolate's call stack is empty. Dart is idle, not looping, blocked or stopped on an exception.
+  - `ext.flutter.debugDumpApp` shows the full tree already built: `LumaScanApp`, `StartGate`, `AppShell`, `HomeScreen`.
+  - `didSendFirstFrameEvent` and `didSendFirstFrameRasterizedEvent` are both `true`. The first frame was drawn for the original window only.
+  - `ext.ui.window.impellerEnabled` is `true`.
+- **Recovery test:** calling `ext.ui.window.scheduleFrame` once made the engine draw a frame. The predraw loop stopped at once and a screenshot showed the Home screen in the dark theme colours.
+- **Not related to app code:** nothing on the start path touches the new Batch scan camera. The `StartGate` provider had already finished.
+
+**Root cause:** after the activity and surface are recreated, the Flutter engine does not draw into the new surface on its own. Dart has nothing marked dirty, so it does not ask for a frame, and the Android embedding keeps waiting for one. The app is alive and correct, but the window never receives a frame. The trigger is the activity or surface recreation (screen off and on, plus rotation) on this device. Impeller on Android 16 is the most likely engine-side factor, but this has not been proven yet.
+
+**Impact:** a user who locks the phone or switches apps can come back to a splash screen that never goes away. The only way out is a touch that forces a redraw, or killing the app. To the user, this looks like a hang.
+
+**Recommended improvement:**
+
+1. **Confirm the engine factor:** reproduce once with Impeller off (`flutter run --no-enable-impeller`, or `io.flutter.embedding.android.EnableImpeller=false` in the debug manifest). If the problem goes away, report it to Flutter with the logs above, and keep Impeller off on affected devices until there is an engine fix.
+2. **Add an app-side safeguard:** when the app returns to the foreground (`AppLifecycleState.resumed`) or the view's metrics change, ask for one frame (`WidgetsBinding.instance.scheduleFrame()`). This is cheap and keeps the window from waiting forever.
+3. **Decide orientation:** lock the app to portrait unless landscape is a product requirement. This removes the rotation part of the trigger.
+4. **Add a regression check:** a device test that starts the app, turns the screen off and on, rotates, and checks that Home is visible within 2 seconds.
+
+**Completion criteria:** on the CPH2661 and one other Android 14+ phone, 20 cycles of screen off/on, app switch and rotation never leave the splash screen visible for more than 2 seconds. No `predraw` loop appears in logcat after resume.
+
 ## 7. Recommended revision sequence
 
 1. **Resolve product scope:** Choose the authoritative release baseline and settle account, offline, cloud, billing, and AI placement (F-01, F-03).
 2. **Define content behavior:** Separate OCR/transcript/text replacement, PDF preservation, and save/export semantics (F-02, F-07, UX-05).
 3. **Repair traceability:** Correct screenshot assignments, label evidence confidence, and add missing stories (F-04, F-05, F-06).
-4. **Unify design:** Adopt one navigation model and token system, then refine keyboard, toolbar, save, and tutorial layouts (UX-01 through UX-06).
+4. **Unify design:** Adopt one navigation model and token system, then refine keyboard, toolbar, save, and tutorial layouts (UX-01 through UX-06), and fix start and resume rendering (UX-10).
 5. **Complete acceptance coverage:** Add error, empty, interrupted, cancelled, and partial-success states to each affected use case (F-07).
 6. **Validate implementation:** Test real-device interactions, accessibility, processing recovery, and generated files against the reconciled criteria.
 
