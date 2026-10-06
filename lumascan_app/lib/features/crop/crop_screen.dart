@@ -200,7 +200,13 @@ class _CropScreenState extends ConsumerState<CropScreen> {
                         panEnabled: !_dragging,
                         scaleEnabled: !_dragging,
                         child: Padding(
-                          padding: const EdgeInsets.all(28),
+                          // Keep the side handles out of the system back
+                          // gesture strip at each edge, or dragging a side
+                          // leaves the screen.
+                          padding: EdgeInsets.symmetric(
+                            vertical: 28,
+                            horizontal: math.max(28, _gestureInset(context) + _handleTouch / 2 + 4),
+                          ),
                           child: Center(
                             child: AspectRatio(
                               aspectRatio: source.width / source.height,
@@ -303,6 +309,12 @@ class _CropScreenState extends ConsumerState<CropScreen> {
       ),
     );
   }
+}
+
+/// The wider of the system gesture strips on the left and right edges.
+double _gestureInset(BuildContext context) {
+  final insets = MediaQuery.systemGestureInsetsOf(context);
+  return math.max(insets.left, insets.right);
 }
 
 /// The page image with its crop outline, corner handles and side handles.
@@ -603,7 +615,11 @@ class _QueueButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final outlined = OutlinedButton.styleFrom(foregroundColor: Colors.white, minimumSize: const Size(48, 48));
+    final outlined = OutlinedButton.styleFrom(
+      foregroundColor: Colors.white,
+      disabledForegroundColor: Colors.white38,
+      minimumSize: const Size(48, 48),
+    );
     return Row(
       children: [
         Expanded(

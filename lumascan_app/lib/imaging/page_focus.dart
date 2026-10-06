@@ -21,6 +21,10 @@ CropQuad focusOnePage(RgbImage image, CropQuad quad) {
 /// Frame edge closer than this counts as the page running off the frame.
 const _edge = 0.02;
 
+/// How much brighter the next page must be, within a few steps of the seam,
+/// for a one-sided seam.
+const _step = 18;
+
 /// A cut-off part must be at most this wide, relative to the page kept.
 const _partRatio = 0.85;
 
@@ -59,23 +63,27 @@ CropQuad _part(CropQuad quad, double from, double to, {required bool across}) {
 }
 
 /// Where a seam crosses [quad], as a fraction across (or down) it, or null
-/// when there is none. Brightness is averaged along lines parallel to the
-/// seam; the seam is the deepest dip that is clearly darker than the paper
-/// just beside it on both sides. Text columns and paragraphs do not count:
-/// the paper next to them is as dark as they are.
+/// when there is none. Paper brightness is measured along lines parallel to
+/// the seam (the upper quartile, so ink does not count); the seam is the
+/// deepest dip that is clearly darker than the paper just beside it on both
+/// sides. A page curving into a book's gutter darkens gradually and then
+/// meets the next page in a sharp step, so a dip that is the darkest point
+/// around it with a sharp rise on one side counts too. Text columns and
+/// paragraphs do not count: the paper next to them is as bright as they are.
 double? _seam(RgbImage image, CropQuad quad, {required bool across}) {
   const steps = 100, samples = 40;
   final profile = List<double>.filled(steps + 1, 0);
   for (var i = 0; i <= steps; i++) {
     final t = i / steps;
-    var sum = 0.0;
+    final line = <double>[];
     for (var j = 0; j < samples; j++) {
       // Skip the outer tenth, where page corners curl and fingers sit.
       final s = 0.1 + 0.8 * j / (samples - 1);
       final (u, v) = across ? (t, s) : (s, t);
-      sum += _luma(image, _at(quad, u, v));
+      line.add(_luma(image, _at(quad, u, v)));
     }
-    profile[i] = sum / samples;
+    line.sort();
+    profile[i] = line[samples * 3 ~/ 4];
   }
   final smooth = [
     for (var i = 0; i <= steps; i++)
@@ -87,8 +95,14 @@ double? _seam(RgbImage image, CropQuad quad, {required bool across}) {
     // The paper beside the dip: the brightest of a band on each side.
     final before = smooth.sublist(i - 12, i - 2).reduce(math.max);
     final after = smooth.sublist(i + 3, i + 13).reduce(math.max);
-    final depth = math.min(before, after) - smooth[i];
-    if (depth >= math.max(14, 0.12 * math.min(before, after)) && depth > bestDepth) {
+    var depth = math.min(before, after) - smooth[i];
+    if (depth < math.max(14, 0.12 * math.min(before, after))) {
+      // One-sided: the darkest point around, with a sharp step up beside it.
+      final around = smooth.sublist(i - 12, i + 13).reduce(math.min);
+      final step = math.max(smooth.sublist(i + 1, i + 5).reduce(math.max), smooth.sublist(i - 4, i).reduce(math.max));
+      depth = smooth[i] <= around && step - smooth[i] >= _step ? step - smooth[i] : 0;
+    }
+    if (depth > 0 && depth > bestDepth) {
       bestDepth = depth;
       best = i / steps;
     }

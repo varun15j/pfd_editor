@@ -17,6 +17,15 @@ void main() {
     }
   });
 
+  test('the open notebook is outlined without the strip of its facing page', () async {
+    final data = await rootBundle.load('sample_photos/05_revision_grocery_table.jpg');
+    final quad = detectPageQuad(RgbImage.decode(data.buffer.asUint8List(), maxDimension: 640))!;
+    // The facing page starts about 85% across the photo.
+    expect(quad.tr.x, inInclusiveRange(0.8, 0.9));
+    expect(quad.br.x, inInclusiveRange(0.8, 0.9));
+    expect(quad.tl.x, lessThan(0.2));
+  });
+
   test('sample pages are copied to files the photo import can read', () async {
     final temp = Directory.systemTemp.createTempSync('lumascan_samples');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
