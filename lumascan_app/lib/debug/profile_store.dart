@@ -1,6 +1,7 @@
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
+import 'profile_location.dart';
 import 'profile_sample.dart';
 
 /// Where image-loading profile samples are kept.
@@ -21,11 +22,12 @@ abstract interface class ProfileStore {
   Future<void> writeFlag(String name, bool value);
 }
 
-/// Keeps samples in a SQLite database in the app's private folder, so a
-/// profile survives restarts (cold starts are often the slowest case).
+/// Keeps samples in a SQLite database, so a profile survives restarts (cold
+/// starts are often the slowest case) and, where [ProfileLocation] allows,
+/// reinstalls.
 class SqliteProfileStore implements ProfileStore {
   SqliteProfileStore({this.factory, Future<String> Function()? path})
-    : _path = path ?? (() async => p.join(await getDatabasesPath(), 'image_profile.db'));
+    : _path = path ?? (() async => p.join(await getDatabasesPath(), ProfileLocation.fileName));
 
   /// The database factory; the platform's sqflite one when null. Tests pass
   /// the ffi one.
@@ -36,6 +38,17 @@ class SqliteProfileStore implements ProfileStore {
   static const _stageColumns = profileStages;
 
   Future<Database> get _open => _db ??= _openDb();
+
+  /// The file in use, once opened.
+  Future<String?> get openPath async => (await _db)?.path;
+
+  /// Closes the database so the next use opens it again, from wherever the
+  /// path now points (after shared storage was allowed).
+  Future<void> reopen() async {
+    final db = _db;
+    _db = null;
+    await (await db)?.close();
+  }
 
   Future<Database> _openDb() async => (factory ?? databaseFactory).openDatabase(
     await _path(),

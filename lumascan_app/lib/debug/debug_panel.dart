@@ -159,6 +159,29 @@ class DebugPanel extends StatelessWidget {
                       ),
                     ),
                 const Divider(),
+                if (profiler.location != null)
+                  ListTile(
+                    leading: Icon(profiler.keptAfterUninstall ? Icons.folder_shared_outlined : Icons.folder_outlined),
+                    title: Text(
+                      profiler.keptAfterUninstall ? 'Data is kept after uninstall' : 'Keep data after uninstall',
+                    ),
+                    subtitle: Text(
+                      profiler.keptAfterUninstall
+                          ? 'Saved in ${profiler.databasePath}'
+                          : 'Moves the database to Documents/LumaScan/debug. Android asks for "All files access".',
+                    ),
+                    onTap: profiler.keptAfterUninstall
+                        ? null
+                        : () async {
+                            final messenger = ScaffoldMessenger.maybeOf(context);
+                            final kept = await profiler.keepAfterUninstall();
+                            if (!kept) {
+                              messenger?.showSnackBar(
+                                const SnackBar(content: Text('Not allowed, so the data stays inside the app.')),
+                              );
+                            }
+                          },
+                  ),
                 ListTile(
                   leading: const Icon(Icons.analytics_outlined),
                   title: const Text('Open profiling report'),

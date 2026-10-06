@@ -8,6 +8,7 @@ import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/debug/debug_panel.dart';
 import 'package:lumascan/debug/image_profiler.dart';
+import 'package:lumascan/debug/profile_location.dart';
 import 'package:lumascan/debug/profile_sample.dart';
 import 'package:lumascan/debug/profile_store.dart';
 import 'package:lumascan/domain/app_settings.dart';
@@ -94,6 +95,63 @@ void main() {
       await store.writeFlag('enabled', true);
       await store.writeFlag('enabled', false);
       expect(await store.readFlag('enabled'), isFalse);
+    });
+  });
+
+  group('keeping the data after uninstall', () {
+    late Directory tmp;
+
+    setUp(() => tmp = Directory.systemTemp.createTempSync('profile_location'));
+    tearDown(() => tmp.deleteSync(recursive: true));
+
+    ProfileLocation location(String privateDir, {bool allow = true, bool android = true}) => ProfileLocation(
+      sharedDir: allow ? '${tmp.path}/Documents/LumaScan/debug' : '${tmp.path}/blocked/LumaScan/debug',
+      privateDir: () async => privateDir,
+      requestAccess: () async => allow,
+      isAndroid: android,
+    );
+
+    test('without access the database stays inside the app', () async {
+      File('${tmp.path}/blocked').writeAsStringSync('a file, so no folder can be made under it');
+      final where = location('${tmp.path}/app1', allow: false);
+      expect(await where.resolve(), '${tmp.path}/app1/image_profile.db');
+      expect(await where.requestShared(), isFalse);
+    });
+
+    test('iOS keeps it inside the app', () async {
+      final where = location('${tmp.path}/app1', android: false);
+      expect(await where.resolve(), '${tmp.path}/app1/image_profile.db');
+    });
+
+    test('moving to shared storage keeps what was recorded, and a reinstall finds it', () async {
+      Directory('${tmp.path}/app1').createSync();
+      // Recorded before access was given, inside the app.
+      final blocked = location('${tmp.path}/app1', allow: false);
+      File('${tmp.path}/blocked').writeAsStringSync('x');
+      final first = SqliteProfileStore(factory: databaseFactoryFfi, path: blocked.resolve);
+      final profiler = ImageProfiler(store: first, location: location('${tmp.path}/app1'), available: true);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      profiler.enabled = true;
+      await first.add(_sample(ProfileKind.thumbnail, 42));
+      expect(profiler.keptAfterUninstall, isFalse);
+
+      // The panel's "Keep data after uninstall".
+      final reopened = SqliteProfileStore(factory: databaseFactoryFfi, path: location('${tmp.path}/app1').resolve);
+      final moved = ImageProfiler(store: reopened, location: location('${tmp.path}/app1'), available: true);
+      expect(await moved.keepAfterUninstall(), isTrue);
+      expect(moved.databasePath, '${tmp.path}/Documents/LumaScan/debug/image_profile.db');
+      expect(await reopened.count(), 1);
+      await first.close();
+      await reopened.close();
+
+      // Uninstall removes the app's folder; the new install opens the shared file.
+      Directory('${tmp.path}/app1').deleteSync(recursive: true);
+      Directory('${tmp.path}/app2').createSync();
+      final reinstalled = SqliteProfileStore(factory: databaseFactoryFfi, path: location('${tmp.path}/app2').resolve);
+      expect(await reinstalled.count(), 1);
+      expect((await reinstalled.recent()).single.totalMs, 42);
+      expect(await reinstalled.readFlag('enabled'), isTrue);
+      await reinstalled.close();
     });
   });
 

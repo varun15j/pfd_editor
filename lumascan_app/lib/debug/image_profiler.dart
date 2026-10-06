@@ -5,13 +5,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'profile_location.dart';
 import 'profile_sample.dart';
 import 'profile_store.dart';
 
 /// Debug builds only: the image-loading profiler. Off by default; switched on
 /// from the debug panel (swipe in from the left edge).
 final imageProfilerProvider = Provider<ImageProfiler>((ref) {
-  final profiler = ImageProfiler(store: SqliteProfileStore());
+  final location = ProfileLocation();
+  final profiler = ImageProfiler(
+    store: SqliteProfileStore(path: location.resolve),
+    location: location,
+  );
   ref.onDispose(profiler.dispose);
   return profiler;
 });
@@ -22,7 +27,7 @@ final imageProfilerProvider = Provider<ImageProfiler>((ref) {
 /// Recording is skipped entirely unless [enabled], so release builds and
 /// normal use pay one boolean check per picture.
 class ImageProfiler extends ChangeNotifier {
-  ImageProfiler({required this.store, bool? available})
+  ImageProfiler({required this.store, this.location, bool? available})
     : available = available ?? (kDebugMode && !Platform.environment.containsKey('FLUTTER_TEST')) {
     if (this.available) unawaited(_restore());
   }
@@ -33,6 +38,35 @@ class ImageProfiler extends ChangeNotifier {
 
   /// Where samples are saved.
   final ProfileStore store;
+
+  /// Where the database file lives; null in tests.
+  final ProfileLocation? location;
+
+  /// The database file in use, for the panel. Null until it is opened or
+  /// when samples are kept in memory.
+  String? databasePath;
+
+  /// Whether the database is in shared storage, which survives an uninstall.
+  bool get keptAfterUninstall {
+    final path = databasePath;
+    final location = this.location;
+    return path != null && location != null && path == location.sharedPath;
+  }
+
+  /// Asks for shared storage and moves the database there (copying what was
+  /// recorded so far). Returns whether it is now kept after an uninstall.
+  Future<bool> keepAfterUninstall() async {
+    final location = this.location;
+    final sqlite = store;
+    if (location == null || !await location.requestShared()) return false;
+    if (sqlite is SqliteProfileStore) {
+      await sqlite.reopen();
+      await sqlite.count();
+      databasePath = await sqlite.openPath;
+    }
+    notifyListeners();
+    return keptAfterUninstall;
+  }
 
   bool _enabled = false;
   bool _showLabels = true;
@@ -67,10 +101,13 @@ class ImageProfiler extends ChangeNotifier {
     try {
       final enabled = await store.readFlag('enabled');
       final labels = await store.readFlag('labels');
+      final sqlite = store;
+      if (sqlite is SqliteProfileStore) databasePath = await sqlite.openPath;
       // A switch flipped while reading wins over the saved one.
-      if (_changed) return;
-      _enabled = enabled ?? false;
-      _showLabels = labels ?? true;
+      if (!_changed) {
+        _enabled = enabled ?? false;
+        _showLabels = labels ?? true;
+      }
       notifyListeners();
     } on Object catch (e) {
       debugPrint('Image profiler could not read its settings: $e');
