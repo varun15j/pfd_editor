@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/providers.dart';
+import '../../debug/image_profiler.dart';
+import '../../debug/profile_sample.dart';
 import '../../domain/models.dart';
 import '../../imaging/page_renderer.dart';
 import '../../imaging/render_service.dart';
@@ -74,8 +76,52 @@ class _PageImageState extends ConsumerState<PageImage> {
   }
 
   void _start() {
-    _future = ref.read(renderServiceProvider).render(widget.page, recipe: _recipe, maxDimension: widget.maxDimension)
-      ..then((r) => _last = r, onError: (_) {});
+    final service = ref.read(renderServiceProvider);
+    final profiler = ref.read(imageProfilerProvider);
+    final timer = profiler.enabled ? (Stopwatch()..start()) : null;
+    final inMemory =
+        timer != null && service.isInMemory(widget.page, recipe: _recipe, maxDimension: widget.maxDimension);
+    _loadMs = null;
+    final future = service.render(widget.page, recipe: _recipe, maxDimension: widget.maxDimension);
+    _future = future
+      ..then((r) {
+        _last = r;
+        if (timer != null && identical(future, _future)) _profileShown(profiler, r, timer, inMemory);
+      }, onError: (_) {});
+  }
+
+  /// How long the picture took to arrive, for the debug label.
+  double? _loadMs;
+  ProfileOrigin? _origin;
+
+  void _profileShown(ImageProfiler profiler, RenderedImage image, Stopwatch timer, bool inMemory) {
+    final ms = timer.elapsedMicroseconds / 1000;
+    final origin = inMemory
+        ? ProfileOrigin.memory
+        : image.stageMicros.isEmpty
+        ? ProfileOrigin.disk
+        : ProfileOrigin.rendered;
+    profiler.record(
+      ProfileSample(
+        at: DateTime.now(),
+        kind: ProfileKind.shown,
+        screen: mounted ? ImageProfiler.screenOf(context) : null,
+        pageId: widget.page.id,
+        origin: origin,
+        filter: _recipe.filter.id,
+        sourceBytes: image.sourceBytes,
+        width: image.width,
+        height: image.height,
+        maxDimension: widget.maxDimension,
+        totalMs: ms,
+      ),
+    );
+    if (mounted) {
+      setState(() {
+        _loadMs = ms;
+        _origin = origin;
+      });
+    }
   }
 
   @override
@@ -115,16 +161,17 @@ class _PageImageState extends ConsumerState<PageImage> {
                   )
                 else
                   picture(widget.fit),
-            if (snap.connectionState != ConnectionState.done)
-              const Align(
-                alignment: Alignment.topRight,
-                child: Padding(
-                  padding: EdgeInsets.all(8),
-                  child: SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                ),
-              ),
-          ],
-        );
+                _ProfileLabel(profiler: ref.read(imageProfilerProvider), ms: _loadMs, origin: _origin),
+                if (snap.connectionState != ConnectionState.done)
+                  const Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: EdgeInsets.all(8),
+                      child: SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                    ),
+                  ),
+              ],
+            );
           },
         );
       },
@@ -144,5 +191,48 @@ class _PageImageState extends ConsumerState<PageImage> {
     };
     final width = (shown * pixelRatio).ceil();
     return width > 0 && width < image.width ? width : null;
+  }
+}
+
+/// Debug builds, with profiling on: how long this picture took to arrive, in
+/// red over its corner, and where it came from (R rendered now, D read from
+/// disk, M already in memory).
+class _ProfileLabel extends StatelessWidget {
+  const _ProfileLabel({required this.profiler, required this.ms, required this.origin});
+
+  final ImageProfiler profiler;
+  final double? ms;
+  final ProfileOrigin? origin;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!profiler.available) return const SizedBox.shrink();
+    return ListenableBuilder(
+      listenable: profiler,
+      builder: (context, _) {
+        if (!profiler.showLabels) return const SizedBox.shrink();
+        final ms = this.ms;
+        final tag = switch (origin) {
+          ProfileOrigin.rendered => 'R',
+          ProfileOrigin.disk => 'D',
+          ProfileOrigin.memory => 'M',
+          null => '',
+        };
+        return Align(
+          alignment: Alignment.bottomLeft,
+          child: IgnorePointer(
+            child: Container(
+              margin: const EdgeInsets.all(2),
+              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+              color: const Color(0xE6FFFFFF),
+              child: Text(
+                ms == null ? '…' : '${formatProfileMs(ms)} $tag',
+                style: const TextStyle(color: Color(0xFFD50000), fontSize: 10, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }

@@ -3,12 +3,13 @@ import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
 
+import 'stage_times.dart';
+
 /// Minimal packed 8-bit RGB buffer. Filters and the perspective warp work on
 /// raw bytes because per-pixel calls through package:image are several times
 /// slower on 12 MP camera images.
 class RgbImage {
-  RgbImage(this.width, this.height, [Uint8List? data])
-      : data = data ?? Uint8List(width * height * 3) {
+  RgbImage(this.width, this.height, [Uint8List? data]) : data = data ?? Uint8List(width * height * 3) {
     assert(this.data.length == width * height * 3);
   }
 
@@ -18,25 +19,34 @@ class RgbImage {
 
   /// Decodes JPEG/PNG/HEIC-free formats, applies EXIF orientation exactly
   /// once and downsamples so the longest side is at most [maxDimension].
-  static RgbImage decode(Uint8List bytes, {int? maxDimension}) {
-    var image = img.decodeImage(bytes);
-    if (image == null) {
-      throw const FormatException('Unsupported or corrupt image');
-    }
-    image = img.bakeOrientation(image);
+  ///
+  /// [times], when given, gets the time spent in "decode" (including
+  /// orientation) and "resize".
+  static RgbImage decode(Uint8List bytes, {int? maxDimension, StageTimes? times}) {
+    final t = times ?? StageTimes();
+    var image = t.time('decode', () {
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) {
+        throw const FormatException('Unsupported or corrupt image');
+      }
+      return img.bakeOrientation(decoded);
+    });
     if (maxDimension != null) {
       final longest = math.max(image.width, image.height);
       if (longest > maxDimension) {
         final scale = maxDimension / longest;
-        image = img.copyResize(
-          image,
-          width: (image.width * scale).round(),
-          height: (image.height * scale).round(),
-          interpolation: img.Interpolation.average,
+        image = t.time(
+          'resize',
+          () => img.copyResize(
+            image,
+            width: (image.width * scale).round(),
+            height: (image.height * scale).round(),
+            interpolation: img.Interpolation.average,
+          ),
         );
       }
     }
-    return fromImage(image);
+    return t.time('decode', () => fromImage(image));
   }
 
   static RgbImage fromImage(img.Image image) {
@@ -48,12 +58,12 @@ class RgbImage {
   }
 
   img.Image toImage() => img.Image.fromBytes(
-        width: width,
-        height: height,
-        bytes: data.buffer,
-        numChannels: 3,
-        order: img.ChannelOrder.rgb,
-      );
+    width: width,
+    height: height,
+    bytes: data.buffer,
+    numChannels: 3,
+    order: img.ChannelOrder.rgb,
+  );
 
   Uint8List encodeJpg({int quality = 90}) => img.encodeJpg(toImage(), quality: quality);
 }
