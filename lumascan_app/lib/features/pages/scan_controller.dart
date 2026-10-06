@@ -36,6 +36,8 @@ class ScanState {
     this.undoStack = const [],
     this.redoStack = const [],
     this.unsaved = false,
+    this.exported = false,
+    this.parked = const [],
   });
 
   final List<ScanPage> pages;
@@ -52,6 +54,12 @@ class ScanState {
 
   /// True when the pages changed since they were last exported as a PDF.
   final bool unsaved;
+
+  /// True when the pages were saved as a PDF and not changed since.
+  final bool exported;
+
+  /// Earlier documents, set aside when a new scan started, newest first.
+  final List<ParkedDraft> parked;
 
   bool get canUndo => undoStack.isNotEmpty;
   bool get canRedo => redoStack.isNotEmpty;
@@ -70,6 +78,8 @@ class ScanState {
     List<List<ScanPage>>? undoStack,
     List<List<ScanPage>>? redoStack,
     bool? unsaved,
+    bool? exported,
+    List<ParkedDraft>? parked,
   }) => ScanState(
     pages: pages ?? this.pages,
     busy: busy ?? this.busy,
@@ -77,6 +87,9 @@ class ScanState {
     undoStack: undoStack ?? this.undoStack,
     redoStack: redoStack ?? this.redoStack,
     unsaved: unsaved ?? this.unsaved,
+    // Any change after the export makes the PDF out of date.
+    exported: exported ?? (unsaved == true ? false : this.exported),
+    parked: parked ?? this.parked,
   );
 }
 
@@ -143,7 +156,10 @@ class ScanController extends Notifier<ScanState> {
   Future<void> _restoreDraft() async {
     final store = ref.read(draftStoreProvider);
     final saved = await store.load();
-    if (!ref.mounted || saved.isEmpty) return;
+    final parked = await store.parked();
+    if (!ref.mounted) return;
+    if (parked.isNotEmpty) state = state.copyWith(parked: parked);
+    if (saved.isEmpty) return;
     // Pages scanned while the draft was loading go after the restored ones;
     // their own save is queued behind this restore and writes the merge.
     state = state.copyWith(pages: List.unmodifiable([...saved, ...state.pages]), unsaved: true);
@@ -568,6 +584,47 @@ class ScanController extends Notifier<ScanState> {
     _persistDraft();
   }
 
+  /// Starts a new, empty document for a new scan. The pages on screen are
+  /// set aside as an earlier document, listed on Home, where they can be
+  /// opened again to read them or add pages.
+  Future<void> startNewDocument() async {
+    await _draftIo;
+    if (!ref.mounted || state.pages.isEmpty || state.busy) return;
+    final parked = await ref.read(draftStoreProvider).park(state.pages, exported: state.exported);
+    if (!ref.mounted) return;
+    state = ScanState(parked: [parked, ...state.parked]);
+    _persistDraft();
+  }
+
+  /// Makes earlier document [id] the draft again. The pages on screen, if
+  /// any, are set aside in its place.
+  Future<void> openParked(String id) async {
+    await _draftIo;
+    if (!ref.mounted || state.busy) return;
+    final store = ref.read(draftStoreProvider);
+    final entry = state.parked.where((d) => d.id == id).firstOrNull;
+    if (entry == null) return;
+    final pages = await store.loadParked(id);
+    final parked = [
+      if (state.pages.isNotEmpty) await store.park(state.pages, exported: state.exported),
+      for (final d in state.parked)
+        if (d.id != id) d,
+    ];
+    if (!ref.mounted) return;
+    state = ScanState(
+      pages: List.unmodifiable(pages),
+      exported: entry.exported,
+      unsaved: !entry.exported,
+      parked: parked,
+    );
+    _persistDraft();
+    // Only once the pages are the draft on disk, so a crash loses nothing.
+    _draftIo = _draftIo.then((_) => store.deleteParked(id));
+  }
+
+  /// The pages were saved as a PDF.
+  void markExported() => state = state.copyWith(unsaved: false, exported: true);
+
   /// Discards the draft and deletes its original files.
   Future<void> clear() async {
     final store = ref.read(pageStoreProvider);
@@ -576,7 +633,7 @@ class ScanController extends Notifier<ScanState> {
       for (final snapshot in [...state.undoStack, ...state.redoStack])
         for (final p in snapshot) p.originalPath,
     };
-    state = const ScanState();
+    state = ScanState(parked: state.parked);
     _persistDraft();
     for (final path in paths) {
       await store.deleteOriginal(path);

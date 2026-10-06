@@ -171,6 +171,35 @@ void main() {
       expect(find.text('2 pages not saved yet'), findsOneWidget);
     });
 
+    testWidgets('earlier scans are listed on home and open again to add pages', (tester) async {
+      final store = MemoryDraftStore(const [
+        ScanPage(id: 'a', originalPath: '/nowhere/a.jpg'),
+        ScanPage(id: 'b', originalPath: '/nowhere/b.jpg'),
+      ]);
+      await store.park(const [
+        ScanPage(id: 'x', originalPath: '/nowhere/x.jpg'),
+        ScanPage(id: 'y', originalPath: '/nowhere/y.jpg'),
+        ScanPage(id: 'z', originalPath: '/nowhere/z.jpg'),
+      ], exported: true);
+      await pumpApp(tester, draft: store);
+      expect(find.text('2 pages not saved yet'), findsOneWidget);
+      expect(find.text('3 pages, saved as PDF'), findsOneWidget);
+
+      await tester.tap(find.text('3 pages, saved as PDF'));
+      // Page images that do not exist keep their spinners going, so no settle.
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(store.pages.map((p) => p.id), ['x', 'y', 'z']);
+      await tester.pageBack();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      // The other document is kept, now as the earlier scan.
+      expect(find.text('Continue draft'), findsOneWidget);
+      expect(find.text('3 pages, saved as PDF'), findsOneWidget);
+      expect(find.text('2 pages not saved yet'), findsOneWidget);
+      expect(find.textContaining('Scan, '), findsOneWidget);
+    });
+
     testWidgets('a library that fails to load offers a retry', (tester) async {
       await pumpApp(tester, library: _BrokenLibraryStore());
       await tester.tap(find.bySemanticsLabel('Library'));

@@ -80,7 +80,7 @@ Priority P0 = required for assigned release; P1 = useful after the core flow; P2
 | QR-01 | P0 / R1 | QR capture mode | Restrict detection to QR in QR mode; show a tracked boundary and decoded summary; deduplicate repeated reads; require explicit user action before opening URLs, joining Wi-Fi or invoking another payload action |
 | LIB-01 | P0 / R1 | Local document library | Rename, sort, search title/OCR, favorite, folders and tags; recent scans persist without account |
 | LIB-02 | P0 / R1 | Trash and restore | Delete moves document to trash; restore preserves assets/order; permanent deletion explains scope and requires confirmation; propose 30-day trash retention |
-| LIB-03 | P0 / R1 | Save/resume drafts | Leaving workflow saves committed captures and edit state; reopening offers Resume draft; no silently lost completed pages |
+| LIB-03 | P0 / R1 | Save/resume drafts | Leaving workflow saves committed captures and edit state; reopening offers Resume draft; no silently lost completed pages; each new scan or import starts a new document, and earlier ones stay on Home to reopen and add pages |
 | PDF-01 | P0 / R1 | PDF generation | A4/Letter/fit-to-image, portrait/landscape, margins, quality presets, page order and actual final file size |
 | PDF-02 | P0 / R1 | Page organization | Reorder, rotate, duplicate, add and delete; reorder also works with accessible Move up/down commands |
 | PDF-03 | P0 / R1 | Annotation | Draw, highlight and add text or a signature image/stroke; editable before export; flattened output preview; signature is visual, not a certificate-based digital signature |

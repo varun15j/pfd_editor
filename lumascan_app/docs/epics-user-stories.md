@@ -512,6 +512,7 @@ As a user, I want the app to preserve edits even when interrupted.
 - Draft state is restored after process termination or accidental navigation.
 - Save progress and completion are explicit.
 - A failed upload does not delete the local document.
+- Every new scan or photo import from Home, the Create button, Library or Tools starts a new document. The document that was open before is kept, listed on Home with its page count and whether it was saved as a PDF, and opening it again lets the user read it and add pages to it. Adding pages from inside an open document still adds to that document.
 
 **US-09.2 — Choose output quality**  
 As a user, I want to balance readability and file size.

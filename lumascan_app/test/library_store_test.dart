@@ -174,6 +174,47 @@ void main() {
       expect(second.read(scanControllerProvider).pages, isEmpty);
     });
 
+    test('a new scan starts a fresh document and keeps the earlier one', () async {
+      final first = launch();
+      final controller = first.read(scanControllerProvider.notifier);
+      await controller.scan(ScanSource.camera);
+      final earlier = [for (final p in first.read(scanControllerProvider).pages) p.id];
+      controller.markExported();
+
+      await controller.startNewDocument();
+      await controller.scan(ScanSource.camera);
+      await controller.draftSaved;
+      var state = first.read(scanControllerProvider);
+      expect(state.pages, hasLength(3));
+      expect(state.pages.map((p) => p.id), isNot(contains(earlier.first)));
+      expect(state.parked.single.pageCount, 3);
+      expect(state.parked.single.exported, isTrue);
+
+      // Both survive a restart: the latest as the draft, the earlier on Home.
+      final second = launch();
+      final restored = second.read(scanControllerProvider.notifier);
+      await restored.draftSaved;
+      state = second.read(scanControllerProvider);
+      expect(state.pages, hasLength(3));
+      final parkedId = state.parked.single.id;
+
+      // Opening the earlier one brings its pages back and sets the other aside.
+      await restored.openParked(parkedId);
+      await restored.draftSaved;
+      state = second.read(scanControllerProvider);
+      expect([for (final p in state.pages) p.id], earlier);
+      expect(state.parked.single.id, isNot(parkedId));
+      expect(state.unsaved, isFalse);
+      expect(File(path.join(tmp.path, DraftStore.parkedDir, '$parkedId.json')).existsSync(), isFalse);
+    });
+
+    test('starting a new document with nothing on screen sets nothing aside', () async {
+      final c = launch();
+      final controller = c.read(scanControllerProvider.notifier);
+      await controller.startNewDocument();
+      expect(c.read(scanControllerProvider).parked, isEmpty);
+    });
+
     test('an unreadable draft file starts an empty draft', () async {
       File(path.join(tmp.path, DraftStore.draftFile))
         ..createSync(recursive: true)

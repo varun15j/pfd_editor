@@ -69,14 +69,16 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 }
 
-/// Scans or imports into the draft, then opens the draft so the new pages can
-/// be checked straight away. The first camera scan shows the scan tips. The
-/// camera stays open between shots and opens the draft when it closes.
+/// Starts a new document, scans or imports into it, then opens it so the new
+/// pages can be checked straight away. The document on screen before, if
+/// any, is kept on Home to open again. The first camera scan shows the scan
+/// tips. The camera stays open between shots and opens the document when it
+/// closes.
 Future<void> scanThenReview(BuildContext context, WidgetRef ref, ScanSource source) async {
-  if (source == ScanSource.camera) {
-    if (!await showScanTipsOnce(context, ref) || !context.mounted) return;
-    return openBatchCapture(context, ref);
-  }
+  if (source == ScanSource.camera && (!await showScanTipsOnce(context, ref) || !context.mounted)) return;
+  await ref.read(scanControllerProvider.notifier).startNewDocument();
+  if (!context.mounted) return;
+  if (source == ScanSource.camera) return openBatchCapture(context, ref);
   // Open the draft as soon as the pages are known, so the wait for a long
   // import is spent looking at the pages arriving.
   final navigator = Navigator.of(context);

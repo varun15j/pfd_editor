@@ -89,13 +89,33 @@ class HomeScreen extends ConsumerWidget {
           ),
           const SizedBox(height: Space.sm),
           if (state.pages.isNotEmpty) ...[
-            _DraftCard(pageCount: state.pages.length, onTap: () => openDraft(context)),
+            _DraftCard(
+              title: 'Continue draft',
+              pageCount: state.pages.length,
+              exported: state.exported,
+              onTap: () => openDraft(context),
+            ),
+            const SizedBox(height: Space.sm),
+          ],
+          // Earlier scans, set aside when a new scan started (each new scan
+          // is a new document). Opening one brings it back to add pages.
+          for (final draft in state.parked) ...[
+            _DraftCard(
+              title: 'Scan, ${formatModified(draft.savedAt, DateTime.now())}',
+              pageCount: draft.pageCount,
+              exported: draft.exported,
+              onTap: busy
+                  ? null
+                  : () async {
+                      await ref.read(scanControllerProvider.notifier).openParked(draft.id);
+                      if (context.mounted) openDraft(context);
+                    },
+            ),
             const SizedBox(height: Space.sm),
           ],
           if (recent.isNotEmpty)
             SizedBox(
-              height:
-                  RecentDocumentCard.width * 1.1 + MediaQuery.textScalerOf(context).scale(44) + Space.lg + Space.xs,
+              height: RecentDocumentCard.width * 1.1 + MediaQuery.textScalerOf(context).scale(44) + Space.lg + Space.xs,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 clipBehavior: Clip.none,
@@ -105,7 +125,7 @@ class HomeScreen extends ConsumerWidget {
                     RecentDocumentCard(document: recent[i], onTap: () => openDocument(context, ref, recent[i])),
               ),
             ),
-          if (state.pages.isEmpty && recent.isEmpty)
+          if (state.pages.isEmpty && state.parked.isEmpty && recent.isEmpty)
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(Space.lg),
@@ -174,10 +194,12 @@ class _QuickAction extends StatelessWidget {
 }
 
 class _DraftCard extends StatelessWidget {
-  const _DraftCard({required this.pageCount, required this.onTap});
+  const _DraftCard({required this.title, required this.pageCount, required this.exported, required this.onTap});
 
+  final String title;
   final int pageCount;
-  final VoidCallback onTap;
+  final bool exported;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -198,9 +220,12 @@ class _DraftCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Continue draft', style: text.titleMedium),
+                    Text(title, style: text.titleMedium),
                     const SizedBox(height: 2),
-                    Text('$pageCount page${pageCount == 1 ? '' : 's'} not saved yet', style: text.bodySmall),
+                    Text(
+                      '$pageCount page${pageCount == 1 ? '' : 's'}${exported ? ', saved as PDF' : ' not saved yet'}',
+                      style: text.bodySmall,
+                    ),
                   ],
                 ),
               ),
