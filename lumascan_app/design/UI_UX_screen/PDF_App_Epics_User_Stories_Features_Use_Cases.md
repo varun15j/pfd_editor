@@ -174,6 +174,8 @@ As a user, I want to narrow the library by type and date and order it predictabl
 - Book-spread capture with spine guidance, left/right page pairing, reading direction, original-spread retention and print-layout choices.
 - Two distinct text modes: low-latency live Text and full-resolution accuracy-first OCR Doc.
 - QR-only detection mode with tracked reticle, decoded summary, duplicate suppression and user-confirmed payload actions.
+- Page-change detection: auto capture takes each page once and waits for the page to be turned or swapped.
+- One-page focus: a second page only partly in view is left out of the page outline, in every page mode.
 
 ### User stories and acceptance criteria
 
@@ -246,6 +248,27 @@ As a user, I want the camera to read a QR code and explain its payload before I 
 - The result identifies URL, Wi-Fi, contact, email, phone, SMS or plain-text payloads when the engine provides structured data.
 - The app shows the destination or action and requires explicit confirmation; it never automatically opens a link or joins a network.
 - Unreadable codes keep the preview active and provide distance, focus or lighting guidance.
+
+
+**US-03.9 — Never capture the same page twice**  
+As a high-volume user scanning 20 to 50 pages, I want auto capture to take each page once, so I do not have to delete duplicates.
+
+- After a capture the guidance reads "Turn to the next page" and the shutter ring stays empty until a different page is in view.
+- A page counts as new only after the view is disturbed for at least two analysed frames in a row: the outline is lost, jumps, or the content over it changes strongly (a hand or a turning page sweeping across).
+- A single lost or dark frame (detector flicker, a shadow) never counts as a new page.
+- Turning a book page under a still outline is detected from the content changing, not only from the outline moving.
+- The new page is taken only once it has settled again: corners and content still for the steadiness setting (3, 5 or 8 frames), so a page caught mid-turn is never taken.
+- A manual shutter tap also counts as taking the page in view, so auto capture does not take it again.
+- Taking the sheet away for two frames or more and putting one back always counts as a new page.
+
+**US-03.10 — Outline only the page in focus**  
+As a user holding the camera over one page, I want the outline and the crop to cover that page only, not half of the page next to it.
+
+- Applies to Docs, Book and OCR Doc, to the live outline and to the crop saved with the page, and to imported photos.
+- When a second page joins the page at a gutter or sheet edge and runs off the edge of the frame, and the visible part is narrower than the page (at most 85% of its width), it is left out.
+- When both pages are fully in view (an open book spread), they are kept together.
+- Book mode makes two pages only when the outline reaches across the middle of the frame (both pages in view); held over one page, it makes one page and hides the LEFT PAGE / RIGHT PAGE guides.
+- The user can still adjust the crop by hand in page review.
 
 ---
 
@@ -489,6 +512,7 @@ As a user, I want the app to preserve edits even when interrupted.
 - Draft state is restored after process termination or accidental navigation.
 - Save progress and completion are explicit.
 - A failed upload does not delete the local document.
+- Every new scan or photo import from Home, the Create button, Library or Tools starts a new document. The document that was open before is kept, listed on Home with its page count and whether it was saved as a PDF, and opening it again lets the user read it and add pages to it. Adding pages from inside an open document still adds to that document.
 
 **US-09.2 — Choose output quality**  
 As a user, I want to balance readability and file size.
@@ -668,6 +692,23 @@ As a user, I want AI assistance only when enabled and appropriate.
 3. User views storage and clears only recoverable cache.
 4. User reviews subscription state, restores purchases, or opens plan management.
 5. User accesses help/legal information, signs out, or initiates account deletion.
+
+### UC-11 — Scan a book page by page with auto capture
+
+1. User opens the camera in Docs, Book or OCR Doc with Auto on.
+2. The page is outlined; once still, it is taken and the guidance reads "Turn to the next page".
+3. While the same page stays in view, nothing more is taken, even if the outline flickers or the light dips for a moment.
+4. User turns the page. The turning page sweeps over the view, so the app counts the page as changed.
+5. When the new page has settled, it is taken. Steps 3 to 5 repeat for every page.
+6. If the app misses a turn, the user taps the shutter; that page is not taken again automatically.
+
+### UC-12 — Scan one page with the next page partly in view
+
+1. User holds the camera over the left page of an open book, or over one sheet lying next to another; part of the second page shows at the edge of the frame.
+2. The outline hugs only the page in focus; the cut-off part is left out.
+3. In Book mode the app makes one page from the photo instead of a left and a right page.
+4. When the user moves back so both pages are fully in view, the outline covers both and Book mode makes two pages again.
+5. The saved page is cropped to the same page the outline showed; the user can still adjust it in review.
 
 ---
 

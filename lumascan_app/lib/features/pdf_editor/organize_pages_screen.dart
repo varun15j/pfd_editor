@@ -106,6 +106,8 @@ class OrganizePagesScreen extends ConsumerWidget {
       ..showSnackBar(
         SnackBar(
           content: Text('Deleted page ${index + 1}'),
+          // An action would otherwise keep it up until dismissed.
+          persist: false,
           action: SnackBarAction(label: 'Undo', onPressed: controller.undo),
         ),
       );

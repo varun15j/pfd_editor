@@ -7,22 +7,16 @@ import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/app/theme.dart';
 import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/domain/models.dart';
-import 'package:lumascan/domain/scanner_service.dart';
 import 'package:lumascan/domain/ui_prefs.dart';
 import 'package:lumascan/features/capture/scan_tips.dart';
 import 'package:lumascan/ui/state_views.dart';
 
+import 'support/fake_batch_camera.dart';
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
 
-class _BlockedScanner implements ScannerService {
-  @override
-  Future<List<String>> scan({required ScanSource source, int maxPages = 100}) async =>
-      throw const ScannerPermissionDenied(permanently: true);
-
-  @override
-  Future<void> cleanUp() async {}
-}
+/// A camera whose access is turned off; it never takes a photo.
+FakeBatchCamera _blockedCamera() => FakeBatchCamera(Directory.systemTemp, deny: true);
 
 class _BrokenLibraryStore extends MemoryLibraryStore {
   @override
@@ -85,22 +79,22 @@ void main() {
       await pumpApp(
         tester,
         prefs: tipsSeen(),
-        overrides: [scannerServiceProvider.overrideWithValue(_BlockedScanner())],
+        overrides: [batchCameraProvider.overrideWithValue(() => _blockedCamera())],
       );
       await tester.tap(find.bySemanticsLabel('Scan'));
       await tester.pumpAndSettle();
       expect(find.text('Camera access needed'), findsOneWidget);
       expect(find.text('Open Settings'), findsOneWidget);
-      await tester.tap(find.text('Not now'));
+      await tester.tap(find.bySemanticsLabel('Discard all captured photos and changes'));
       await tester.pumpAndSettle();
-      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.text('Camera access needed'), findsNothing);
     });
 
     testWidgets('scanning from the Create sheet uses the same camera flow', (tester) async {
       await pumpApp(
         tester,
         prefs: tipsSeen(),
-        overrides: [scannerServiceProvider.overrideWithValue(_BlockedScanner())],
+        overrides: [batchCameraProvider.overrideWithValue(() => _blockedCamera())],
       );
       await tester.tap(find.byTooltip('Create'));
       await tester.pumpAndSettle();
@@ -175,6 +169,35 @@ void main() {
       );
       expect(find.text('Continue draft'), findsOneWidget);
       expect(find.text('2 pages not saved yet'), findsOneWidget);
+    });
+
+    testWidgets('earlier scans are listed on home and open again to add pages', (tester) async {
+      final store = MemoryDraftStore(const [
+        ScanPage(id: 'a', originalPath: '/nowhere/a.jpg'),
+        ScanPage(id: 'b', originalPath: '/nowhere/b.jpg'),
+      ]);
+      await store.park(const [
+        ScanPage(id: 'x', originalPath: '/nowhere/x.jpg'),
+        ScanPage(id: 'y', originalPath: '/nowhere/y.jpg'),
+        ScanPage(id: 'z', originalPath: '/nowhere/z.jpg'),
+      ], exported: true);
+      await pumpApp(tester, draft: store);
+      expect(find.text('2 pages not saved yet'), findsOneWidget);
+      expect(find.text('3 pages, saved as PDF'), findsOneWidget);
+
+      await tester.tap(find.text('3 pages, saved as PDF'));
+      // Page images that do not exist keep their spinners going, so no settle.
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(store.pages.map((p) => p.id), ['x', 'y', 'z']);
+      await tester.pageBack();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      // The other document is kept, now as the earlier scan.
+      expect(find.text('Continue draft'), findsOneWidget);
+      expect(find.text('3 pages, saved as PDF'), findsOneWidget);
+      expect(find.text('2 pages not saved yet'), findsOneWidget);
+      expect(find.textContaining('Scan, '), findsOneWidget);
     });
 
     testWidgets('a library that fails to load offers a retry', (tester) async {

@@ -1,12 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/domain/models.dart';
+import 'package:lumascan/features/batch_capture/batch_capture_screen.dart';
 import 'package:lumascan/features/batch_edit/batch_review_screen.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 
+import 'support/fake_batch_camera.dart';
 import 'support/memory_stores.dart';
 import 'support/screen_harness.dart';
 
@@ -65,10 +68,20 @@ void main() {
 
   group('Done in Batch Review', () {
     final harness = ScreenHarness();
-    tearDown(harness.dispose);
+    late Directory shots;
+    tearDown(() {
+      harness.dispose();
+      shots.deleteSync(recursive: true);
+    });
 
     Future<void> openDone(WidgetTester tester) async {
-      await tester.runAsync(() => harness.setUp(pageCount: 2));
+      shots = Directory.systemTemp.createTempSync('lumascan_shots');
+      await tester.runAsync(
+        () => harness.setUp(
+          pageCount: 2,
+          overrides: [batchCameraProvider.overrideWithValue(() => FakeBatchCamera(shots))],
+        ),
+      );
       await harness.pumpRoute(tester, (_) => const BatchReviewScreen());
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
@@ -90,12 +103,21 @@ void main() {
       expect(find.text('open'), findsOneWidget);
     });
 
-    testWidgets('Return to camera adds pages to the same draft and keeps the selection', (tester) async {
+    testWidgets('Return to camera opens Batch capture into the same draft and keeps the selection', (tester) async {
       await openDone(tester);
       await tester.tap(find.text('Return to camera'));
       await harness.settle(tester);
+      expect(find.byType(BatchCaptureScreen), findsOneWidget);
 
-      expect(harness.pages, hasLength(4));
+      await tester.tap(find.bySemanticsLabel('Take photo'));
+      await harness.settle(tester);
+      await tester.tap(find.bySemanticsLabel('Open preview of 3 captured photos'));
+      await harness.settle(tester);
+      await tester.tap(find.text('Review all 3 pages'));
+      await harness.settle(tester);
+
+      expect(harness.pages, hasLength(3));
+      expect(find.byType(BatchCaptureScreen), findsNothing);
       expect(find.text('Batch review'), findsOneWidget);
       expect(find.text('2 selected'), findsOneWidget);
     });

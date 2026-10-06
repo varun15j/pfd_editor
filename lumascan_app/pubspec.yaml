@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.13+14
+version: 1.2.0+16
 
 environment:
   sdk: ^3.13.1
@@ -46,7 +46,11 @@ dependencies:
   signature: ^6.4.0
   file_picker: ^13.1.0
   package_info_plus: ^10.2.2
+  camera: ^0.12.1
   sqflite: ^2.4.4
+  google_mlkit_text_recognition: ^0.17.1
+  google_mlkit_barcode_scanning: ^0.16.1
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:
@@ -70,6 +74,16 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Math revision page photos for trying batch edit and page detection in
+  # debug builds (debug panel > Add sample pages). About 2 MB.
+  assets:
+    - sample_photos/01_revision1_palindrome_lengths.jpg
+    - sample_photos/02_revision2_multiplication.jpg
+    - sample_photos/03_revision3_conversions_shapes.jpg
+    - sample_photos/04_revision4_lengths.jpg
+    - sample_photos/05_revision_grocery_table.jpg
+    - sample_photos/book/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

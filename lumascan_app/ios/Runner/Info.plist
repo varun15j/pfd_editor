@@ -4,6 +4,8 @@
 <dict>
 	<key>NSCameraUsageDescription</key>
 	<string>LumaScan uses the camera to scan documents. Pages stay on this device.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>LumaScan never records sound. iOS asks every camera app to include this note.</string>
 	<key>CFBundleAllowMixedLocalizations</key>
 	<true/>
 	<key>CADisableMinimumFrameDurationOnPhone</key>

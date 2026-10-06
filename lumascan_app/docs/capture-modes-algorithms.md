@@ -50,6 +50,8 @@ pageArea / frameArea ≥ 0.20
 
 for a continuous hold period, initially 450–700 ms and calibrated on reference devices. Thresholds are proposed starting values, not universal constants.
 
+After a capture, auto capture does not fire again until the page has been turned or swapped: two analysed frames in a row with no page, a jumped outline, or strongly changed page content, followed by a new steady hold. One lost or dark frame never re-arms it. A cut-off second page is trimmed from the outline in every page mode. Details: [auto-capture-and-page-focus.md](auto-capture-and-page-focus.md) (US-03.9, US-03.10).
+
 ### Focus and exposure signals
 
 Variance of the Laplacian is a useful blur signal:

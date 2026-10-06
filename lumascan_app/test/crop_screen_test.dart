@@ -196,6 +196,19 @@ void main() {
     expect(before.width, closeTo(16, 0.5));
   });
 
+  testWidgets('side handles stay clear of the system back gesture strips', (tester) async {
+    final semantics = tester.ensureSemantics();
+    // Gesture navigation: a 30 dp back gesture strip on each side.
+    tester.view.systemGestureInsets = const FakeViewPadding(left: 78, right: 78);
+    await pumpCrop(tester);
+
+    final width = tester.view.physicalSize.width / tester.view.devicePixelRatio;
+    expect(tester.getRect(handle('Left side')).left, greaterThanOrEqualTo(30));
+    expect(tester.getRect(handle('Right side')).right, lessThanOrEqualTo(width - 30));
+    expect(tester.getRect(handle('Top left corner')).left, greaterThanOrEqualTo(30));
+    semantics.dispose();
+  });
+
   testWidgets('Reset to detected restores the detected page quad', (tester) async {
     await pumpCrop(tester);
     await tester.tap(find.text('Reset to detected'));

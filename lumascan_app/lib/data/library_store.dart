@@ -85,10 +85,7 @@ class DraftStore {
       final text = await _files.readText(draftFile);
       if (text == null) return const [];
       final json = (jsonDecode(text) as Map).cast<String, Object?>();
-      final originals = (await _files.originalsDir).path;
-      return [for (final p in json['pages']! as List) ScanPage.fromJson((p as Map).cast(), originalsDir: originals)]
-          .where((p) => File(p.originalPath).existsSync())
-          .toList();
+      return _pages(json, (await _files.originalsDir).path);
     } catch (_) {
       return const [];
     }
@@ -104,4 +101,96 @@ class DraftStore {
     };
     await _files.writeFileAtomically(draftFile, utf8.encode(jsonEncode(json)));
   }
+
+  /// Earlier documents, set aside when a new scan started, live in
+  /// `drafts/parked/<id>.json` until they are opened again.
+  static const parkedDir = 'drafts/parked';
+
+  /// Sets [pages] aside as an earlier document and returns it. The page
+  /// images stay where they are.
+  Future<ParkedDraft> park(List<ScanPage> pages, {bool exported = false}) async {
+    final now = DateTime.now();
+    final draft = ParkedDraft(
+      id: 'd${now.microsecondsSinceEpoch}',
+      pageCount: pages.length,
+      savedAt: now,
+      exported: exported,
+      cover: pages.first,
+    );
+    final json = {
+      'version': version,
+      'savedAt': now.toUtc().toIso8601String(),
+      'exported': exported,
+      'pages': [for (final p in pages) p.toJson()],
+    };
+    await _files.writeFileAtomically('$parkedDir/${draft.id}.json', utf8.encode(jsonEncode(json)));
+    return draft;
+  }
+
+  /// The earlier documents, newest first. Unreadable files are skipped.
+  Future<List<ParkedDraft>> parked() async {
+    final dir = Directory(path.join(await _files.rootPath, parkedDir));
+    if (!dir.existsSync()) return const [];
+    final originals = (await _files.originalsDir).path;
+    final found = <ParkedDraft>[];
+    for (final file in dir.listSync().whereType<File>().where((f) => f.path.endsWith('.json'))) {
+      try {
+        final json = (jsonDecode(await file.readAsString()) as Map).cast<String, Object?>();
+        final pages = _pages(json, originals);
+        if (pages.isEmpty) continue;
+        found.add(
+          ParkedDraft(
+            id: path.basenameWithoutExtension(file.path),
+            pageCount: pages.length,
+            savedAt: DateTime.parse(json['savedAt']! as String).toLocal(),
+            exported: json['exported'] == true,
+            cover: pages.first,
+          ),
+        );
+      } catch (_) {
+        continue;
+      }
+    }
+    return found..sort((a, b) => b.savedAt.compareTo(a.savedAt));
+  }
+
+  /// The pages of earlier document [id], or none if it cannot be read.
+  Future<List<ScanPage>> loadParked(String id) async {
+    try {
+      final text = await _files.readText('$parkedDir/$id.json');
+      if (text == null) return const [];
+      return _pages((jsonDecode(text) as Map).cast(), (await _files.originalsDir).path);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> deleteParked(String id) => _files.deleteFile('$parkedDir/$id.json');
+
+  static List<ScanPage> _pages(Map<String, Object?> json, String originals) =>
+      [for (final p in json['pages']! as List) ScanPage.fromJson((p as Map).cast(), originalsDir: originals)]
+          .where((p) => File(p.originalPath).existsSync())
+          .toList();
+}
+
+/// An earlier scan document set aside when a new scan started. Opening it
+/// makes it the draft again, so pages can be added to it.
+class ParkedDraft {
+  const ParkedDraft({
+    required this.id,
+    required this.pageCount,
+    required this.savedAt,
+    required this.exported,
+    required this.cover,
+  });
+
+  final String id;
+  final int pageCount;
+  final DateTime savedAt;
+
+  /// Saved as a PDF and not changed since.
+  final bool exported;
+
+  /// The first page, for the thumbnail.
+  final ScanPage cover;
 }

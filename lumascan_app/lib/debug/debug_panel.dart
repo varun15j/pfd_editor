@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'image_profiler.dart';
 import 'profile_sample.dart';
 import 'profiling_report_screen.dart';
+import 'sample_pages.dart';
+import 'sample_pages_tile.dart';
 
 /// The app's navigator, so the debug panel (which sits above every route) can
 /// open the profiling report.
@@ -121,6 +123,9 @@ class DebugPanel extends StatelessWidget {
                   subtitle: const Text('Debug builds only'),
                   trailing: IconButton(icon: const Icon(Icons.close), tooltip: 'Close', onPressed: onClose),
                 ),
+                const Divider(),
+                SamplePagesTile(onStart: onClose),
+                SamplePagesTile(set: bookSamples, onStart: onClose),
                 const Divider(),
                 SwitchListTile(
                   title: const Text('Profile image loading'),

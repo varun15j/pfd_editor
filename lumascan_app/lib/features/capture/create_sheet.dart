@@ -31,7 +31,7 @@ class CreateSheet extends StatelessWidget {
     (
       Icons.document_scanner_outlined,
       'Scan document',
-      'Use the camera; edges are found for you',
+      'Take page after page; edges are found for you',
       (context, ref) => scanThenReview(context, ref, ScanSource.camera),
     ),
     (

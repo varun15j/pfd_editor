@@ -3,11 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../../domain/models.dart';
-import '../../domain/scanner_service.dart';
+import '../batch_capture/batch_capture_screen.dart';
 import '../capture/add_pages_sheet.dart';
 import '../export/export_sheet.dart';
 import '../pages/page_image.dart';
-import '../pages/scan_actions.dart';
 import '../pages/scan_controller.dart';
 import 'batch_action_bar.dart';
 import 'batch_action_runner.dart';
@@ -18,7 +17,11 @@ import 'batch_selection.dart';
 /// grid. Tap pages to pick which ones the batch actions apply to. All pages
 /// start selected, because opening this screen means editing the batch.
 class BatchReviewScreen extends ConsumerStatefulWidget {
-  const BatchReviewScreen({super.key});
+  const BatchReviewScreen({super.key, this.fromCamera = false});
+
+  /// Opened over Batch capture: the chosen outcome is handed back to the
+  /// camera, which resumes for Return to camera and closes otherwise.
+  final bool fromCamera;
 
   @override
   ConsumerState<BatchReviewScreen> createState() => _BatchReviewScreenState();
@@ -32,10 +35,11 @@ class _BatchReviewScreenState extends ConsumerState<BatchReviewScreen> {
   Future<void> _finish() async {
     final outcome = await showBatchCompletionSheet(context);
     if (outcome == null || !mounted) return;
+    if (widget.fromCamera) return Navigator.of(context).pop(outcome);
     switch (outcome) {
       // New pages join the same draft; edits and the selection are kept.
       case BatchOutcome.camera:
-        await runScan(context, ref, ScanSource.camera);
+        await openBatchCapture(context, ref, openDraftAfter: false);
       case BatchOutcome.review:
         Navigator.of(context).pop();
       case BatchOutcome.export:

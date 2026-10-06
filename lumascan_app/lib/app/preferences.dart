@@ -55,6 +55,14 @@ class AppSettingsController extends Notifier<AppSettings> {
 
   void setAnalytics(bool value) => _set(state.copyWith(analytics: value));
 
+  void setCaptureResolution(CaptureResolution value) => _set(state.copyWith(captureResolution: value));
+
+  void setShutterSound(bool value) => _set(state.copyWith(shutterSound: value));
+
+  void setCaptureHaptics(bool value) => _set(state.copyWith(captureHaptics: value));
+
+  void setAutoCaptureSteadiness(AutoCaptureSteadiness value) => _set(state.copyWith(autoCaptureSteadiness: value));
+
   void _set(AppSettings settings) {
     _changed = true;
     state = settings;

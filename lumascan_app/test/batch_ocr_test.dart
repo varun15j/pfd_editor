@@ -39,6 +39,9 @@ class _FakeOcr implements OcrEngine {
     if (text == null) throw StateError('unreadable');
     return text;
   }
+
+  @override
+  Future<String> recognizeFile(String path) async => '';
 }
 
 List<ScanPage> _pages(int n) => [for (var i = 0; i < n; i++) ScanPage(id: 'p$i', originalPath: '/p$i.jpg')];
@@ -102,7 +105,10 @@ void main() {
     tearDown(harness.dispose);
 
     testWidgets('without an engine it explains why and leaves pages alone', (tester) async {
-      await tester.runAsync(() => harness.setUp(pageCount: 2));
+      await tester.runAsync(
+        () =>
+            harness.setUp(pageCount: 2, overrides: [ocrEngineProvider.overrideWithValue(const UnavailableOcrEngine())]),
+      );
       await harness.pumpRoute(tester, (_) => const BatchReviewScreen());
 
       await tester.tap(find.text('OCR'));
@@ -142,6 +148,20 @@ void main() {
       await tester.tap(find.widgetWithText(OutlinedButton, 'Done'));
       await tester.pumpAndSettle();
       expect(find.text('open'), findsOneWidget);
+    });
+
+    testWidgets('results name pages by their place in the document', (tester) async {
+      final engine = _FakeOcr(readiness: OcrReadiness.ready);
+      await tester.runAsync(
+        () => harness.setUp(pageCount: 5, overrides: [ocrEngineProvider.overrideWithValue(engine)]),
+      );
+      final ids = [for (final p in harness.pages) p.id];
+      engine.texts = {ids[4]: 'Grocery'};
+      await harness.pumpRoute(tester, (_) => BatchOcrScreen(pageIds: [ids[4]]));
+
+      await tester.tap(find.text('Recognize text on 1 page'));
+      await tester.pumpAndSettle();
+      expect(find.text('Page 5: Text found'), findsOneWidget);
     });
   });
 }

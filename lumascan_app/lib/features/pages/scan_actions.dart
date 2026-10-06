@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../domain/scanner_service.dart';
+import '../batch_capture/batch_capture_screen.dart';
 import '../capture/photo_import_screen.dart';
 import 'scan_controller.dart';
 
@@ -17,6 +18,13 @@ Future<bool> runScan(BuildContext context, WidgetRef ref, ScanSource source, {Vo
   // Photos go through LumaScan's own import, which keeps the chosen order and
   // can auto-crop (C2).
   if (source == ScanSource.gallery) return importPhotosFlow(context, ref, onAdding: onAdding);
+  // The camera stays open between shots (BE-01), so pages are taken one
+  // after another with no preview in between.
+  if (source == ScanSource.camera) {
+    final before = ref.read(scanControllerProvider).pages;
+    await openBatchCapture(context, ref, openDraftAfter: false);
+    return !identical(ref.read(scanControllerProvider).pages, before);
+  }
   final outcome = await ref.read(scanControllerProvider.notifier).scan(source, onAdding: onAdding);
   if (!context.mounted) return false;
   final messenger = ScaffoldMessenger.of(context);

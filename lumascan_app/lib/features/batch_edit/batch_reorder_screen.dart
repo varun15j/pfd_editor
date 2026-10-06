@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../../domain/models.dart';
+import '../../ui/undo_toast.dart';
 import '../pages/page_image.dart';
 import '../pages/scan_controller.dart';
 
@@ -32,14 +33,7 @@ class _BatchReorderScreenState extends ConsumerState<BatchReorderScreen> {
     if (_changed) {
       final controller = ref.read(scanControllerProvider.notifier);
       controller.reorderPages(_order);
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(
-            content: const Text('Page order changed'),
-            action: SnackBarAction(label: 'Undo', onPressed: controller.undo),
-          ),
-        );
+      showUndoToast(ScaffoldMessenger.of(context), message: 'Page order changed', onUndo: controller.undo);
     }
     Navigator.of(context).pop();
   }

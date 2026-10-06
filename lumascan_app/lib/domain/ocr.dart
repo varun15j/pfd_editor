@@ -38,6 +38,9 @@ abstract interface class OcrEngine {
   /// Returns the text on [page] as rendered with its recipe. An empty string
   /// means the page has no readable text. Throws when recognition fails.
   Future<String> recognize(ScanPage page, {required String languageCode});
+
+  /// Returns the text in a photo file as it is, for Text mode in the camera.
+  Future<String> recognizeFile(String path);
 }
 
 /// The engine used until LumaScan ships one: it reports OCR as unavailable,
@@ -58,4 +61,7 @@ class UnavailableOcrEngine implements OcrEngine {
   @override
   Future<String> recognize(ScanPage page, {required String languageCode}) =>
       Future.error(UnsupportedError('No OCR engine'));
+
+  @override
+  Future<String> recognizeFile(String path) => Future.error(UnsupportedError('No OCR engine'));
 }

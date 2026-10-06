@@ -9,11 +9,14 @@
     <!-- Debug builds only: the image-loading profiler keeps its database in
          Documents/LumaScan/debug so it survives an uninstall. A reinstalled
          app needs "All files access" (Android 11+) or the storage permission
-         (Android 8-10) to open it again. Release builds never ask. -->
+         (Android 8-10) to open it again. Release builds never ask.
+         The camera plugin also declares WRITE_EXTERNAL_STORAGE, capped at
+         Android 9; tools:replace keeps this debug-only cap at Android 10. -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="29"/>
+        android:maxSdkVersion="29"
+        tools:replace="android:maxSdkVersion"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32"/>
     <application android:requestLegacyExternalStorage="true"/>

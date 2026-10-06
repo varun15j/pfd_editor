@@ -93,7 +93,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
         },
       );
       if (mounted) setState(() => _result = file);
-      draft.markSaved();
+      draft.markExported();
       // The PDF is already safe on disk; a failed index write only means it
       // is missing from the Library list, so it is reported, not thrown.
       await library.addScan(file, pages);

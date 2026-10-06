@@ -37,6 +37,31 @@ class MemoryDraftStore extends DraftStore {
 
   @override
   Future<void> save(List<ScanPage> pages) async => this.pages = pages;
+
+  /// Earlier documents by id.
+  final parkedPages = <String, (ParkedDraft, List<ScanPage>)>{};
+
+  @override
+  Future<ParkedDraft> park(List<ScanPage> pages, {bool exported = false}) async {
+    final draft = ParkedDraft(
+      id: 'p${parkedPages.length}',
+      pageCount: pages.length,
+      savedAt: DateTime.now(),
+      exported: exported,
+      cover: pages.first,
+    );
+    parkedPages[draft.id] = (draft, pages);
+    return draft;
+  }
+
+  @override
+  Future<List<ParkedDraft>> parked() async => [for (final e in parkedPages.values) e.$1].reversed.toList();
+
+  @override
+  Future<List<ScanPage>> loadParked(String id) async => parkedPages[id]?.$2 ?? const [];
+
+  @override
+  Future<void> deleteParked(String id) async => parkedPages.remove(id);
 }
 
 class MemoryUiPrefsStore extends UiPrefsStore {

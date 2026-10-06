@@ -95,6 +95,26 @@ class PageStore {
     return dest;
   }
 
+  /// Moves a photo the app itself just took into private storage and returns
+  /// the new path. A rename is instant, so the camera never waits on a copy;
+  /// a copy is made only when the two folders are on different volumes.
+  Future<String> adoptOriginal(String sourcePath, String id) async {
+    final dir = await originalsDir;
+    final ext = p.extension(sourcePath).toLowerCase();
+    final dest = p.join(dir.path, '$id${ext.isEmpty ? '.jpg' : ext}');
+    try {
+      await File(sourcePath).rename(dest);
+    } on FileSystemException {
+      await File(sourcePath).copy(dest);
+      try {
+        await File(sourcePath).delete();
+      } on FileSystemException {
+        // The camera's own cache folder is cleared by the OS.
+      }
+    }
+    return dest;
+  }
+
   /// The upright, uncropped copy of [originalPath] the editor works from,
   /// kept next to the original so it lives and dies with it.
   static String workingPreviewPath(String originalPath) => _beside(originalPath, 'preview');
