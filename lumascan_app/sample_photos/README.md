@@ -12,7 +12,9 @@ The original phone photos behind the scans in `sample_scan_img/`. Same file name
 | 04_revision4_lengths.jpg | Fingers at the top, left and bottom, page runs off the bottom of the frame |
 | 05_revision_grocery_table.jpg | Notebook page with the facing page visible on the right, shadow at the bottom |
 
-Not bundled into the app (nothing in `pubspec.yaml` lists them as assets). To try them by hand on an emulator or a USB-connected phone:
+Bundled into the app as assets (listed in `pubspec.yaml`, about 2 MB). In a debug build, swipe in from the left edge to open the debug panel and tap **Add sample pages**: the five photos go through the normal photo import with auto-crop and the draft opens, ready for Batch Review (enhance, rotate, crop, OCR, delete, markup, duplicate, reorder). `test/sample_pages_test.dart` checks they are bundled and that a page is found in each.
+
+To try them through the system photo picker instead (emulator or USB phone):
 
 ```bash
 adb push sample_photos/. /sdcard/Pictures/LumaScanPhotos/

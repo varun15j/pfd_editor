@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/pages/pages_screen.dart';
+import '../features/pages/scan_controller.dart';
 import 'image_profiler.dart';
 import 'profile_sample.dart';
 import 'profiling_report_screen.dart';
+import 'sample_pages.dart';
 
 /// The app's navigator, so the debug panel (which sits above every route) can
 /// open the profiling report.
@@ -122,6 +125,8 @@ class DebugPanel extends StatelessWidget {
                   trailing: IconButton(icon: const Icon(Icons.close), tooltip: 'Close', onPressed: onClose),
                 ),
                 const Divider(),
+                _SamplePagesTile(onClose: onClose),
+                const Divider(),
                 SwitchListTile(
                   title: const Text('Profile image loading'),
                   subtitle: const Text('Times every thumbnail, preview and effect, and saves it for the report.'),
@@ -204,4 +209,49 @@ class DebugPanel extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Adds the bundled math revision photos to the draft through the normal
+/// photo import, with auto-crop, and opens the draft: pages to try batch
+/// edit and page detection on.
+class _SamplePagesTile extends ConsumerStatefulWidget {
+  const _SamplePagesTile({required this.onClose});
+
+  final VoidCallback onClose;
+
+  @override
+  ConsumerState<_SamplePagesTile> createState() => _SamplePagesTileState();
+}
+
+class _SamplePagesTileState extends ConsumerState<_SamplePagesTile> {
+  bool _adding = false;
+
+  Future<void> _add() async {
+    setState(() => _adding = true);
+    final messenger = ScaffoldMessenger.maybeOf(debugNavigatorKey.currentContext ?? context);
+    try {
+      final photos = await loadSamplePages();
+      final result = await ref.read(scanControllerProvider.notifier).importPhotos(photos, autoCrop: true);
+      if (!mounted) return;
+      widget.onClose();
+      messenger?.showSnackBar(SnackBar(content: Text('Added ${result.added} sample pages')));
+      if (result.added > 0) {
+        debugNavigatorKey.currentState?.push(MaterialPageRoute<void>(builder: (_) => const PagesScreen()));
+      }
+    } catch (e) {
+      messenger?.showSnackBar(SnackBar(content: Text('Sample pages not added ($e)')));
+    } finally {
+      if (mounted) setState(() => _adding = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    leading: _adding
+        ? const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2))
+        : const Icon(Icons.collections_outlined),
+    title: const Text('Add sample pages'),
+    subtitle: Text('The ${samplePageAssets.length} math revision photos, auto-cropped, for testing batch edit'),
+    onTap: _adding ? null : _add,
+  );
 }

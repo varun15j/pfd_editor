@@ -75,6 +75,15 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Math revision page photos for trying batch edit and page detection in
+  # debug builds (debug panel > Add sample pages). About 2 MB.
+  assets:
+    - sample_photos/01_revision1_palindrome_lengths.jpg
+    - sample_photos/02_revision2_multiplication.jpg
+    - sample_photos/03_revision3_conversions_shapes.jpg
+    - sample_photos/04_revision4_lengths.jpg
+    - sample_photos/05_revision_grocery_table.jpg
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
