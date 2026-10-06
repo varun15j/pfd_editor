@@ -6,12 +6,14 @@ import '../features/pages/scan_controller.dart';
 import 'debug_panel.dart';
 import 'sample_pages.dart';
 
-/// Adds the bundled math revision photos to the draft through the normal
+/// Adds a bundled set of sample photos ([set]) to the draft through the normal
 /// photo import, with auto-crop, and opens the draft: pages to try batch
 /// edit and page detection on. Shown in the debug panel and in Settings >
 /// Developer (debug builds only).
 class SamplePagesTile extends ConsumerStatefulWidget {
-  const SamplePagesTile({super.key, this.onStart, this.contentPadding});
+  const SamplePagesTile({super.key, this.set = mathSamples, this.onStart, this.contentPadding});
+
+  final SampleSet set;
 
   /// Called once the pages are added, before the draft opens (the debug
   /// panel closes itself).
@@ -30,7 +32,7 @@ class _SamplePagesTileState extends ConsumerState<SamplePagesTile> {
     setState(() => _adding = true);
     final messenger = ScaffoldMessenger.maybeOf(debugNavigatorKey.currentContext ?? context);
     try {
-      final photos = await loadSamplePages();
+      final photos = await loadSamplePages(set: widget.set);
       final result = await ref.read(scanControllerProvider.notifier).importPhotos(photos, autoCrop: true);
       if (!mounted) return;
       widget.onStart?.call();
@@ -52,9 +54,9 @@ class _SamplePagesTileState extends ConsumerState<SamplePagesTile> {
     contentPadding: widget.contentPadding,
     leading: _adding
         ? const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2))
-        : const Icon(Icons.collections_outlined),
-    title: const Text('Add sample pages'),
-    subtitle: Text('The ${samplePageAssets.length} math revision photos, auto-cropped, for testing batch edit'),
+        : Icon(widget.set == bookSamples ? Icons.menu_book_outlined : Icons.collections_outlined),
+    title: Text(widget.set.title),
+    subtitle: Text(widget.set.subtitle),
     onTap: _adding ? null : _add,
   );
 }

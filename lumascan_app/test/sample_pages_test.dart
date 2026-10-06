@@ -40,4 +40,30 @@ void main() {
       expect(File(p.path).lengthSync(), greaterThan(100000), reason: p.name);
     }
   });
+
+  test('the 20 book photos are bundled at 1080 x 1920 and copy for import', () async {
+    expect(bookSamples.assets, hasLength(20));
+    expect(sampleSets, [mathSamples, bookSamples]);
+    for (final asset in bookSamples.assets) {
+      final photo = RgbImage.decode((await rootBundle.load(asset)).buffer.asUint8List());
+      expect((photo.width, photo.height), (1080, 1920), reason: asset);
+    }
+
+    final temp = Directory.systemTemp.createTempSync('lumascan_book');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      (call) async => temp.path,
+    );
+    addTearDown(() => temp.deleteSync(recursive: true));
+    final photos = await loadSamplePages(set: bookSamples);
+    expect(photos.map((p) => p.name), [for (final a in bookSamples.assets) a.split('/').last]);
+  });
+
+  test('a flat book page is outlined', () async {
+    // 03: one page, flat, nothing over it.
+    final data = await rootBundle.load('sample_photos/book/03_straw_pipette.jpg');
+    final quad = detectPageQuad(RgbImage.decode(data.buffer.asUint8List(), maxDimension: 640))!;
+    expect(quad.tl.x, inInclusiveRange(0.05, 0.2));
+    expect(quad.br.x, inInclusiveRange(0.85, 1.0));
+  });
 }

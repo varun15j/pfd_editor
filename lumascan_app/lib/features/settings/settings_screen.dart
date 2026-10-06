@@ -5,6 +5,7 @@ import '../../app/preferences.dart';
 import '../../app/theme.dart';
 import '../../debug/image_profiler.dart';
 import '../../debug/profiling_report_screen.dart';
+import '../../debug/sample_pages.dart';
 import '../../debug/sample_pages_tile.dart';
 import '../../domain/app_settings.dart';
 import '../../domain/models.dart';
@@ -122,6 +123,7 @@ class SettingsScreen extends ConsumerWidget {
             // The debug panel's edge swipe is taken by the system back
             // gesture on phones with gesture navigation, so this is here too.
             const SamplePagesTile(contentPadding: EdgeInsets.zero),
+            const SamplePagesTile(set: bookSamples, contentPadding: EdgeInsets.zero),
           ],
           const SizedBox(height: Space.xl),
           const AboutSection(),

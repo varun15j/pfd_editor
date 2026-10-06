@@ -20,3 +20,11 @@ To try them through the system photo picker instead (emulator or USB phone):
 adb push sample_photos/. /sdcard/Pictures/LumaScanPhotos/
 adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Pictures/LumaScanPhotos
 ```
+
+## Book pages (`book/`)
+
+Twenty phone photos of a printed black-and-white children's science book, held open on a lap, taken with LumaScan on the CPH2661 (OnePlus) on 6 October 2026. They were picked from 134 photos in the app for sharp, readable text; blurred shots and page turns were left out. Each was resized from 2160 x 3840 to 1080 x 1920 (about 300 KB each, 6 MB in all).
+
+They are harder than the math pages: two-page spreads with a curved gutter, the facing page and the page stack in view, fingers on the page (08, 13, 14, 15), and a busy background (cables, a lamp, cloth). In a debug build, tap **Add book pages** under Settings > Developer or in the debug panel.
+
+Page detection on 6 October 2026 (`detectPageQuad`, 640 px): about 5 of 20 are outlined well (03, 08, 12, 18, 20). 02 gets no outline, and most others cut across both pages or keep only a strip of one. Two-page spreads need their own handling: pick one page at the gutter, or keep the spread.

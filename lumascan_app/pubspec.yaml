@@ -83,6 +83,7 @@ flutter:
     - sample_photos/03_revision3_conversions_shapes.jpg
     - sample_photos/04_revision4_lengths.jpg
     - sample_photos/05_revision_grocery_table.jpg
+    - sample_photos/book/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
