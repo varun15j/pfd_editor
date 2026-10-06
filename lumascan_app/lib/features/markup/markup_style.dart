@@ -31,6 +31,9 @@ class MarkupStyle {
     Color(0xFFE91E8C),
   ];
 
+  /// What a screen reader says for each swatch in [palette], in the same order.
+  static const paletteNames = ['Black', 'Blue', 'Red', 'Green', 'Yellow', 'Pink'];
+
   static const _pen = [0.003, 0.005, 0.01];
   static const _highlighter = [0.014, 0.022, 0.034];
   static const _text = [0.028, 0.035, 0.05];

@@ -147,6 +147,8 @@ class _DocumentInteraction {
       selected: selecting ? selected : null,
       button: true,
       label: semanticsLabel,
+      onTap: onTap,
+      onLongPress: onLongPress,
       onLongPressHint: selecting ? null : 'Select',
       child: Card(
         clipBehavior: Clip.antiAlias,
@@ -157,7 +159,9 @@ class _DocumentInteraction {
                 side: BorderSide(color: c.accent, width: 2),
               )
             : null,
-        child: InkWell(onTap: onTap, onLongPress: onLongPress, child: child),
+        // The Semantics above carries the label and actions, so the ink does not
+        // add a second, unlabelled tap target for a screen reader.
+        child: InkWell(onTap: onTap, onLongPress: onLongPress, excludeFromSemantics: true, child: child),
       ),
     );
   }
