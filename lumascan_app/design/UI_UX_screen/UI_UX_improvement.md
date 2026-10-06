@@ -43,7 +43,7 @@ Source references below use section names and stable story/screen IDs so they re
 | UX-04 | Tutorial overlays obscure task context | Medium | Screens 27, 36–37 |
 | UX-05 | Saving, uploading, and sharing need distinct states | High | Screens 34–39; EP-09 |
 | UX-06 | Navigation and visual-system definitions conflict | High | Feature direction, screen design, screenshot specification |
-| UX-10 | App stays on the splash screen although the Flutter UI is built and idle | High | App start and resume; Android debug build on a real device |
+| UX-10 | Debug build stays on the splash screen (window recreated; or reopened paused after the debug session ended) | High | App start and resume; Android debug build on a real device |
 
 ## 4. Product, epic, and story findings
 
@@ -225,11 +225,11 @@ These are proposed changes to the specification, not findings that the current a
 
 **Completion criteria:** Screen routes, navigation diagrams, component names, color tokens, spacing, typography, target sizes, and accessibility criteria agree across the specification and design documents. Define light/dark, loading, disabled, focused, selected, and error states for shared components.
 
-### UX-10 — App stays on the splash screen after the window is recreated
+### UX-10 — App stays on the splash screen in debug builds
 
 **Status:** Open. Root cause analysis (RCA) done on 6 October 2026. The fix is not yet confirmed.
 
-**Scenario (seen twice, both with the same signature):**
+**Scenario 1 (6 October 2026, 09:33–09:37): window recreated during a debug session**
 
 1. A debug build is started from Android Studio on a real phone: model CPH2661, Android 16 (API 36), Flutter 3.47.6 / Dart 3.13.5, Impeller renderer on. The branch is `claude/project-thread-d2sa4n` (Batch scan).
 2. The app opens and draws its first frame normally (09:33:29 on the device).
@@ -260,6 +260,22 @@ These are proposed changes to the specification, not findings that the current a
 2. **Add an app-side safeguard:** when the app returns to the foreground (`AppLifecycleState.resumed`) or the view's metrics change, ask for one frame (`WidgetsBinding.instance.scheduleFrame()`). This is cheap and keeps the window from waiting forever.
 3. **Decide orientation:** lock the app to portrait unless landscape is a product requirement. This removes the rotation part of the trigger.
 4. **Add a regression check:** a device test that starts the app, turns the screen off and on, rotates, and checks that Home is visible within 2 seconds.
+
+**Scenario 2 (6 October 2026, 10:05): app reopened after the debug session ended**
+
+1. Android Studio ran the app at 09:30 and stopped the session at 09:41 (`idea.log`: `StopApp lumascan_app`). Stopping the session also stops the app process.
+2. At 10:05:38 the app was opened again from the phone (launcher or Recents). No Flutter run or attach session existed: `idea.log` has no `RunApp` after 09:41, and no `flutter run` process was running on the PC.
+3. The phone showed only the splash screen.
+
+**What was checked:**
+
+- **How it was started:** `dumpsys activity recents` shows that the app's task was created by `com.android.shell` (uid 2000). That is the `adb shell am start` command the Flutter tool sends. The 10:05 start reused that task's launch intent, with `(has extras)` (`ActivityTaskManager: START ... (has extras)`).
+- **Which extras:** for every Studio launch, the tool adds `--start-paused` (`idea.log`: `flutter run --machine ... --start-paused`). In `flutter_tools/lib/src/android/android_device.dart`, that becomes `am start ... --ez start-paused true`, alongside `enable-checked-mode` and `verify-entry-points`. The Flutter Android embedding reads these extras as engine flags every time the activity starts.
+- **The app was waiting:** the app process was alive and nearly idle (`top`). Its Dart VM service was listening on the device and answered `403 Forbidden` without the session's auth token. No `flutter`-tagged log lines and no first frame appeared.
+
+**Root cause:** reopening the app reused the debug launch intent, so the Dart VM started with `start-paused=true`. The main isolate waits at its first line for a debugger to resume it. The debugger that would normally do this, Android Studio's run session, had already ended, so `main()` never ran, Flutter never drew a frame, and Android kept the splash screen up. This only affects debug and profile builds, which have a VM service. A release build is not affected.
+
+**Workaround:** remove LumaScan from Recents and start it from the app icon, or start it again from Android Studio (Run or Attach). Don't reopen a debug build from Recents after stopping the session.
 
 **Completion criteria:** on the CPH2661 and one other Android 14+ phone, 20 cycles of screen off/on, app switch and rotation never leave the splash screen visible for more than 2 seconds. No `predraw` loop appears in logcat after resume.
 
