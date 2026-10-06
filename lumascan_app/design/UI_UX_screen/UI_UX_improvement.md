@@ -14,6 +14,12 @@ This review evaluates documentation and visible screen states. Runtime performan
 
 ## 2. Source documents
 
+- [Batch edit UI/UX flow board (SVG)](./lumascan-batch-edit-flow.svg) — eight connected mobile states for selection, enhancement, crop/rotate, organization, export, and completion.
+- [Interactive iOS batch workflow (HTML/CSS/SVG)](../ios-flow/index.html) — responsive phone screens, embedded SVG objects, selectable feature lanes, and contextual batch-action states.
+- [Runnable iOS wireframe prototype](../ios-flow/prototype.html) — real buttons, touch/swipe and keyboard navigation, animated transitions, camera controls, batch editing, export progress, and hotspot inspection.
+- [UI component and animation coverage checklist](../ios-flow/UI_UX_COMPONENT_ANIMATION_CHECKLIST.md) — screen-by-screen audit of buttons, lists, navigation, motion, simulated behavior, and remaining gaps.
+- [Capture modes algorithms and quality plan](../../docs/capture-modes-algorithms.md) — Docs, Book, live Text, OCR Doc, QR and Photo pipelines, formulas, platform adapters and evaluation metrics.
+- [Capture mode SVG screen board](./lumascan-capture-modes-flow.svg) — six camera screenshots showing mode-specific overlays, guidance and output intent.
 - [Screenshot-derived epics, stories, features, and use cases](./PDF_App_Epics_User_Stories_Features_Use_Cases.md)
 - [LumaScan product requirements](../../docs/requirements.md)
 - [Screen design and interaction specification](../../docs/screen-design.md)
@@ -151,7 +157,7 @@ The following mappings were introduced during the earlier filename assignment an
 |---|---|
 | EP-01 — Account/onboarding | Establish optional account behavior; separate onboarding, sign-out/deletion, and legal/help flows |
 | EP-02 — Library | Add rename, trash/restore, batch actions, sort direction, and precise filter rules |
-| EP-03 — Capture | Separate modes; define duplicate suppression, quality feedback, and interruption recovery |
+| EP-03 — Capture | Separate capture modes from edit tools; define synchronized Batch/flash/Auto/grid controls, duplicate suppression, quality feedback, and interruption recovery |
 | EP-04 — Import | Define formats, selection order, limits, and partial-import failures |
 | EP-05 — Page management | Specify retake replacement, accessible reorder controls, undo scope, and last-page deletion |
 | EP-06 — Enhancement | Require recoverable originals; define batch scope and distinguish image cleanup from annotation erasing |

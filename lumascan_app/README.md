@@ -2,6 +2,8 @@
 
 A working first cut of the document scanning flow from `pfd_editor/docs`: camera capture with automatic edge detection and crop, multi-page capture, manual corner crop, rotation, document filters (Original, Magic Color, Grayscale, B&W) and export of all pages to one PDF that can be shared or saved.
 
+Design references for the planned custom camera are [the clickable iOS prototype](design/ios-flow/prototype.html), [the six-mode SVG board](design/UI_UX_screen/lumascan-capture-modes-flow.svg), and [the capture algorithms and quality plan](docs/capture-modes-algorithms.md). They cover Docs, Book, live Text, OCR Doc, QR and Photo. These references are not claims that every engine is implemented in the current Flutter build.
+
 ## How it fits the design docs
 
 | Design decision | Where it lives |
@@ -22,6 +24,7 @@ Filter behaviour follows `docs/document.md`: B&W uses an adaptive (Bradley) thre
 3. Pages are copied into app storage and listed in order. Drag to reorder, tap to enhance, or use crop, rotate and delete (with undo).
 4. **Crop** lets the user fine-tune four corners; the page is perspective-corrected from the untouched original.
 5. **Enhance** shows live filter thumbnails. Hold the page to compare with the original.
+6. Reopen either a draft or a saved document at any time to adjust crop/resize or change Original, Auto Color, Enhanced Color, Bright, Grayscale, and B&W. The editable recipe is saved separately from the immutable source.
 6. **Export PDF** picks page size (A4, Letter, fit to image) and quality, renders each page off the UI thread, writes the PDF and opens the share sheet.
 
 ## Run it
