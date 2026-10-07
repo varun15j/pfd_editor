@@ -14,16 +14,22 @@ import 'rgb_image.dart';
 /// crop.
 ///
 /// The photo is shrunk to [workSize] on its long edge, then:
-/// 1. Pixels that look like paper are marked: a "paper score" (brightness,
-///    raised for cool white and lowered for warm tones) above an Otsu cut,
-///    and nearly colourless, so grey concrete, wood and skin drop out.
-/// 2. The mask is eroded to cut thin bridges to other pages and fingers, the
-///    largest region is kept, and it is grown back.
+/// 1. Two masks of what may be the page are made: pixels that look like
+///    white paper (a "paper score" of brightness, raised for cool white and
+///    lowered for warm tones, above an Otsu cut, and nearly colourless), and
+///    pixels the colour of the paper in the middle of the frame, where the
+///    page is held, which finds cream, yellowed or coloured paper too.
+/// 2. Each mask is eroded to cut thin bridges to other pages and fingers,
+///    one region is kept (the largest, or the one nearest the middle), and
+///    it is grown back.
 /// 3. The corners start as the largest-area quadrilateral on the region's
 ///    convex hull, so fingers or tears that bite into an edge do not pull a
 ///    corner inwards, and are then nudged off any background the hull
 ///    bridged over.
-/// 4. A second page that is only partly in view, joined to the page at a
+/// 4. The outlines found are rated by the contrast across their edges
+///    (paper on one side, background on the other) and by how near the
+///    middle of the frame they are, and the best is kept.
+/// 5. A second page that is only partly in view, joined to the page at a
 ///    gutter or a sheet edge, is cut off ([focusOnePage]).
 ///
 /// Known limit: paper touching the page with no gap (a stack of loose sheets,
@@ -33,34 +39,42 @@ CropQuad? detectPageQuad(RgbImage src, {int workSize = 320, double minArea = 0.1
   final scale = workSize / math.max(src.width, src.height);
   final w = math.max(8, (src.width * math.min(1.0, scale)).round());
   final h = math.max(8, (src.height * math.min(1.0, scale)).round());
-  final (score, sat) = _paperScore(src, w, h);
+  final work = _Work.of(src, w, h);
 
-  final threshold = _otsu(score);
-  final paper = Uint8List(w * h);
-  for (var i = 0; i < w * h; i++) {
-    if (score[i] > threshold && sat[i] < _maxPaperSaturation) paper[i] = 1;
-  }
-
-  // Erode to cut thin bridges to fingers and other paper, keep the largest
-  // region, and grow it back.
-  final erosions = math.max(1, (math.min(w, h) / 80).round());
-  var region = paper;
-  for (var i = 0; i < erosions; i++) {
-    region = _erode(region, w, h);
-  }
-  region = _largestComponent(region, w, h);
-  for (var i = 0; i < erosions; i++) {
-    region = _dilate(region, w, h);
-  }
-  final hull = _convexHull(_boundary(region, w, h));
-  if (hull.length < 4) return null;
-  final corners = _refine(paper, w, h, _largestQuad(hull));
-
-  NormPoint norm((double, double) p) => NormPoint(p.$1 / (w - 1), p.$2 / (h - 1)).clamp();
-  final quad = _ordered([for (final c in corners) norm(c)]);
-  if (!quad.isValid(minArea: minArea) || !_pageShaped(quad, src)) return null;
+  final candidates = <CropQuad>{
+    ..._outlines(work.paperMask(), w, h, central: const [false, true]),
+    ..._outlines(work.seededMask(), w, h, central: const [true]),
+  }..removeWhere((q) => !q.isValid(minArea: minArea) || !_pageShaped(q, src));
+  final rated = {for (final c in candidates) c: work.rate(c)}..removeWhere((_, rate) => rate <= 0);
+  if (rated.isEmpty) return null;
+  final quad = rated.keys.reduce((a, b) => rated[b]! > rated[a]! ? b : a);
   final page = focusOnePage(src, quad);
   return page.isValid(minArea: minArea / 2) && _pageShaped(page, src) ? page : quad;
+}
+
+/// Outlines of regions of [mask]: for each of [central], the largest
+/// region, or with true the one nearest the middle of the frame, where the
+/// page being scanned is held.
+Iterable<CropQuad> _outlines(Uint8List? mask, int w, int h, {required List<bool> central}) sync* {
+  if (mask == null) return;
+  // Erode to cut thin bridges to fingers and other paper, keep one region,
+  // and grow it back.
+  final erosions = math.max(1, (math.min(w, h) / 80).round());
+  var eroded = mask;
+  for (var i = 0; i < erosions; i++) {
+    eroded = _erode(eroded, w, h);
+  }
+  for (final middle in central) {
+    var region = _pickComponent(eroded, w, h, central: middle);
+    for (var i = 0; i < erosions; i++) {
+      region = _dilate(region, w, h);
+    }
+    final hull = _convexHull(_boundary(region, w, h));
+    if (hull.length < 4) continue;
+    final corners = _refine(mask, w, h, _largestQuad(hull));
+    NormPoint norm((double, double) p) => NormPoint(p.$1 / (w - 1), p.$2 / (h - 1)).clamp();
+    yield _ordered([for (final c in corners) norm(c)]);
+  }
 }
 
 /// Narrowest page shape accepted: the short side at least this share of the
@@ -84,36 +98,211 @@ const _maxPaperSaturation = 0.22;
 /// desks and skin read warm, so blue minus red is added to the brightness.
 const _coolBonus = 2.0;
 
-/// Per work pixel: the paper score (0..255) and the saturation (0..1).
-(Uint8List, Float32List) _paperScore(RgbImage src, int w, int h) {
-  final score = Uint8List(w * h);
-  final sat = Float32List(w * h);
-  final fx = src.width / w, fy = src.height / h;
-  final d = src.data;
-  for (var y = 0; y < h; y++) {
-    final y0 = (y * fy).floor(), y1 = math.max(y0 + 1, ((y + 1) * fy).floor());
-    for (var x = 0; x < w; x++) {
-      final x0 = (x * fx).floor(), x1 = math.max(x0 + 1, ((x + 1) * fx).floor());
-      var r = 0, g = 0, b = 0, n = 0;
-      // Box average, sampling every other pixel; plenty for a 320 px mask.
-      for (var sy = y0; sy < y1 && sy < src.height; sy += 2) {
-        var i = (sy * src.width + x0) * 3;
-        for (var sx = x0; sx < x1 && sx < src.width; sx += 2, i += 6) {
-          r += d[i];
-          g += d[i + 1];
-          b += d[i + 2];
-          n++;
+/// The photo shrunk to the work size, as per-pixel measures the page is
+/// told apart by.
+class _Work {
+  _Work(this.w, this.h, this.luma, this.score, this.sat, this.redGreen, this.yellowBlue);
+
+  final int w, h;
+
+  /// Brightness, 0..255.
+  final Uint8List luma;
+
+  /// Paper score (0..255): brightness raised for cool white, lowered for
+  /// warm tones.
+  final Uint8List score;
+
+  /// Saturation, 0..1.
+  final Float32List sat;
+
+  /// Colour, as red minus green and yellow minus blue.
+  final Int16List redGreen, yellowBlue;
+
+  static _Work of(RgbImage src, int w, int h) {
+    final luma = Uint8List(w * h), score = Uint8List(w * h);
+    final sat = Float32List(w * h);
+    final redGreen = Int16List(w * h), yellowBlue = Int16List(w * h);
+    final fx = src.width / w, fy = src.height / h;
+    final d = src.data;
+    for (var y = 0; y < h; y++) {
+      final y0 = (y * fy).floor(), y1 = math.max(y0 + 1, ((y + 1) * fy).floor());
+      for (var x = 0; x < w; x++) {
+        final x0 = (x * fx).floor(), x1 = math.max(x0 + 1, ((x + 1) * fx).floor());
+        var r = 0, g = 0, b = 0, n = 0;
+        // Box average, sampling every other pixel; plenty for a 320 px mask.
+        for (var sy = y0; sy < y1 && sy < src.height; sy += 2) {
+          var i = (sy * src.width + x0) * 3;
+          for (var sx = x0; sx < x1 && sx < src.width; sx += 2, i += 6) {
+            r += d[i];
+            g += d[i + 1];
+            b += d[i + 2];
+            n++;
+          }
         }
+        r ~/= n;
+        g ~/= n;
+        b ~/= n;
+        final i = y * w + x;
+        final mx = math.max(r, math.max(g, b)), mn = math.min(r, math.min(g, b));
+        final l = 0.299 * r + 0.587 * g + 0.114 * b;
+        luma[i] = l.round().clamp(0, 255);
+        score[i] = (l + _coolBonus * (b - r)).round().clamp(0, 255);
+        sat[i] = mx == 0 ? 0 : (mx - mn) / mx;
+        redGreen[i] = r - g;
+        yellowBlue[i] = (r + g) ~/ 2 - b;
       }
-      r ~/= n;
-      g ~/= n;
-      b ~/= n;
-      final mx = math.max(r, math.max(g, b)), mn = math.min(r, math.min(g, b));
-      score[y * w + x] = (0.299 * r + 0.587 * g + 0.114 * b + _coolBonus * (b - r)).round().clamp(0, 255);
-      sat[y * w + x] = mx == 0 ? 0 : (mx - mn) / mx;
     }
+    return _Work(w, h, luma, score, sat, redGreen, yellowBlue);
   }
-  return (score, sat);
+
+  /// Bright, nearly colourless pixels: white paper.
+  Uint8List paperMask() {
+    final threshold = _otsu(score);
+    final mask = Uint8List(w * h);
+    for (var i = 0; i < w * h; i++) {
+      if (score[i] > threshold && sat[i] < _maxPaperSaturation) mask[i] = 1;
+    }
+    return mask;
+  }
+
+  /// Pixels the colour of the paper in the middle of the frame, where the
+  /// page is held: finds cream, yellowed or coloured paper the white-paper
+  /// test misses, against a background of another colour or brightness.
+  /// Null when the middle is too dark to be paper.
+  Uint8List? seededMask() {
+    // The paper in the middle: the brighter half of a central window, so
+    // print and pictures on the page do not count.
+    final window = <int>[];
+    for (var y = (h * 0.35).round(); y < (h * 0.65).round(); y++) {
+      for (var x = (w * 0.35).round(); x < (w * 0.65).round(); x++) {
+        window.add(y * w + x);
+      }
+    }
+    window.sort((a, b) => luma[a].compareTo(luma[b]));
+    final bright = window.sublist(window.length ~/ 2);
+    int median(List<int> values) => (values..sort())[values.length ~/ 2];
+    final l0 = median([for (final i in bright) luma[i]]);
+    if (l0 < _minSeedLuma) return null;
+    final rg0 = median([for (final i in bright) redGreen[i]]);
+    final yb0 = median([for (final i in bright) yellowBlue[i]]);
+    // Shade on curved paper changes brightness far more than colour.
+    final distance = Uint8List(w * h);
+    for (var i = 0; i < w * h; i++) {
+      final dl = (luma[i] - l0).abs() * (luma[i] < l0 ? 0.5 : 0.8);
+      final dc = 2.0 * ((redGreen[i] - rg0).abs() + (yellowBlue[i] - yb0).abs());
+      distance[i] = (dl + dc).round().clamp(0, 255);
+    }
+    final cut = _otsu(distance).clamp(_minColourCut, _maxColourCut);
+    final mask = Uint8List(w * h);
+    for (var i = 0; i < w * h; i++) {
+      if (distance[i] <= cut) mask[i] = 1;
+    }
+    return _close(mask, w, h);
+  }
+
+  /// How much [quad] looks like the page being scanned: strong contrast
+  /// across its edges (paper on one side, background on the other), close
+  /// to the middle of the frame, and a page-like share of it.
+  double rate(CropQuad quad) {
+    var sum = 0.0;
+    final pts = quad.points;
+    final cx = pts.fold(0.0, (s, p) => s + p.x) / 4 * (w - 1);
+    final cy = pts.fold(0.0, (s, p) => s + p.y) / 4 * (h - 1);
+    var seen = false;
+    for (var k = 0; k < 4; k++) {
+      final edge = _edgeContrast(pts[k], pts[(k + 1) % 4], cx, cy);
+      if (edge != null) {
+        sum += edge;
+        seen |= edge >= _minEdge;
+      } else {
+        sum += _borderEdge;
+      }
+    }
+    // Some edge of a page must stand out from what lies beside it.
+    if (!seen) return 0;
+    final dx = cx / (w - 1) - 0.5, dy = cy / (h - 1) - 0.5;
+    final central = 1 - math.min(1.0, math.sqrt(dx * dx + dy * dy) / 0.5);
+    final area = quad.area;
+    final size = area < 0.15 ? area / 0.15 : 1.0;
+    // The page being scanned is held over the middle of the frame.
+    final holdsMiddle = _contains(quad, 0.5, 0.5) ? 1.0 : 0.5;
+    return sum / 4 * (0.6 + 0.4 * central) * size * holdsMiddle;
+  }
+
+  /// Contrast between just inside and just outside the edge from [a] to
+  /// [b]: the median along it, so a finger or a shadow over part of the
+  /// edge does not decide it. Null for an edge along the frame border, with
+  /// no outside to see.
+  double? _edgeContrast(NormPoint a, NormPoint b, double cx, double cy) {
+    const samples = 24, offset = 3.0;
+    final ax = a.x * (w - 1), ay = a.y * (h - 1), bx = b.x * (w - 1), by = b.y * (h - 1);
+    final len = math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay));
+    if (len < 1) return 0;
+    var nx = -(by - ay) / len, ny = (bx - ax) / len;
+    // Normal pointing away from the middle of the quad.
+    if (nx * ((ax + bx) / 2 - cx) + ny * ((ay + by) / 2 - cy) < 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    final values = <double>[];
+    var border = 0;
+    for (var j = 0; j < samples; j++) {
+      final t = 0.1 + 0.8 * j / (samples - 1);
+      final px = ax + (bx - ax) * t, py = ay + (by - ay) * t;
+      final ox = (px + nx * offset).round(), oy = (py + ny * offset).round();
+      final ix = (px - nx * offset).round(), iy = (py - ny * offset).round();
+      if (ox < 0 || oy < 0 || ox >= w || oy >= h) {
+        border++;
+        continue;
+      }
+      if (ix < 0 || iy < 0 || ix >= w || iy >= h) continue;
+      final o = oy * w + ox, i = iy * w + ix;
+      values.add(
+        (luma[i] - luma[o]).abs() +
+            (redGreen[i] - redGreen[o]).abs() +
+            (yellowBlue[i] - yellowBlue[o]).abs().toDouble(),
+      );
+    }
+    if (border > samples / 2) return null;
+    if (values.isEmpty) return 0;
+    values.sort();
+    return values[values.length ~/ 2];
+  }
+}
+
+bool _contains(CropQuad q, double x, double y) {
+  final pts = q.points;
+  for (var i = 0; i < 4; i++) {
+    final a = pts[i], b = pts[(i + 1) % 4];
+    if ((b.x - a.x) * (y - a.y) - (b.y - a.y) * (x - a.x) < 0) return false;
+  }
+  return true;
+}
+
+/// The middle of the frame must be at least this bright to seed paper.
+const _minSeedLuma = 70;
+
+/// Bounds on the colour distance that still counts as the seeded paper.
+const _minColourCut = 14, _maxColourCut = 60;
+
+/// Contrast at least one edge of a page must show.
+const _minEdge = 6.0;
+
+/// Contrast an edge along the frame border scores: a page running off the
+/// frame is common, so it is neither a strong nor a missing edge.
+const _borderEdge = 30.0;
+
+/// Fills print and small gaps in a mask: two steps of dilation, then two of
+/// erosion.
+Uint8List _close(Uint8List m, int w, int h) {
+  var out = m;
+  for (var i = 0; i < 2; i++) {
+    out = _dilate(out, w, h);
+  }
+  for (var i = 0; i < 2; i++) {
+    out = _erode(out, w, h);
+  }
+  return out;
 }
 
 int _otsu(Uint8List values) {
@@ -176,20 +365,28 @@ Uint8List _morph(Uint8List m, int w, int h, {required bool erode}) {
   return out;
 }
 
-Uint8List _largestComponent(Uint8List m, int w, int h) {
+/// Keeps one 4-connected region of [m]: the largest, or with [central] the
+/// one that best combines size with closeness to the middle of the frame.
+Uint8List _pickComponent(Uint8List m, int w, int h, {required bool central}) {
   final label = Int32List(w * h);
   final stack = Int32List(w * h);
-  var next = 0, bestLabel = 0, bestSize = 0;
+  var next = 0, bestLabel = 0;
+  var bestSize = 0.0;
   for (var start = 0; start < w * h; start++) {
     if (m[start] == 0 || label[start] != 0) continue;
     next++;
     var size = 0, top = 0;
+    var sumX = 0.0, sumY = 0.0;
+    var holdsMiddle = false;
     stack[top++] = start;
     label[start] = next;
     while (top > 0) {
       final i = stack[--top];
       size++;
       final x = i % w, y = i ~/ w;
+      sumX += x;
+      sumY += y;
+      if ((x - w / 2).abs() <= w * 0.05 && (y - h / 2).abs() <= h * 0.05) holdsMiddle = true;
       void visit(int j) {
         if (m[j] == 1 && label[j] == 0) {
           label[j] = next;
@@ -202,8 +399,14 @@ Uint8List _largestComponent(Uint8List m, int w, int h) {
       if (y > 0) visit(i - w);
       if (y < h - 1) visit(i + w);
     }
-    if (size > bestSize) {
-      bestSize = size;
+    var weight = size.toDouble();
+    if (central && !holdsMiddle) {
+      // Off the middle: weighed down by how far its centre lies from it.
+      final dx = (sumX / size - w / 2) / w, dy = (sumY / size - h / 2) / h;
+      weight /= 1 + 32 * (dx * dx + dy * dy);
+    }
+    if (weight > bestSize) {
+      bestSize = weight;
       bestLabel = next;
     }
   }

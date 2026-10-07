@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/providers.dart';
+import '../../domain/models.dart';
 import '../../ui/undo_toast.dart';
 import '../pages/page_actions.dart';
 import '../pages/scan_controller.dart';
 import 'batch_actions.dart';
+import 'batch_auto_crop.dart';
 import 'batch_crop_queue.dart';
 import 'batch_enhance_screen.dart';
 import 'batch_ocr_screen.dart';
@@ -30,10 +33,35 @@ Future<void> runBatchAction(BuildContext context, WidgetRef ref, BatchAction act
       await Navigator.of(context)
           .push(MaterialPageRoute<void>(builder: (_) => BatchEnhanceScreen(pageIds: [for (final p in selected) p.id])));
     case BatchAction.crop:
-      final summary = await runCropQueue(Navigator.of(context), [for (final p in selected) p.id]);
-      messenger
-        ..clearSnackBars()
-        ..showSnackBar(SnackBar(content: Text(summary.message)));
+      final choice = await showModalBottomSheet<CropChoice>(
+        context: context,
+        showDragHandle: true,
+        builder: (_) => CropChoiceSheet(count: count),
+      );
+      if (choice == null || !context.mounted) return;
+      switch (choice) {
+        case CropChoice.adjust:
+          final summary = await runCropQueue(Navigator.of(context), [for (final p in selected) p.id]);
+          messenger
+            ..clearSnackBars()
+            ..showSnackBar(SnackBar(content: Text(summary.message)));
+        case CropChoice.auto:
+          final found = await autoCropPages(context, ref.read(photoAnalyzerProvider), selected);
+          if (found == null) return;
+          controller.setCrops(found);
+          final missed = count - found.length;
+          showUndoToast(
+            messenger,
+            message: [
+              'Auto cropped ${found.length} page${found.length == 1 ? '' : 's'}',
+              if (missed > 0) 'no page found on $missed',
+            ].join(', '),
+            onUndo: controller.undo,
+          );
+        case CropChoice.full:
+          controller.setCrops({for (final p in selected) p.id: CropQuad.full});
+          showUndoToast(messenger, message: 'Full photo on $count $noun', onUndo: controller.undo);
+      }
     case BatchAction.ocr:
       await Navigator.of(context)
           .push(MaterialPageRoute<void>(builder: (_) => BatchOcrScreen(pageIds: [for (final p in selected) p.id])));

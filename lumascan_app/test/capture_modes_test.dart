@@ -1,12 +1,13 @@
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/domain/app_settings.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/ocr.dart';
+import 'package:lumascan/domain/photo_import.dart';
 import 'package:lumascan/domain/qr_reader.dart';
 import 'package:lumascan/features/batch_capture/auto_capture.dart';
 import 'package:lumascan/features/batch_capture/batch_capture_screen.dart';
@@ -42,6 +43,11 @@ class _FakeOcr implements OcrEngine {
 
   @override
   Future<String> recognizeFile(String path) async => photoText;
+}
+
+class _NoPage implements PhotoAnalyzer {
+  @override
+  Future<CropQuad?> analyze(String path) async => null;
 }
 
 class _FakeQr implements QrReader {
@@ -301,7 +307,12 @@ void main() {
       shots.deleteSync(recursive: true);
     });
 
-    Future<void> open(WidgetTester tester, {List overrides = const [], FrameAnalyzer? analyzer}) async {
+    Future<void> open(
+      WidgetTester tester, {
+      List overrides = const [],
+      FrameAnalyzer? analyzer,
+      PhotoAnalyzer? photos,
+    }) async {
       shots = Directory.systemTemp.createTempSync('lumascan_shots');
       camera = FakeBatchCamera(shots);
       await tester.runAsync(
@@ -309,7 +320,7 @@ void main() {
           pageCount: 0,
           overrides: [
             batchCameraProvider.overrideWithValue(() => camera),
-            photoAnalyzerProvider.overrideWithValue(FakePhotoAnalyzer()),
+            photoAnalyzerProvider.overrideWithValue(photos ?? FakePhotoAnalyzer()),
             frameAnalyzerProvider.overrideWithValue(analyzer ?? (frame) async => const FrameAnalysis(quad: _page)),
             spreadSplitterProvider.overrideWithValue((path) async => (_left, _right)),
             appSettingsStoreProvider.overrideWithValue(MemoryAppSettingsStore()),
@@ -386,6 +397,23 @@ void main() {
 
       await frames(tester, 8);
       expect(camera.shots, 2, reason: 'the turned page settles and is taken');
+    });
+
+    testWidgets('a photo the detector finds no page in is cropped to the outline on the preview', (tester) async {
+      await open(tester, photos: _NoPage());
+      await frames(tester, 6);
+      expect(camera.shots, 1);
+      expect(harness.pages.single.recipe.crop, _page);
+    });
+
+    testWidgets('the outline stays drawn when the page is lost for a frame', (tester) async {
+      final seen = [for (var i = 0; i < 3; i++) const FrameAnalysis(quad: _page), const FrameAnalysis()];
+      var next = 0;
+      await open(tester, analyzer: (frame) async => seen[next < seen.length ? next++ : seen.length - 1]);
+      await tester.tap(find.bySemanticsLabel('Auto On'));
+      await tester.pump();
+      await frames(tester, 4);
+      expect(find.byKey(const ValueKey('page-outline')), findsOneWidget);
     });
 
     testWidgets('with Auto off the page outline shows but nothing is taken', (tester) async {

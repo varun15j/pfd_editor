@@ -10,7 +10,8 @@ import 'rgb_image.dart';
 /// The pages meet at a seam, a narrow line darker than the paper on both
 /// sides of it (the gutter shadow of a book, or the shadowed edge of a
 /// sheet). When the part beyond the seam runs off the edge of the frame and
-/// is narrower than the page, it is a cut-off neighbour and is dropped. Two
+/// is narrower than the page, it is a cut-off neighbour and is dropped. When
+/// both run off the frame, the larger part, held in the middle, is kept. Two
 /// whole pages side by side, a book spread both of whose pages are in view,
 /// are kept together.
 CropQuad focusOnePage(RgbImage image, CropQuad quad) {
@@ -36,8 +37,15 @@ CropQuad? _trim(RgbImage image, CropQuad quad, {required bool across}) {
   final endCut = across
       ? quad.tr.x >= 1 - _edge && quad.br.x >= 1 - _edge
       : quad.bl.y >= 1 - _edge && quad.br.y >= 1 - _edge;
-  if (startCut == endCut) return null;
+  if (!startCut && !endCut) return null;
   final start = seam, end = 1 - seam;
+  if (startCut && endCut) {
+    // Both run off the frame, as when a book is held close: the page in
+    // focus is the one held in the middle, the clearly larger part.
+    if (end <= start * _partRatio) return _part(quad, 0, seam, across: across);
+    if (start <= end * _partRatio) return _part(quad, seam, 1, across: across);
+    return null;
+  }
   if (endCut && end <= start * _partRatio) return _part(quad, 0, seam, across: across);
   if (startCut && start <= end * _partRatio) return _part(quad, seam, 1, across: across);
   return null;
@@ -107,8 +115,41 @@ double? _seam(RgbImage image, CropQuad quad, {required bool across}) {
       best = i / steps;
     }
   }
+  return best ?? _riseSeam(smooth);
+}
+
+/// Where a shaded page meets the brighter page beside it with no dark
+/// gutter line between them, as when a book is held tilted to the light:
+/// the steepest rise to the brightest paper in view, within [_rampSteps].
+/// The seam is put at the top of the rise, so the shaded page keeps all of
+/// itself.
+double? _riseSeam(List<double> smooth) {
+  final steps = smooth.length - 1;
+  final brightest = smooth.reduce(math.max);
+  double? best;
+  var bestRise = 0.0;
+  for (var i = (steps * 0.15).round(); i <= (steps * 0.85).round(); i++) {
+    for (final dir in const [1, -1]) {
+      final top = i + dir * _rampSteps;
+      if (top < 0 || top > steps) continue;
+      final rise = smooth[top] - smooth[i];
+      // The bright side must be the paper itself, and stay bright beyond.
+      if (rise < _minRise || smooth[top] < brightest - _brightSlack) continue;
+      final beyond = (top + dir * 4).clamp(0, steps);
+      if (smooth[beyond] < smooth[top] - _brightSlack) continue;
+      if (rise > bestRise) {
+        bestRise = rise;
+        best = top / steps;
+      }
+    }
+  }
   return best;
 }
+
+/// A step: a rise of at least [_minRise] grey levels within [_rampSteps]
+/// hundredths of the page, up to within [_brightSlack] of the brightest
+/// paper.
+const _rampSteps = 8, _minRise = 22.0, _brightSlack = 12.0;
 
 NormPoint _at(CropQuad q, double u, double v) {
   final top = NormPoint(q.tl.x + (q.tr.x - q.tl.x) * u, q.tl.y + (q.tr.y - q.tl.y) * u);

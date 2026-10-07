@@ -270,6 +270,14 @@ As a user holding the camera over one page, I want the outline and the crop to c
 - Book mode makes two pages only when the outline reaches across the middle of the frame (both pages in view); held over one page, it makes one page and hides the LEFT PAGE / RIGHT PAGE guides.
 - The user can still adjust the crop by hand in page review.
 
+**US-03.12 — Every page photo is cropped to the page**  
+As a user scanning a book or sheets of any colour, I want every photo cropped to the page in the middle of the frame, and to crop or uncrop many pages at once.
+
+- The page is found by its colour against the background, the contrast across its edges and its place in the middle of the frame, so cream, yellowed or coloured paper is found too.
+- The outline on the preview does not flicker out when the page is lost for a moment.
+- A photo in which no page is found is cropped to the outline that was on the preview.
+- In Batch Review, Crop offers Auto crop, Full photo or Adjust each page for the selected pages; Auto crop and Full photo are one undo step each.
+
 ---
 
 ## EP-04 — Import and alternate acquisition

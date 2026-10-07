@@ -67,9 +67,11 @@ void main() {
     expect(quad.br.x, inInclusiveRange(0.85, 1.0));
   });
 
-  test('a strip of a page is not taken for a page', () async {
+  test('a page with a strip of the next one beside it is outlined as the page, not the strip', () async {
     // 05: the detector used to keep only a thin strip at the right edge.
     final data = await rootBundle.load('sample_photos/book/05_bend_a_straw.jpg');
-    expect(detectPageQuad(RgbImage.decode(data.buffer.asUint8List(), maxDimension: 640)), isNull);
+    final quad = detectPageQuad(RgbImage.decode(data.buffer.asUint8List(), maxDimension: 640))!;
+    expect(quad.tl.x, lessThan(0.3));
+    expect(quad.tr.x, inInclusiveRange(0.6, 0.85));
   });
 }

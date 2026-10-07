@@ -144,6 +144,19 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
 
   // Live preview analysis.
   final _tracker = AutoCaptureTracker();
+
+  /// The last page outline seen, and when: drawn on for a moment after the
+  /// detector loses the page for a frame or two, so the outline does not
+  /// flicker, and used to crop a photo the detector finds no page in.
+  CropQuad? _seenQuad;
+  DateTime _seenAt = DateTime(0);
+
+  /// How long an outline stays drawn after the page was last found.
+  static const _outlineHold = Duration(milliseconds: 700);
+
+  /// The page outline to draw: the one in the last frame, or one seen a
+  /// moment ago.
+  CropQuad? get _outline => _tracker.quad ?? (DateTime.now().difference(_seenAt) <= _outlineHold ? _seenQuad : null);
   bool _analysing = false;
   DateTime _lastAnalysis = DateTime.fromMillisecondsSinceEpoch(0);
   FrameAnalysis _frame = const FrameAnalysis();
@@ -259,6 +272,10 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
       if (!mounted || _mode != mode) return;
       final dark = analysis.tooDark;
       final shoot = _tracker.add(dark ? null : analysis.quad, dark ? null : analysis.signature, analysis.scene);
+      if (!dark && analysis.quad != null) {
+        _seenQuad = analysis.quad;
+        _seenAt = DateTime.now();
+      }
       setState(() => _frame = analysis);
       if (shoot && _autoCapture && mode.canAutoCapture && !_shooting && _retakeId == null) unawaited(_shoot());
     } catch (e) {
@@ -298,6 +315,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     }
     final replacing = _retakeId;
     final mode = _mode;
+    final seen = mode.findsPage ? _outline : null;
     // Whether tapped or automatic, this page is taken: auto capture now
     // waits for a different page instead of taking the same one again.
     if (mode.findsPage) _tracker.captured();
@@ -317,7 +335,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
         _saving++;
         if (replacing != null) _retakeId = null;
       });
-      final saved = _save(path, replacing, mode);
+      final saved = _save(path, replacing, mode, seen: seen);
       _saves = _saves.then((_) => saved);
       if (!_batch) unawaited(saved.then((page) => page != null && mounted ? _review() : null));
     } on ScannerFailure catch (e) {
@@ -332,7 +350,8 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     }
   }
 
-  Future<ScanPage?> _save(String path, String? replacing, CameraMode mode) async {
+  /// [seen] is the page outline on the preview when the photo was taken.
+  Future<ScanPage?> _save(String path, String? replacing, CameraMode mode, {CropQuad? seen}) async {
     final List<ScanPage>? pages;
     // Book mode makes two pages only when both are in view; held over one
     // page, with the other cut off, it makes just that page.
@@ -343,7 +362,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
       pages = page == null ? null : [page];
     }
     if (!mounted) {
-      if (pages != null) _afterCapture(pages, mode);
+      if (pages != null) _afterCapture(pages, mode, seen: seen);
       return pages?.first;
     }
     setState(() {
@@ -367,13 +386,17 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
       _ when replacing != null => 'Page $first replaced',
       _ => 'Page $first captured',
     });
-    _afterCapture(pages, mode);
+    _afterCapture(pages, mode, seen: seen);
     return pages.first;
   }
 
   /// Background work on new pages, one photo at a time: the page outline
   /// (Docs, OCR Doc), the spine (Book), then the text (OCR Doc).
-  void _afterCapture(List<ScanPage> pages, CameraMode mode) {
+  ///
+  /// With auto crop on, every page photo is cropped: to the page found in
+  /// the photo, or when none is found there, to the outline [seen] on the
+  /// preview as it was taken. The crop can still be adjusted afterwards.
+  void _afterCapture(List<ScanPage> pages, CameraMode mode, {CropQuad? seen}) {
     final container = _container;
     final analyzer = container.read(photoAnalyzerProvider);
     final splitter = container.read(spreadSplitterProvider);
@@ -387,7 +410,13 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
           controller.applyDetectedCrop(pages[0].id, left, expected: leftHalf);
           controller.applyDetectedCrop(pages[1].id, right, expected: rightHalf);
         } else if (mode.findsPage && autoCrop) {
-          final quad = await analyzer.analyze(pages.first.originalPath);
+          CropQuad? found;
+          try {
+            found = await analyzer.analyze(pages.first.originalPath);
+          } catch (e) {
+            debugPrint('Page detection failed: $e');
+          }
+          final quad = found ?? seen;
           if (quad != null) controller.applyDetectedCrop(pages.first.id, quad);
         }
       } catch (e) {
@@ -525,6 +554,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
       if (!mode.addsPages) _retakeId = null;
     });
     _tracker.reset();
+    _seenQuad = null;
     if (mode == CameraMode.text || mode == CameraMode.ocrDoc) unawaited(_checkOcr());
   }
 
@@ -554,6 +584,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
       case _Option.auto:
         setState(() => _autoCapture = on);
         _tracker.reset();
+        _seenQuad = null;
       case _Option.crop:
         setState(() => _autoCrop = on);
       case _Option.grid:
@@ -645,6 +676,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     }
     _covered = false;
     _tracker.reset();
+    _seenQuad = null;
     // Pages deleted in Batch Review leave this visit's list too.
     final ids = {for (final p in ref.read(scanControllerProvider).pages) p.id};
     _taken.removeWhere((p) => !ids.contains(p.id));
@@ -833,7 +865,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
                   overlay: IgnorePointer(
                     child: _PreviewOverlay(
                       mode: _mode,
-                      quad: _watchesPages ? _tracker.quad : null,
+                      quad: _watchesPages ? _outline : null,
                       steady: _tracker.state == AutoCaptureState.capture,
                       qrFound: _mode == CameraMode.qr && _qrSeen != null,
                       grid: _grid,
@@ -1539,6 +1571,7 @@ class _PreviewOverlay extends StatelessWidget {
         if (grid) const CustomPaint(painter: _GridPainter()),
         if (quad != null)
           CustomPaint(
+            key: const ValueKey('page-outline'),
             painter: _QuadPainter(quad!, color: accent, steady: steady),
           ),
         if (mode == CameraMode.book && showsSpread(quad)) ...[
