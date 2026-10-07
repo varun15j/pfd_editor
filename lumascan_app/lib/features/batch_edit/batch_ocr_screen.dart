@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../domain/ocr.dart';
+import '../../export/ocr_pdf_builder.dart';
+import '../share/pdf_sharer.dart';
 import '../pages/scan_controller.dart';
 import 'batch_ocr_job.dart';
 
@@ -50,6 +52,36 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
     });
   }
 
+  bool _building = false;
+
+  /// Builds a text PDF of the pages that were read, then offers it to share.
+  Future<void> _createPdf(BatchOcrJob job, int? Function(String) numberOf) async {
+    final state = ref.read(scanControllerProvider);
+    final pages = <OcrPdfPage>[
+      for (final r in job.results)
+        if ((r.status == OcrPageStatus.done || r.status == OcrPageStatus.empty) && state.pageById(r.pageId) != null)
+          OcrPdfPage(
+            page: state.pageById(r.pageId)!,
+            number: numberOf(r.pageId) ?? 0,
+            text: r.text ?? '',
+            layout: r.layout,
+          ),
+    ];
+    if (pages.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _building = true);
+    try {
+      final file = await OcrPdfBuilder(ref.read(pageStoreProvider)).build(pages);
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text('Saved ${file.uri.pathSegments.last}')));
+      await ref.read(pdfSharerProvider).send(file.path);
+    } catch (e) {
+      messenger.showSnackBar(const SnackBar(content: Text('Could not create the PDF. Try again.')));
+    } finally {
+      if (mounted) setState(() => _building = false);
+    }
+  }
+
   void _start() {
     final state = ref.read(scanControllerProvider);
     final job = BatchOcrJob(
@@ -82,7 +114,12 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
           if (job != null) {
             return ListenableBuilder(
               listenable: job,
-              builder: (context, _) => _JobView(job: job, numberOf: numberOf),
+              builder: (context, _) => _JobView(
+                job: job,
+                numberOf: numberOf,
+                building: _building,
+                onCreatePdf: () => _createPdf(job, numberOf),
+              ),
             );
           }
           return _Intro(
@@ -168,10 +205,12 @@ class _Intro extends StatelessWidget {
 }
 
 class _JobView extends StatelessWidget {
-  const _JobView({required this.job, required this.numberOf});
+  const _JobView({required this.job, required this.numberOf, required this.building, required this.onCreatePdf});
 
   final BatchOcrJob job;
   final int? Function(String pageId) numberOf;
+  final bool building;
+  final VoidCallback onCreatePdf;
 
   @override
   Widget build(BuildContext context) {
@@ -202,6 +241,17 @@ class _JobView extends StatelessWidget {
             child: const Text('Cancel'),
           )
         else ...[
+          if (job.withStatus(OcrPageStatus.done).isNotEmpty || job.withStatus(OcrPageStatus.empty).isNotEmpty) ...[
+            FilledButton.icon(
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+              onPressed: building ? null : onCreatePdf,
+              icon: building
+                  ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.picture_as_pdf_outlined),
+              label: const Text('Create text PDF'),
+            ),
+            const SizedBox(height: 8),
+          ],
           if (failed > 0)
             FilledButton.icon(
               style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
