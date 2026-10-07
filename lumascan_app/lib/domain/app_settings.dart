@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 
 import 'models.dart';
+import 'plan.dart';
 
 /// How a new PDF is named in the save sheet. The name can still be edited
 /// before saving, and a saved file is never renamed when this changes.
@@ -67,6 +68,7 @@ class AppSettings {
     this.shutterSound = false,
     this.captureHaptics = true,
     this.autoCaptureSteadiness = AutoCaptureSteadiness.normal,
+    this.debugPlan,
   });
 
   /// Looks only. Does not touch any file.
@@ -112,6 +114,11 @@ class AppSettings {
   /// How long auto capture waits for the page to be still.
   final AutoCaptureSteadiness autoCaptureSteadiness;
 
+  /// Debug builds only: the plan to behave as, to try Basic, Pro and Gold
+  /// without buying. Null means the plan the user is really on. Release
+  /// builds ignore it.
+  final AppPlan? debugPlan;
+
   AppSettings copyWith({
     ThemeMode? themeMode,
     DocumentFilter? defaultFilter,
@@ -124,6 +131,7 @@ class AppSettings {
     bool? shutterSound,
     bool? captureHaptics,
     AutoCaptureSteadiness? autoCaptureSteadiness,
+    Object? debugPlan = _keep,
   }) => AppSettings(
     themeMode: themeMode ?? this.themeMode,
     defaultFilter: defaultFilter ?? this.defaultFilter,
@@ -136,6 +144,7 @@ class AppSettings {
     shutterSound: shutterSound ?? this.shutterSound,
     captureHaptics: captureHaptics ?? this.captureHaptics,
     autoCaptureSteadiness: autoCaptureSteadiness ?? this.autoCaptureSteadiness,
+    debugPlan: identical(debugPlan, _keep) ? this.debugPlan : debugPlan as AppPlan?,
   );
 
   static const Object _keep = Object();
@@ -152,6 +161,7 @@ class AppSettings {
     'shutterSound': shutterSound,
     'captureHaptics': captureHaptics,
     'autoCaptureSteadiness': autoCaptureSteadiness.name,
+    if (debugPlan != null) 'debugPlan': debugPlan!.name,
   };
 
   /// Unknown or missing values fall back to the defaults, so a settings file
@@ -169,6 +179,7 @@ class AppSettings {
     captureHaptics: json['captureHaptics'] as bool? ?? true,
     autoCaptureSteadiness:
         AutoCaptureSteadiness.values.asNameMap()[json['autoCaptureSteadiness']] ?? AutoCaptureSteadiness.normal,
+    debugPlan: AppPlan.values.asNameMap()[json['debugPlan']],
   );
 
   @override
@@ -184,7 +195,8 @@ class AppSettings {
       other.captureResolution == captureResolution &&
       other.shutterSound == shutterSound &&
       other.captureHaptics == captureHaptics &&
-      other.autoCaptureSteadiness == autoCaptureSteadiness;
+      other.autoCaptureSteadiness == autoCaptureSteadiness &&
+      other.debugPlan == debugPlan;
 
   @override
   int get hashCode => Object.hash(
@@ -199,5 +211,6 @@ class AppSettings {
     shutterSound,
     captureHaptics,
     autoCaptureSteadiness,
+    debugPlan,
   );
 }

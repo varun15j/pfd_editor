@@ -258,6 +258,11 @@ void main() {
       await pump(tester, const Scaffold(body: Center(child: Text('home'))));
       await tester.dragFrom(const Offset(4, 300), const Offset(250, 0));
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Open profiling report'),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
       await tester.tap(find.text('Open profiling report'));
       await tester.pumpAndSettle();
       expect(find.text('Image loading profile'), findsOneWidget);

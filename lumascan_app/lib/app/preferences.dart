@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,6 +6,7 @@ import '../data/app_settings_store.dart';
 import '../data/ui_prefs_store.dart';
 import '../domain/app_settings.dart';
 import '../domain/models.dart';
+import '../domain/plan.dart';
 import '../domain/ui_prefs.dart';
 import 'providers.dart';
 
@@ -63,6 +65,9 @@ class AppSettingsController extends Notifier<AppSettings> {
 
   void setAutoCaptureSteadiness(AutoCaptureSteadiness value) => _set(state.copyWith(autoCaptureSteadiness: value));
 
+  /// Debug builds: behave as [plan], or as the real plan when null.
+  void setDebugPlan(AppPlan? plan) => _set(state.copyWith(debugPlan: plan));
+
   void _set(AppSettings settings) {
     _changed = true;
     state = settings;
@@ -114,3 +119,15 @@ class UiPrefsController extends Notifier<UiPrefs> {
     _io = _io.then((_) => store.save(prefs)).catchError((Object _) {});
   }
 }
+
+/// The plan the app behaves as: the real one, or in debug builds the one
+/// picked in the debug panel.
+final planProvider = Provider<AppPlan>((ref) {
+  final picked = kDebugMode ? ref.watch(appSettingsProvider.select((s) => s.debugPlan)) : null;
+  return picked ?? purchasedPlan;
+});
+
+/// Whether the current plan includes [feature].
+final planIncludesProvider = Provider.family<bool, PlanFeature>(
+  (ref, feature) => ref.watch(planProvider).includes(feature),
+);
