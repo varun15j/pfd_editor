@@ -35,20 +35,31 @@ import 'rgb_image.dart';
 /// Known limit: paper touching the page with no gap (a stack of loose sheets,
 /// the facing page of a notebook) can be taken in with it. The quad is a
 /// starting point the user can still adjust in the crop screen.
-CropQuad? detectPageQuad(RgbImage src, {int workSize = 320, double minArea = 0.1}) {
+///
+/// With [smart] off (the Basic plan) only steps 1 (white paper), 2 (the
+/// largest region), 3 and 5 as they were before the Pro plan's smarter
+/// search run: no colour-seeded mask, no preference for the middle, no
+/// rating of outlines.
+CropQuad? detectPageQuad(RgbImage src, {int workSize = 320, double minArea = 0.1, bool smart = true}) {
   final scale = workSize / math.max(src.width, src.height);
   final w = math.max(8, (src.width * math.min(1.0, scale)).round());
   final h = math.max(8, (src.height * math.min(1.0, scale)).round());
   final work = _Work.of(src, w, h);
 
   final candidates = <CropQuad>{
-    ..._outlines(work.paperMask(), w, h, central: const [false, true]),
-    ..._outlines(work.seededMask(), w, h, central: const [true]),
+    ..._outlines(work.paperMask(), w, h, central: smart ? const [false, true] : const [false]),
+    if (smart) ..._outlines(work.seededMask(), w, h, central: const [true]),
   }..removeWhere((q) => !q.isValid(minArea: minArea) || !_pageShaped(q, src));
-  final rated = {for (final c in candidates) c: work.rate(c)}..removeWhere((_, rate) => rate <= 0);
-  if (rated.isEmpty) return null;
-  final quad = rated.keys.reduce((a, b) => rated[b]! > rated[a]! ? b : a);
-  final page = focusOnePage(src, quad);
+  if (candidates.isEmpty) return null;
+  final CropQuad quad;
+  if (smart) {
+    final rated = {for (final c in candidates) c: work.rate(c)}..removeWhere((_, rate) => rate <= 0);
+    if (rated.isEmpty) return null;
+    quad = rated.keys.reduce((a, b) => rated[b]! > rated[a]! ? b : a);
+  } else {
+    quad = candidates.first;
+  }
+  final page = focusOnePage(src, quad, smart: smart);
   return page.isValid(minArea: minArea / 2) && _pageShaped(page, src) ? page : quad;
 }
 

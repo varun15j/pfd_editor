@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/preferences.dart';
+import '../../domain/plan.dart';
 import '../../app/providers.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
@@ -156,7 +157,11 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
 
   /// The page outline to draw: the one in the last frame, or one seen a
   /// moment ago.
-  CropQuad? get _outline => _tracker.quad ?? (DateTime.now().difference(_seenAt) <= _outlineHold ? _seenQuad : null);
+  CropQuad? get _outline =>
+      _tracker.quad ?? (_smart && DateTime.now().difference(_seenAt) <= _outlineHold ? _seenQuad : null);
+
+  /// Smart scanning (outline hold, fallback crop) is a Pro feature.
+  bool get _smart => ref.read(planIncludesProvider(PlanFeature.smartScan));
   bool _analysing = false;
   DateTime _lastAnalysis = DateTime.fromMillisecondsSinceEpoch(0);
   FrameAnalysis _frame = const FrameAnalysis();
@@ -315,7 +320,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     }
     final replacing = _retakeId;
     final mode = _mode;
-    final seen = mode.findsPage ? _outline : null;
+    final seen = mode.findsPage && _smart ? _outline : null;
     // Whether tapped or automatic, this page is taken: auto capture now
     // waits for a different page instead of taking the same one again.
     if (mode.findsPage) _tracker.captured();

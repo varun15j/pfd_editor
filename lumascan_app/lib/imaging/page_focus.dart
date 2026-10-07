@@ -14,9 +14,12 @@ import 'rgb_image.dart';
 /// both run off the frame, the larger part, held in the middle, is kept. Two
 /// whole pages side by side, a book spread both of whose pages are in view,
 /// are kept together.
-CropQuad focusOnePage(RgbImage image, CropQuad quad) {
+///
+/// With [smart] off, only the original rules apply: a seam that is a dark
+/// line (or a sharp step beside a dark dip), and a part cut off on one side.
+CropQuad focusOnePage(RgbImage image, CropQuad quad, {bool smart = true}) {
   // Across (left and right pages), then down (pages above and below).
-  return _trim(image, quad, across: true) ?? _trim(image, quad, across: false) ?? quad;
+  return _trim(image, quad, across: true, smart: smart) ?? _trim(image, quad, across: false, smart: smart) ?? quad;
 }
 
 /// Frame edge closer than this counts as the page running off the frame.
@@ -29,8 +32,8 @@ const _step = 18;
 /// A cut-off part must be at most this wide, relative to the page kept.
 const _partRatio = 0.85;
 
-CropQuad? _trim(RgbImage image, CropQuad quad, {required bool across}) {
-  final seam = _seam(image, quad, across: across);
+CropQuad? _trim(RgbImage image, CropQuad quad, {required bool across, required bool smart}) {
+  final seam = _seam(image, quad, across: across, smart: smart);
   if (seam == null) return null;
   // The two outer sides of the quad along the seam direction.
   final startCut = across ? quad.tl.x <= _edge && quad.bl.x <= _edge : quad.tl.y <= _edge && quad.tr.y <= _edge;
@@ -40,6 +43,7 @@ CropQuad? _trim(RgbImage image, CropQuad quad, {required bool across}) {
   if (!startCut && !endCut) return null;
   final start = seam, end = 1 - seam;
   if (startCut && endCut) {
+    if (!smart) return null;
     // Both run off the frame, as when a book is held close: the page in
     // focus is the one held in the middle, the clearly larger part.
     if (end <= start * _partRatio) return _part(quad, 0, seam, across: across);
@@ -78,7 +82,7 @@ CropQuad _part(CropQuad quad, double from, double to, {required bool across}) {
 /// meets the next page in a sharp step, so a dip that is the darkest point
 /// around it with a sharp rise on one side counts too. Text columns and
 /// paragraphs do not count: the paper next to them is as bright as they are.
-double? _seam(RgbImage image, CropQuad quad, {required bool across}) {
+double? _seam(RgbImage image, CropQuad quad, {required bool across, required bool smart}) {
   const steps = 100, samples = 40;
   final profile = List<double>.filled(steps + 1, 0);
   for (var i = 0; i <= steps; i++) {
@@ -115,7 +119,7 @@ double? _seam(RgbImage image, CropQuad quad, {required bool across}) {
       best = i / steps;
     }
   }
-  return best ?? _riseSeam(smooth);
+  return best ?? (smart ? _riseSeam(smooth) : null);
 }
 
 /// Where a shaded page meets the brighter page beside it with no dark

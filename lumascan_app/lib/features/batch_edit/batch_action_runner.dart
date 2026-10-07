@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../domain/models.dart';
+import '../../domain/plan.dart';
 import '../../ui/undo_toast.dart';
 import '../pages/page_actions.dart';
 import '../pages/scan_controller.dart';
@@ -33,11 +35,15 @@ Future<void> runBatchAction(BuildContext context, WidgetRef ref, BatchAction act
       await Navigator.of(context)
           .push(MaterialPageRoute<void>(builder: (_) => BatchEnhanceScreen(pageIds: [for (final p in selected) p.id])));
     case BatchAction.crop:
-      final choice = await showModalBottomSheet<CropChoice>(
-        context: context,
-        showDragHandle: true,
-        builder: (_) => CropChoiceSheet(count: count),
-      );
+      // Auto crop and Full photo for all pages are Pro; Basic adjusts each page.
+      final smart = ref.read(planIncludesProvider(PlanFeature.smartScan));
+      final choice = smart
+          ? await showModalBottomSheet<CropChoice>(
+              context: context,
+              showDragHandle: true,
+              builder: (_) => CropChoiceSheet(count: count),
+            )
+          : CropChoice.adjust;
       if (choice == null || !context.mounted) return;
       switch (choice) {
         case CropChoice.adjust:

@@ -26,9 +26,17 @@ class DetectorPhotoAnalyzer implements PhotoAnalyzer {
   /// Long edge of the copy used for detection; the detector works at 320.
   static const _decodeSize = 640;
 
+  /// [smart] is the Pro plan's smarter page search.
+  DetectorPhotoAnalyzer({this.smart = true});
+
+  final bool smart;
+
   @override
-  Future<CropQuad?> analyze(String path) => Isolate.run(() {
-    final bytes = File(path).readAsBytesSync();
-    return detectPageQuad(RgbImage.decode(bytes, maxDimension: _decodeSize));
-  });
+  Future<CropQuad?> analyze(String path) {
+    final smart = this.smart;
+    return Isolate.run(() {
+      final bytes = File(path).readAsBytesSync();
+      return detectPageQuad(RgbImage.decode(bytes, maxDimension: _decodeSize), smart: smart);
+    });
+  }
 }

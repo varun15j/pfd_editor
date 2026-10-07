@@ -96,4 +96,15 @@ void main() {
       expect(good, greaterThanOrEqualTo(8), reason: 'size $size: ${scores.join(' ')}');
     }
   });
+
+  test('on the Basic plan the old detector runs, which is less accurate on books', () async {
+    var sum = 0.0;
+    for (final asset in bookSamples.assets) {
+      final name = asset.split('/').last.substring(0, 2);
+      final photo = RgbImage.decode((await rootBundle.load(asset)).buffer.asUint8List(), maxDimension: 640);
+      final quad = detectPageQuad(photo, smart: false);
+      sum += quad == null ? 0.0 : _marked[name]!.map((m) => _iou(quad, m)).reduce((a, b) => a > b ? a : b);
+    }
+    expect(sum / bookSamples.assets.length, lessThan(0.7));
+  });
 }

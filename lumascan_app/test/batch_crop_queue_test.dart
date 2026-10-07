@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/photo_import.dart';
+import 'package:lumascan/domain/plan.dart';
 import 'package:lumascan/features/batch_edit/batch_crop_queue.dart';
 import 'package:lumascan/features/batch_edit/batch_review_screen.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
@@ -41,7 +43,10 @@ void main() {
     Future<void> open(WidgetTester tester) async {
       analyzer = _PerPageAnalyzer();
       await tester.runAsync(
-        () => harness.setUp(pageCount: 3, overrides: [photoAnalyzerProvider.overrideWithValue(analyzer)]),
+        () => harness.setUp(
+          pageCount: 3,
+          overrides: [photoAnalyzerProvider.overrideWithValue(analyzer), planProvider.overrideWithValue(AppPlan.pro)],
+        ),
       );
       for (final (i, p) in harness.pages.indexed) {
         analyzer.quads[p.originalPath] = _inset(const [0.05, 0.1, 0.15][i]);
@@ -111,7 +116,10 @@ void main() {
     Future<void> choose(WidgetTester tester, String choice) async {
       analyzer = _PerPageAnalyzer();
       await tester.runAsync(
-        () => harness.setUp(pageCount: 3, overrides: [photoAnalyzerProvider.overrideWithValue(analyzer)]),
+        () => harness.setUp(
+          pageCount: 3,
+          overrides: [photoAnalyzerProvider.overrideWithValue(analyzer), planProvider.overrideWithValue(AppPlan.pro)],
+        ),
       );
       // No page is found in the third photo.
       for (final (i, p) in harness.pages.take(2).indexed) {
@@ -138,7 +146,10 @@ void main() {
     testWidgets('Full photo removes the crop from every page', (tester) async {
       analyzer = _PerPageAnalyzer();
       await tester.runAsync(
-        () => harness.setUp(pageCount: 2, overrides: [photoAnalyzerProvider.overrideWithValue(analyzer)]),
+        () => harness.setUp(
+          pageCount: 2,
+          overrides: [photoAnalyzerProvider.overrideWithValue(analyzer), planProvider.overrideWithValue(AppPlan.pro)],
+        ),
       );
       final controller = harness.container.read(scanControllerProvider.notifier);
       controller.setCrops({for (final p in harness.pages) p.id: _inset(0.1)});
