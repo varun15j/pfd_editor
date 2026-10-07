@@ -65,6 +65,10 @@ class AutoCaptureTracker {
   /// Steady frames in a row needed before a capture.
   int stableFrames;
 
+  /// Whether the Pro plan's smarter tracking is on: following slow drift
+  /// and capturing the next page sooner. Off, the tracker works as before.
+  bool smart = true;
+
   /// Fewest steady frames needed after a page turn.
   static const minTurnFrames = 3;
 
@@ -120,7 +124,7 @@ class AutoCaptureTracker {
   /// Steady frames needed now: fewer right after a page turn, when the
   /// hand has just left the page and it settles fast, so the next page
   /// follows quickly.
-  int get _needed => _turned ? math.max(minTurnFrames, stableFrames - 2) : stableFrames;
+  int get _needed => smart && _turned ? math.max(minTurnFrames, stableFrames - 2) : stableFrames;
 
   AutoCaptureState get state {
     if (_waiting) return AutoCaptureState.waitingForNext;
@@ -145,7 +149,7 @@ class AutoCaptureTracker {
       if (_disturbed >= disturbFrames) {
         _forgetCaptured();
         _turned = true;
-      } else if (!disturbed) {
+      } else if (!disturbed && smart) {
         _followDrift(quad, signature, scene, previous, previousSignature, previousScene);
       }
     }

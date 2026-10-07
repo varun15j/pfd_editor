@@ -8,6 +8,7 @@ import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/domain/app_settings.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/ocr.dart';
+import 'package:lumascan/domain/plan.dart';
 import 'package:lumascan/domain/qr_reader.dart';
 import 'package:lumascan/features/batch_capture/auto_capture.dart';
 import 'package:lumascan/features/batch_capture/batch_capture_screen.dart';
@@ -336,6 +337,7 @@ void main() {
             frameAnalyzerProvider.overrideWithValue(analyzer ?? (frame) async => const FrameAnalysis(quad: _page)),
             spreadSplitterProvider.overrideWithValue((path) async => (_left, _right)),
             appSettingsStoreProvider.overrideWithValue(MemoryAppSettingsStore()),
+            planProvider.overrideWithValue(AppPlan.pro),
             ...overrides,
           ],
         ),

@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/device_load.dart';
 import '../../app/preferences.dart';
+import '../../domain/plan.dart';
 import '../../app/providers.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
@@ -153,6 +154,10 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
 
   // Live preview analysis.
   final _tracker = AutoCaptureTracker();
+
+  /// Smart scanning (drift following, quick next page, repeat check) is a
+  /// Pro feature.
+  bool get _smart => ref.read(planIncludesProvider(PlanFeature.smartScan));
   bool _analysing = false;
   DateTime _lastAnalysis = DateTime.fromMillisecondsSinceEpoch(0);
   FrameAnalysis _frame = const FrameAnalysis();
@@ -267,6 +272,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
       final analysis = await ref.read(frameAnalyzerProvider)(frame);
       if (!mounted || _mode != mode) return;
       final dark = analysis.tooDark;
+      _tracker.smart = _smart;
       final shoot = _tracker.add(dark ? null : analysis.quad, dark ? null : analysis.signature, analysis.scene);
       setState(() => _frame = analysis);
       if (shoot && _autoCapture && mode.canAutoCapture && !_shooting && _retakeId == null) {
@@ -394,7 +400,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     final ocr = container.read(ocrEngineProvider);
     final controller = _controller;
     final autoCrop = _autoCrop;
-    final checkRepeat = _autoCapture && mode.canAutoCapture && !retake;
+    final checkRepeat = _smart && _autoCapture && mode.canAutoCapture && !retake;
     if (checkRepeat) _pendingChecks++;
     _cropIo = _cropIo.then((_) async {
       try {

@@ -83,6 +83,13 @@ void main() {
     expect(tracker.state, AutoCaptureState.waitingForNext);
   });
 
+  test('on the Basic plan a held page that drifts is taken again, as before', () async {
+    final page = await _Book.load('03_straw_pipette.jpg');
+    final tracker = AutoCaptureTracker()..smart = false;
+    final held = [for (var i = 0; i < 400; i++) page.frame(dx: i ~/ 20, dy: i ~/ 10, gain: 1 - 0.2 * i / 400)];
+    expect(_shots(tracker, held), greaterThan(1));
+  });
+
   test('after a long hold, turning to the next page still takes it', () async {
     final first = await _Book.load('03_straw_pipette.jpg');
     final second = await _Book.load('19_hard_boiled_egg.jpg');
