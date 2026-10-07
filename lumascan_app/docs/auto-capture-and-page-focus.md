@@ -28,12 +28,15 @@ Reported on the OnePlus (2026-10-06): holding a page in front of the camera for 
 
 **Fix, two layers.**
 
-1. **Follow drift.** While waiting for the next page, every quiet frame (scene changed less than 0.15 from the frame before) becomes the new reference. Slow drift never adds up to a new page; only a sharp change, such as a hand or a page sweeping over the view, still re-arms. The fallback without scene signatures follows the outline and page signature the same way.
+1. **Follow drift.** While waiting for the next page, every quiet frame (scene changed less than 0.15 from the frame before) becomes the new reference, as long as the page in view still reads as the page taken (page signature within 0.5 of the one at capture). Slow drift never adds up to a new page; a page turned slowly does, because its content changes. The fallback without scene signatures follows the outline and page signature the same way.
 2. **Read the page.** With auto capture on, each new photo in Docs, Book and OCR Doc is read with OCR in the background (`PageIdentity` in `page_identity.dart`), and compared with the photo before:
    - page numbers: lines holding only a number ("28", "- 28 -", "(28)", "Page 28"). Different numbers mean a different page.
    - first and last lines, compared allowing for misread letters (edit distance, 80% alike).
    - words of three letters or more: two readings of one page share at least 60% (40% with the same page number); different pages of one book share far fewer.
+   **Only when there is room.** Before each read the camera asks Android for free memory, low-memory state, thermal status and the app's CPU time (`DeviceLoad`, channel `lumascan/device_load`). The read is skipped, and the page kept, when memory is low, under 300 MB or 12% is free, the app used more than half of all CPU cores since the last sample, the phone is at severe thermal status or hotter, or more than two reads are already waiting behind a fast batch. iOS has no probe yet, so only the waiting reads decide there.
    A photo auto capture took of the same page again is removed from the draft (undo brings it back) and the camera says "Same page as page N, not kept". Photos taken with the shutter are always kept, and retakes are never checked. Pages with too little text (fewer than six words: photos, blank pages, scripts ML Kit cannot read) are always kept.
+
+**Faster next page.** Right after a page turn the hand has just left the page and it settles fast, so the next photo needs 2 fewer steady frames (at least 3): about 0.3 s sooner at the Normal setting.
 
 Comparing pixel signatures was tried first on the 20 book photos: pages 28 and 30 of the open book differ by 0.14 on a fine 24 x 32 whole-frame grid, while one page moved by 3% differs by up to 0.25, so pixels cannot tell a page from its neighbour. Text can.
 
@@ -48,9 +51,10 @@ Code: `lib/imaging/page_focus.dart` (`focusOnePage`), called at the end of `dete
 ## Tests
 
 - `test/capture_modes_test.dart`: tracker cases (flicker and dark frames do not retake, a page turned under a still outline is taken once it settles, a page taken away counts as new, mid-turn is not steady), signature stability under camera movement and exposure, a camera-screen test feeding flicker, a dark frame and a page turn, and Book held over one page making one page.
-- `test/held_page_test.dart`: a book photo held and drifting for a minute is taken once; after that, turning to the next page still takes it.
+- `test/held_page_test.dart`: a book photo held and drifting for a minute is taken once; after that, turning to the next page still takes it, and so does a page turned slowly over two seconds.
+- `test/device_load_test.dart`: when the text check runs or is skipped, and the CPU share worked out from two Android samples.
 - `test/page_identity_test.dart`: page numbers, first and last lines, the same page read with misread letters, the next page, and a form with alike text but another page number.
-- `test/capture_modes_test.dart`: the same page taken twice by auto capture is kept once with the toast; taken twice with the shutter, both are kept.
+- `test/capture_modes_test.dart`: the same page taken twice by auto capture is kept once with the toast; short of memory, it is not read and both are kept; taken twice with the shutter, both are kept; after a turn the next page needs fewer steady frames.
 - `test/page_focus_test.dart`: half of the next page on the right or left is trimmed, a whole spread is kept, a single page of text is untouched.
 
 ## Limits and tuning

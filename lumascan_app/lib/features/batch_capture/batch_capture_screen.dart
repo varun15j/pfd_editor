@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../app/device_load.dart';
 import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../app/shell.dart';
@@ -114,6 +115,9 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
   /// What the text on the last page photo read as, and its pages, so an
   /// automatic photo of the same page again is not kept (US-03.11).
   ({PageIdentity identity, List<String> pageIds})? _lastRead;
+
+  /// Repeat checks queued behind the camera and not yet run.
+  int _pendingChecks = 0;
 
   /// Reading text or a QR code from a photo just taken.
   bool _reading = false;
@@ -391,6 +395,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     final controller = _controller;
     final autoCrop = _autoCrop;
     final checkRepeat = _autoCapture && mode.canAutoCapture && !retake;
+    if (checkRepeat) _pendingChecks++;
     _cropIo = _cropIo.then((_) async {
       try {
         if (mode == CameraMode.book && autoCrop && pages.length == 2) {
@@ -404,7 +409,13 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
       } catch (e) {
         debugPrint('Page detection failed: $e');
       }
-      if (checkRepeat) await _checkRepeat(pages, ocr, controller, container, auto: auto);
+      if (checkRepeat) {
+        try {
+          await _checkRepeat(pages, ocr, controller, container, auto: auto);
+        } finally {
+          _pendingChecks--;
+        }
+      }
       if (mode != CameraMode.ocrDoc) return;
       for (final page in pages) {
         if (container.read(scanControllerProvider).pageById(page.id) == null) continue;
@@ -435,6 +446,15 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     ProviderContainer container, {
     required bool auto,
   }) async {
+    // Reading text is heavy. When the phone is short of memory or CPU, or
+    // reads are piling up behind a fast batch, the check is skipped so the
+    // camera stays quick; the page is kept.
+    final load = await container.read(deviceLoadProbeProvider).sample();
+    if (!affordsTextCheck(load, pending: _pendingChecks - 1)) {
+      debugPrint('Repeat check skipped: $load, ${_pendingChecks - 1} waiting');
+      _lastRead = null;
+      return;
+    }
     PageIdentity? identity;
     try {
       identity = PageIdentity.fromText(await ocr.recognizeFile(pages.first.originalPath));

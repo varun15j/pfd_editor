@@ -23,6 +23,19 @@ class _Book {
     return _Book(photo.width, photo.height, luma);
   }
 
+  /// Partway through turning to [next]: the part of the view left of
+  /// [shown] (0..1) already shows the next page.
+  FrameAnalysis turningTo(_Book next, double shown) {
+    final out = Uint8List(width * height);
+    final edge = (width * shown).round();
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        out[y * width + x] = x < edge ? next.luma[y * width + x] : luma[y * width + x];
+      }
+    }
+    return analyzeFrame(CameraFrame.gray(width, height, out));
+  }
+
   /// The view moved by ([dx], [dy]) pixels with its brightness times [gain],
   /// optionally with a hand covering the left [covered] part of it.
   FrameAnalysis frame({int dx = 0, int dy = 0, double gain = 1, double covered = 0}) {
@@ -80,6 +93,19 @@ void main() {
       // The hand turns the page over.
       first.frame(dx: 10, dy: 20, covered: 0.5),
       second.frame(covered: 0.7),
+      for (var i = 0; i < 20; i++) second.frame(),
+    ];
+    expect(_shots(tracker, frames), 2);
+  });
+
+  test('a page turned slowly is still taken', () async {
+    final first = await _Book.load('03_straw_pipette.jpg');
+    final second = await _Book.load('19_hard_boiled_egg.jpg');
+    final tracker = AutoCaptureTracker();
+    final frames = [
+      for (var i = 0; i < 20; i++) first.frame(),
+      // Two seconds to turn the page: each frame changes only a little.
+      for (var i = 1; i <= 14; i++) first.turningTo(second, i / 14),
       for (var i = 0; i < 20; i++) second.frame(),
     ];
     expect(_shots(tracker, frames), 2);

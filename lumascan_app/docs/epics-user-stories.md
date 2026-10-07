@@ -276,6 +276,8 @@ As a user who holds a page in front of the camera for half a minute or more befo
 - Slow movement of the hand and changing light never count as a new page; only a turn or swap does.
 - With auto capture on, the text on each new page is read and compared with the page before: page number first, then the first and last lines and the words, allowing for misread letters.
 - A page auto capture took again is removed, with "Same page as page N, not kept"; undo brings it back. Pages taken with the shutter are always kept.
+- The text is read only when the phone has memory and CPU to spare; otherwise the page is kept unread.
+- A page turned slowly is still taken, and the next page is taken sooner after a turn.
 
 ---
 
