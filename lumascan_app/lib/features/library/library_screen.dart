@@ -68,6 +68,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         editTagsSheet(context, ref, [doc]);
       case DocumentMenuAction.share:
         shareDocuments(context, [doc]);
+      case DocumentMenuAction.textPdf:
+        createTextPdf(context, ref, doc);
       case DocumentMenuAction.delete:
         deleteWithUndo(context, ref, [doc]);
     }
@@ -280,11 +282,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       padding: const EdgeInsets.symmetric(horizontal: Space.page),
       child: Row(
         children: [
-          ChoiceChip(
-            label: const Text('All'),
-            selected: current == null,
-            onSelected: (_) => q.openFolder(null),
-          ),
+          ChoiceChip(label: const Text('All'), selected: current == null, onSelected: (_) => q.openFolder(null)),
           for (final f in index.folders) ...[
             const SizedBox(width: Space.sm),
             ChoiceChip(

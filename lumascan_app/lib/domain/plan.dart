@@ -19,7 +19,12 @@ enum PlanFeature {
   /// and the middle of the frame; auto crop of every photo; the held-page
   /// repeat check; faster auto capture after a page turn; Auto crop and Full
   /// photo for many pages at once. Basic scans the original way.
-  smartScan(AppPlan.pro);
+  smartScan(AppPlan.pro),
+
+  /// Text PDF: OCR turns a draft, or a saved PDF, into a PDF of real text
+  /// with the pictures kept as images. Offered in the export sheet and the
+  /// Library menu.
+  textPdf(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 

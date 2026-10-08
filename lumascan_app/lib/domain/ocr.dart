@@ -65,3 +65,38 @@ class UnavailableOcrEngine implements OcrEngine {
   @override
   Future<String> recognizeFile(String path) => Future.error(UnsupportedError('No OCR engine'));
 }
+
+/// A block of text and where it sits on the page, as fractions (0 to 1) of
+/// the page's width and height.
+@immutable
+class OcrBlock {
+  const OcrBlock({
+    required this.text,
+    required this.left,
+    required this.top,
+    required this.right,
+    required this.bottom,
+  });
+
+  final String text;
+  final double left;
+  final double top;
+  final double right;
+  final double bottom;
+}
+
+/// The text on a page, block by block with positions.
+@immutable
+class OcrLayout {
+  const OcrLayout(this.blocks);
+
+  final List<OcrBlock> blocks;
+
+  String get text => blocks.map((b) => b.text).join('\n');
+}
+
+/// An engine that also reports where the text is, so a text PDF can keep
+/// the parts of a page it could not read as pictures.
+abstract interface class OcrLayoutEngine {
+  Future<OcrLayout> recognizeLayout(ScanPage page, {required String languageCode});
+}

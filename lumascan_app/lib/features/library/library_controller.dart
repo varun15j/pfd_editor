@@ -31,10 +31,15 @@ class LibraryController extends AsyncNotifier<LibraryIndex> {
 
   /// Registers a PDF exported from scanned [pages] and renders its thumbnail
   /// from the first page.
-  Future<SavedDocument> addScan(File pdf, List<ScanPage> pages, {ScanType type = ScanType.document}) async {
+  Future<SavedDocument> addScan(
+    File pdf,
+    List<ScanPage> pages, {
+    ScanType type = ScanType.document,
+    int? pageCount,
+  }) async {
     final id = await _idFor(pdf);
     final thumbnail = pages.isEmpty ? null : await ref.read(libraryStoreProvider).writeThumbnail(id, pages.first);
-    return _add(id, pdf, pageCount: pages.length, type: type, thumbnailPath: thumbnail);
+    return _add(id, pdf, pageCount: pageCount ?? pages.length, type: type, thumbnailPath: thumbnail);
   }
 
   /// Registers a PDF saved from the PDF editor.

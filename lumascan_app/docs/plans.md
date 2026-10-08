@@ -7,7 +7,7 @@ Added 2026-10-07. Code: `lib/domain/plan.dart`, `planProvider` and `planIncludes
 | Plan | Price | Includes |
 | --- | --- | --- |
 | Basic | free | everything in the app today |
-| Pro | paid | Basic, plus smart scanning (below) |
+| Pro | paid | Basic, plus smart scanning and text PDF (below) |
 | Gold | paid | everything in Pro, plus Gold features (none defined yet) |
 
 A plan includes a feature when it is at least the feature's lowest plan (`AppPlan.includes`). So Gold always has what Pro has.
@@ -21,6 +21,10 @@ A plan includes a feature when it is at least the feature's lowest plan (`AppPla
 - the next page taken sooner after a page turn
 
 Basic scans the original way: white-paper detection only, the page found in each photo, and the shutter and Auto work as before.
+
+## Text PDF (`PlanFeature.textPdf`, Pro and Gold)
+
+OCR turns a draft, a saved document or any PDF of photos into a PDF of real text, with pictures kept as images (`docs/ocr-text-pdf.md`). On Basic the buttons are visible and open the upgrade pop-up (`ensurePlan` in `lib/ui/upgrade_dialog.dart`).
 
 ## Which plan the app uses
 

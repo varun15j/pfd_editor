@@ -9,13 +9,16 @@ enum OcrPageStatus { waiting, running, done, empty, failed, cancelled }
 /// later crop or rotation shows the text no longer matches the page.
 @immutable
 class OcrPageResult {
-  const OcrPageResult({required this.pageId, required this.status, this.revision, this.text, this.error});
+  const OcrPageResult({required this.pageId, required this.status, this.revision, this.text, this.error, this.layout});
 
   final String pageId;
   final OcrPageStatus status;
   final String? revision;
   final String? text;
   final String? error;
+
+  /// Where the text sits on the page, when the engine reports it.
+  final OcrLayout? layout;
 }
 
 /// Runs OCR over several pages one at a time (BE-07). Cancel stops pages
@@ -84,13 +87,16 @@ class BatchOcrJob extends ChangeNotifier {
       _set(OcrPageResult(pageId: page.id, status: OcrPageStatus.running));
       final revision = page.recipe.cacheKey;
       try {
-        final text = await engine.recognize(page, languageCode: languageCode);
+        final Object e = engine;
+        final layout = e is OcrLayoutEngine ? await e.recognizeLayout(page, languageCode: languageCode) : null;
+        final text = layout?.text ?? await engine.recognize(page, languageCode: languageCode);
         _set(
           OcrPageResult(
             pageId: page.id,
             status: text.trim().isEmpty ? OcrPageStatus.empty : OcrPageStatus.done,
             revision: revision,
             text: text,
+            layout: layout,
           ),
         );
       } catch (e) {
