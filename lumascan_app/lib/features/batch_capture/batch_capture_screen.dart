@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../app/device_load.dart';
 import '../../app/preferences.dart';
 import '../../domain/plan.dart';
 import '../../app/providers.dart';
@@ -28,6 +29,7 @@ import 'batch_camera.dart';
 import 'camera_frame.dart';
 import 'camera_mode.dart';
 import 'capture_settings_screen.dart';
+import 'page_identity.dart';
 
 /// Opens the camera. Pages join the current draft as they are taken. When
 /// the camera closes with pages taken, the draft opens; [openDraftAfter] is
@@ -111,6 +113,13 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
   bool _shooting = false;
   int _queuedShots = 0;
 
+  /// What the text on the last page photo read as, and its pages, so an
+  /// automatic photo of the same page again is not kept (US-03.11).
+  ({PageIdentity identity, List<String> pageIds})? _lastRead;
+
+  /// Repeat checks queued behind the camera and not yet run.
+  int _pendingChecks = 0;
+
   /// Reading text or a QR code from a photo just taken.
   bool _reading = false;
 
@@ -160,7 +169,8 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
   CropQuad? get _outline =>
       _tracker.quad ?? (_smart && DateTime.now().difference(_seenAt) <= _outlineHold ? _seenQuad : null);
 
-  /// Smart scanning (outline hold, fallback crop) is a Pro feature.
+  /// Smart scanning (drift following, quick next page, repeat check, outline
+  /// hold, fallback crop) is a Pro feature.
   bool get _smart => ref.read(planIncludesProvider(PlanFeature.smartScan));
   bool _analysing = false;
   DateTime _lastAnalysis = DateTime.fromMillisecondsSinceEpoch(0);
@@ -276,13 +286,16 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
       final analysis = await ref.read(frameAnalyzerProvider)(frame);
       if (!mounted || _mode != mode) return;
       final dark = analysis.tooDark;
+      _tracker.smart = _smart;
       final shoot = _tracker.add(dark ? null : analysis.quad, dark ? null : analysis.signature, analysis.scene);
       if (!dark && analysis.quad != null) {
         _seenQuad = analysis.quad;
         _seenAt = DateTime.now();
       }
       setState(() => _frame = analysis);
-      if (shoot && _autoCapture && mode.canAutoCapture && !_shooting && _retakeId == null) unawaited(_shoot());
+      if (shoot && _autoCapture && mode.canAutoCapture && !_shooting && _retakeId == null) {
+        unawaited(_shoot(auto: true));
+      }
     } catch (e) {
       debugPrint('Preview analysis failed: $e');
     }
@@ -312,7 +325,9 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     if (_settings.shutterSound) unawaited(SystemSound.play(SystemSoundType.click));
   }
 
-  Future<void> _shoot() async {
+  /// Takes a photo. [auto] when auto capture took it, not the shutter: then
+  /// a photo of the page taken just before is dropped once its text is read.
+  Future<void> _shoot({bool auto = false}) async {
     if (_status != _CameraStatus.ready || _covered || _reading || !_camera.isReady) return;
     if (_shooting) {
       if (_batch && _mode.addsPages && _queuedShots < _maxQueuedShots) _queuedShots++;
@@ -340,7 +355,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
         _saving++;
         if (replacing != null) _retakeId = null;
       });
-      final saved = _save(path, replacing, mode, seen: seen);
+      final saved = _save(path, replacing, mode, auto: auto, seen: seen);
       _saves = _saves.then((_) => saved);
       if (!_batch) unawaited(saved.then((page) => page != null && mounted ? _review() : null));
     } on ScannerFailure catch (e) {
@@ -356,7 +371,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
   }
 
   /// [seen] is the page outline on the preview when the photo was taken.
-  Future<ScanPage?> _save(String path, String? replacing, CameraMode mode, {CropQuad? seen}) async {
+  Future<ScanPage?> _save(String path, String? replacing, CameraMode mode, {bool auto = false, CropQuad? seen}) async {
     final List<ScanPage>? pages;
     // Book mode makes two pages only when both are in view; held over one
     // page, with the other cut off, it makes just that page.
@@ -367,7 +382,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
       pages = page == null ? null : [page];
     }
     if (!mounted) {
-      if (pages != null) _afterCapture(pages, mode, seen: seen);
+      if (pages != null) _afterCapture(pages, mode, auto: auto, retake: replacing != null, seen: seen);
       return pages?.first;
     }
     setState(() {
@@ -391,23 +406,26 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
       _ when replacing != null => 'Page $first replaced',
       _ => 'Page $first captured',
     });
-    _afterCapture(pages, mode, seen: seen);
+    _afterCapture(pages, mode, auto: auto, retake: replacing != null, seen: seen);
     return pages.first;
   }
 
   /// Background work on new pages, one photo at a time: the page outline
-  /// (Docs, OCR Doc), the spine (Book), then the text (OCR Doc).
+  /// (Docs, OCR Doc), the spine (Book), the text (OCR Doc), then, with auto
+  /// capture on, whether the photo shows the same page as the one before.
   ///
   /// With auto crop on, every page photo is cropped: to the page found in
   /// the photo, or when none is found there, to the outline [seen] on the
   /// preview as it was taken. The crop can still be adjusted afterwards.
-  void _afterCapture(List<ScanPage> pages, CameraMode mode, {CropQuad? seen}) {
+  void _afterCapture(List<ScanPage> pages, CameraMode mode, {bool auto = false, bool retake = false, CropQuad? seen}) {
     final container = _container;
     final analyzer = container.read(photoAnalyzerProvider);
     final splitter = container.read(spreadSplitterProvider);
     final ocr = container.read(ocrEngineProvider);
     final controller = _controller;
     final autoCrop = _autoCrop;
+    final checkRepeat = _smart && _autoCapture && mode.canAutoCapture && !retake;
+    if (checkRepeat) _pendingChecks++;
     _cropIo = _cropIo.then((_) async {
       try {
         if (mode == CameraMode.book && autoCrop && pages.length == 2) {
@@ -427,8 +445,16 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
       } catch (e) {
         debugPrint('Page detection failed: $e');
       }
+      if (checkRepeat) {
+        try {
+          await _checkRepeat(pages, ocr, controller, container, auto: auto);
+        } finally {
+          _pendingChecks--;
+        }
+      }
       if (mode != CameraMode.ocrDoc) return;
       for (final page in pages) {
+        if (container.read(scanControllerProvider).pageById(page.id) == null) continue;
         try {
           final current = container.read(scanControllerProvider).pageById(page.id);
           if (current == null) continue;
@@ -443,6 +469,53 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
         }
       }
     });
+  }
+
+  /// Reads the text on a new photo and compares it with the photo before:
+  /// the page number, then the first and last lines and the words. A photo
+  /// auto capture took of that same page again, because it was held in
+  /// view too long, is removed. Shutter photos are always kept.
+  Future<void> _checkRepeat(
+    List<ScanPage> pages,
+    OcrEngine ocr,
+    ScanController controller,
+    ProviderContainer container, {
+    required bool auto,
+  }) async {
+    // Reading text is heavy. When the phone is short of memory or CPU, or
+    // reads are piling up behind a fast batch, the check is skipped so the
+    // camera stays quick; the page is kept.
+    final load = await container.read(deviceLoadProbeProvider).sample();
+    if (!affordsTextCheck(load, pending: _pendingChecks - 1)) {
+      debugPrint('Repeat check skipped: $load, ${_pendingChecks - 1} waiting');
+      _lastRead = null;
+      return;
+    }
+    PageIdentity? identity;
+    try {
+      identity = PageIdentity.fromText(await ocr.recognizeFile(pages.first.originalPath));
+    } catch (e) {
+      debugPrint('Repeat check could not read the page: $e');
+    }
+    final before = _lastRead;
+    if (identity == null) {
+      // Nothing to compare with: neither this photo nor the one before can
+      // be told apart from the next.
+      _lastRead = null;
+      return;
+    }
+    final draft = container.read(scanControllerProvider);
+    final kept = before != null && before.pageIds.any((id) => draft.pageById(id) != null);
+    if (auto && kept && identity.samePageAs(before.identity)) {
+      final ids = {for (final p in pages) p.id};
+      controller.removePages(ids);
+      final n = draft.pages.indexWhere((p) => p.id == before.pageIds.first) + 1;
+      if (!mounted) return;
+      setState(() => _taken.removeWhere((p) => ids.contains(p.id)));
+      _showToast(n > 0 ? 'Same page as page $n, not kept' : 'Same page again, not kept');
+      return;
+    }
+    _lastRead = (identity: identity, pageIds: [for (final p in pages) p.id]);
   }
 
   /// Text mode: reads the photo and offers the text. The photo is kept only
