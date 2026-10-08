@@ -51,6 +51,9 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DeviceLoad.CHANNEL).setMethodCallHandler { call, result ->
+            if (call.method == "snapshot") result.success(DeviceLoad.snapshot(this)) else result.notImplemented()
+        }
     }
 
     override fun onResume() {

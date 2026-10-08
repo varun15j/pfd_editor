@@ -16,6 +16,7 @@ import '../export/text_pdf_service.dart';
 import '../pdf_edit/pdf_edit_controller.dart';
 import '../features/batch_capture/batch_camera.dart';
 import '../imaging/render_service.dart';
+import 'device_load.dart';
 
 // Services are plain providers so tests can override them (LLD Riverpod
 // conventions).
@@ -59,4 +60,7 @@ final qrReaderProvider = Provider<QrReader>((ref) {
 });
 
 /// Makes the live camera for Batch capture, one per visit to the screen.
+/// How busy the phone is, for background work the camera can skip.
+final deviceLoadProbeProvider = Provider<DeviceLoadProbe>((ref) => PlatformDeviceLoadProbe());
+
 final batchCameraProvider = Provider<BatchCameraFactory>((ref) => PluginBatchCamera.new);

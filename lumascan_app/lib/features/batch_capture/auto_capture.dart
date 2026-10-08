@@ -40,6 +40,16 @@ enum AutoCaptureState {
 /// count as a new page. Once disturbed, the new page must settle and stay
 /// still again before it is taken, so a page caught mid-turn is never taken
 /// either.
+///
+/// A page held in the hand for half a minute or more drifts slowly, and the
+/// light on it changes. Each frame then differs only a little from the one
+/// before, but over many frames the view moves far from the captured one.
+/// So while waiting, every quiet frame (one that changed less than
+/// [quietChange] from the frame before) becomes the new reference: only a
+/// sharp change, such as a hand or a page sweeping over the view, ever adds
+/// up to a new page. Slow drift never does. A page turned slowly is not
+/// followed: once the page in view no longer reads as the page taken (its
+/// [pageSignature]), the changes add up again.
 class AutoCaptureTracker {
   AutoCaptureTracker({
     this.stableFrames = 5,
@@ -49,10 +59,18 @@ class AutoCaptureTracker {
     this.steadyChange = 0.5,
     this.flipChange = 0.7,
     this.sceneChange = 0.4,
+    this.quietChange = 0.15,
   });
 
   /// Steady frames in a row needed before a capture.
   int stableFrames;
+
+  /// Whether the Pro plan's smarter tracking is on: following slow drift
+  /// and capturing the next page sooner. Off, the tracker works as before.
+  bool smart = true;
+
+  /// Fewest steady frames needed after a page turn.
+  static const minTurnFrames = 3;
 
   /// Largest average corner movement between frames, as a fraction of the
   /// frame, that still counts as steady.
@@ -76,13 +94,23 @@ class AutoCaptureTracker {
   /// before, that disturbs it.
   final double sceneChange;
 
+  /// Largest change from the frame before that counts as the same view
+  /// drifting, not something moving across it. Quiet frames replace the
+  /// captured frame as the reference, so drift never adds up to a new page.
+  final double quietChange;
+
   CropQuad? _last;
   Float32List? _lastSignature;
   Float32List? _lastScene;
   Float32List? _capturedScene;
   bool _waiting = false;
+  bool _turned = false;
   CropQuad? _capturedQuad;
   Float32List? _capturedSignature;
+
+  /// The page signature when the photo was taken; unlike
+  /// [_capturedSignature] it does not follow drift.
+  Float32List? _capturedPage;
   int _disturbed = 0;
   int _steady = 0;
 
@@ -91,12 +119,17 @@ class AutoCaptureTracker {
 
   /// How far along the steady count is, from 0 to 1, for the ring around
   /// the shutter.
-  double get progress => _waiting || _last == null ? 0 : (_steady / stableFrames).clamp(0.0, 1.0);
+  double get progress => _waiting || _last == null ? 0 : (_steady / _needed).clamp(0.0, 1.0);
+
+  /// Steady frames needed now: fewer right after a page turn, when the
+  /// hand has just left the page and it settles fast, so the next page
+  /// follows quickly.
+  int get _needed => smart && _turned ? math.max(minTurnFrames, stableFrames - 2) : stableFrames;
 
   AutoCaptureState get state {
     if (_waiting) return AutoCaptureState.waitingForNext;
     if (_last == null) return AutoCaptureState.searching;
-    return _steady >= stableFrames ? AutoCaptureState.capture : AutoCaptureState.steadying;
+    return _steady >= _needed ? AutoCaptureState.capture : AutoCaptureState.steadying;
   }
 
   /// Takes the page found in the next frame (null when none, or when the
@@ -113,7 +146,12 @@ class AutoCaptureTracker {
           ? _sceneChanged(scene, previousScene)
           : _disturbs(quad, signature, previousSignature);
       _disturbed = disturbed ? _disturbed + 1 : 0;
-      if (_disturbed >= disturbFrames) _forgetCaptured();
+      if (_disturbed >= disturbFrames) {
+        _forgetCaptured();
+        _turned = true;
+      } else if (!disturbed && smart) {
+        _followDrift(quad, signature, scene, previous, previousSignature, previousScene);
+      }
     }
     if (quad == null) {
       _steady = 0;
@@ -124,7 +162,7 @@ class AutoCaptureTracker {
         drift(quad, previous) <= maxDrift &&
         (signature == null || previousSignature == null || signatureDiff(signature, previousSignature) <= steadyChange);
     _steady = still ? _steady + 1 : 1;
-    return !_waiting && _steady >= stableFrames;
+    return !_waiting && _steady >= _needed;
   }
 
   /// Whether the view changed: from the frame captured, or sharply from the
@@ -132,6 +170,35 @@ class AutoCaptureTracker {
   bool _sceneChanged(Float32List scene, Float32List? previousScene) =>
       signatureDiff(scene, _capturedScene!) >= sceneChange ||
       (previousScene != null && signatureDiff(scene, previousScene) >= sceneChange);
+
+  /// Moves the captured reference along with a view that is only drifting:
+  /// a page held in the hand, or light slowly changing on it.
+  void _followDrift(
+    CropQuad? quad,
+    Float32List? signature,
+    Float32List? scene,
+    CropQuad? previous,
+    Float32List? previousSignature,
+    Float32List? previousScene,
+  ) {
+    // A page turned slowly changes the view only a little each frame too,
+    // so the view is followed only while the page on it still reads as
+    // the page taken.
+    final samePage =
+        _capturedPage == null || (signature != null && signatureDiff(signature, _capturedPage!) < steadyChange);
+    if (samePage && scene != null && previousScene != null && signatureDiff(scene, previousScene) < quietChange) {
+      _capturedScene = scene;
+    }
+    if (quad != null &&
+        previous != null &&
+        drift(quad, previous) <= maxDrift &&
+        signature != null &&
+        previousSignature != null &&
+        signatureDiff(signature, previousSignature) < quietChange) {
+      _capturedQuad = quad;
+      _capturedSignature = signature;
+    }
+  }
 
   /// Without scene signatures: whether this frame looks unlike the captured
   /// page lying still.
@@ -149,10 +216,12 @@ class AutoCaptureTracker {
   /// Call once a photo is taken: auto capture waits for the next page.
   void captured() {
     _steady = 0;
+    _turned = false;
     _disturbed = 0;
     _waiting = true;
     _capturedQuad = _last;
     _capturedSignature = _lastSignature;
+    _capturedPage = _lastSignature;
     _capturedScene = _lastScene;
   }
 
@@ -160,11 +229,13 @@ class AutoCaptureTracker {
     _waiting = false;
     _capturedQuad = null;
     _capturedSignature = null;
+    _capturedPage = null;
     _capturedScene = null;
     _disturbed = 0;
   }
 
   void reset() {
+    _turned = false;
     _last = null;
     _lastSignature = null;
     _lastScene = null;
