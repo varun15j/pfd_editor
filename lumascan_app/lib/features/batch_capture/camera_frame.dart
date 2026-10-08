@@ -5,7 +5,9 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/preferences.dart';
 import '../../domain/models.dart';
+import '../../domain/plan.dart';
 import '../../imaging/book_split.dart';
 import '../../imaging/page_detector.dart';
 import '../../imaging/rgb_image.dart';
@@ -116,9 +118,9 @@ class FrameAnalysis {
 }
 
 /// Pure Dart, so it can run in an isolate.
-FrameAnalysis analyzeFrame(CameraFrame frame) {
+FrameAnalysis analyzeFrame(CameraFrame frame, {bool smart = true}) {
   final gray = frame.uprightGray();
-  final quad = detectPageQuad(gray, workSize: 160, minArea: 0.2);
+  final quad = detectPageQuad(gray, workSize: 160, minArea: 0.2, smart: smart);
   return FrameAnalysis(
     quad: quad,
     signature: quad == null ? null : pageSignature(gray, quad),
@@ -130,16 +132,17 @@ FrameAnalysis analyzeFrame(CameraFrame frame) {
 typedef FrameAnalyzer = Future<FrameAnalysis> Function(CameraFrame frame);
 
 /// Analyses preview frames off the UI thread. Tests swap in a direct call.
-final frameAnalyzerProvider = Provider<FrameAnalyzer>(
-  (ref) =>
-      (frame) => Isolate.run(() => analyzeFrame(frame)),
-);
+final frameAnalyzerProvider = Provider<FrameAnalyzer>((ref) {
+  final smart = ref.watch(planIncludesProvider(PlanFeature.smartScan));
+  return (frame) => Isolate.run(() => analyzeFrame(frame, smart: smart));
+});
 
 typedef SpreadSplitter = Future<(CropQuad, CropQuad)> Function(String photoPath);
 
 /// Finds the left and right page in a photo of an open book, off the UI
 /// thread (Book mode).
-final spreadSplitterProvider = Provider<SpreadSplitter>(
-  (ref) =>
-      (path) => Isolate.run(() => splitSpread(RgbImage.decode(File(path).readAsBytesSync(), maxDimension: 640))),
-);
+final spreadSplitterProvider = Provider<SpreadSplitter>((ref) {
+  final smart = ref.watch(planIncludesProvider(PlanFeature.smartScan));
+  return (path) =>
+      Isolate.run(() => splitSpread(RgbImage.decode(File(path).readAsBytesSync(), maxDimension: 640), smart: smart));
+});

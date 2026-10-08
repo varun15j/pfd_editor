@@ -416,6 +416,17 @@ class ScanController extends Notifier<ScanState> {
     _persistDraft();
   }
 
+  /// Sets the crop of each page in [crops], as one undo step: auto crop or
+  /// full photo on many pages at once. Marks on a page whose crop changes
+  /// are removed, as with any crop.
+  void setCrops(Map<String, CropQuad> crops) {
+    final changes = state.pages.any((p) => crops.containsKey(p.id) && p.recipe.crop != crops[p.id]);
+    if (!changes) return;
+    _commit([
+      for (final p in state.pages) crops.containsKey(p.id) ? _withRecipe(p, p.recipe.copyWith(crop: crops[p.id])) : p,
+    ]);
+  }
+
   /// Inserts a copy of [pageId], with the same edits, right after it. Both
   /// pages share the original image, which is never modified.
   void duplicate(String pageId) {

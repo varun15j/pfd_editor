@@ -9,6 +9,7 @@ import '../data/plugin_batch_camera.dart';
 import '../debug/image_profiler.dart';
 import '../domain/ocr.dart';
 import '../domain/photo_import.dart';
+import '../domain/plan.dart';
 import '../domain/qr_reader.dart';
 import '../domain/scanner_service.dart';
 import '../export/pdf_exporter.dart';
@@ -17,6 +18,7 @@ import '../pdf_edit/pdf_edit_controller.dart';
 import '../features/batch_capture/batch_camera.dart';
 import '../imaging/render_service.dart';
 import 'device_load.dart';
+import 'preferences.dart';
 
 // Services are plain providers so tests can override them (LLD Riverpod
 // conventions).
@@ -42,7 +44,9 @@ final draftStoreProvider = Provider<DraftStore>((ref) => DraftStore(ref.watch(pa
 
 final photoPickerProvider = Provider<PhotoPicker>((ref) => FilePickerPhotoPicker());
 
-final photoAnalyzerProvider = Provider<PhotoAnalyzer>((ref) => DetectorPhotoAnalyzer());
+final photoAnalyzerProvider = Provider<PhotoAnalyzer>(
+  (ref) => DetectorPhotoAnalyzer(smart: ref.watch(planIncludesProvider(PlanFeature.smartScan))),
+);
 
 /// On-device text recognition. It reads each page as rendered with its crop
 /// and filter, at a size that keeps small print legible.
