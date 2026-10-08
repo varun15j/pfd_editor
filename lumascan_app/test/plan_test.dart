@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/app/preferences.dart';
+import 'package:lumascan/app/providers.dart';
+import 'package:lumascan/data/photo_import_services.dart';
 import 'package:lumascan/debug/plan_switcher_tile.dart';
 import 'package:lumascan/domain/app_settings.dart';
 import 'package:lumascan/domain/plan.dart';
@@ -48,6 +50,19 @@ void main() {
       container.read(appSettingsProvider.notifier).setDebugPlan(null);
       expect(container.read(planProvider), purchasedPlan);
     });
+  });
+
+  test('photo import and manual crop use the basic detector on Basic and the smart one on Pro and Gold', () {
+    for (final (plan, smart) in [(AppPlan.basic, false), (AppPlan.pro, true), (AppPlan.gold, true)]) {
+      final container = ProviderContainer(
+        overrides: [
+          appSettingsStoreProvider.overrideWithValue(MemoryAppSettingsStore()),
+          planProvider.overrideWithValue(plan),
+        ],
+      );
+      addTearDown(container.dispose);
+      expect((container.read(photoAnalyzerProvider) as DetectorPhotoAnalyzer).smart, smart, reason: plan.label);
+    }
   });
 
   testWidgets('the debug panel switches the plan', (tester) async {
