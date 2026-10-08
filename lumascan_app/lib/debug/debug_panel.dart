@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'image_profiler.dart';
+import 'plan_switcher_tile.dart';
 import 'profile_sample.dart';
 import 'profiling_report_screen.dart';
 import 'sample_pages.dart';
@@ -123,6 +124,8 @@ class DebugPanel extends StatelessWidget {
                   subtitle: const Text('Debug builds only'),
                   trailing: IconButton(icon: const Icon(Icons.close), tooltip: 'Close', onPressed: onClose),
                 ),
+                const Divider(),
+                const PlanSwitcherTile(),
                 const Divider(),
                 SamplePagesTile(onStart: onClose),
                 SamplePagesTile(set: bookSamples, onStart: onClose),

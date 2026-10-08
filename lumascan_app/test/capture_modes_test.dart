@@ -2,11 +2,13 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumascan/app/device_load.dart';
 import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/domain/app_settings.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/ocr.dart';
+import 'package:lumascan/domain/plan.dart';
 import 'package:lumascan/domain/qr_reader.dart';
 import 'package:lumascan/features/batch_capture/auto_capture.dart';
 import 'package:lumascan/features/batch_capture/batch_capture_screen.dart';
@@ -40,8 +42,22 @@ class _FakeOcr implements OcrEngine {
   @override
   Future<String> recognize(ScanPage page, {required String languageCode}) async => pageText;
 
+  int fileReads = 0;
+
   @override
-  Future<String> recognizeFile(String path) async => photoText;
+  Future<String> recognizeFile(String path) async {
+    fileReads++;
+    return photoText;
+  }
+}
+
+class _FakeLoad implements DeviceLoadProbe {
+  _FakeLoad(this.load);
+
+  final DeviceLoad? load;
+
+  @override
+  Future<DeviceLoad?> sample() async => load;
 }
 
 class _FakeQr implements QrReader {
@@ -158,6 +174,14 @@ void main() {
       tracker.add(null);
       expect(tracker.state, AutoCaptureState.searching);
       expect([for (var i = 0; i < 3; i++) tracker.add(_page)], [false, false, true]);
+    });
+
+    test('after a page turn the next page is taken sooner', () {
+      final tracker = AutoCaptureTracker(stableFrames: 5);
+      expect([for (var i = 0; i < 5; i++) tracker.add(_page, _signature(1))], [false, false, false, false, true]);
+      tracker.captured();
+      expect([tracker.add(_page, _signature(2)), tracker.add(_page, _signature(3))], [false, false]);
+      expect([tracker.add(_page, _signature(3)), tracker.add(_page, _signature(3))], [false, true]);
     });
 
     test('movement restarts the count', () {
@@ -313,6 +337,7 @@ void main() {
             frameAnalyzerProvider.overrideWithValue(analyzer ?? (frame) async => const FrameAnalysis(quad: _page)),
             spreadSplitterProvider.overrideWithValue((path) async => (_left, _right)),
             appSettingsStoreProvider.overrideWithValue(MemoryAppSettingsStore()),
+            planProvider.overrideWithValue(AppPlan.pro),
             ...overrides,
           ],
         ),
@@ -386,6 +411,64 @@ void main() {
 
       await frames(tester, 8);
       expect(camera.shots, 2, reason: 'the turned page settles and is taken');
+    });
+
+    const pageText = 'Tough Newspaper\nYour strongest blow cannot budge this fearless newspaper!\nWhat happens:\n28';
+
+    testWidgets('a page held so long it is taken again is not kept twice', (tester) async {
+      // The same page taken twice by auto capture: lifted, put back down.
+      final seen = [
+        for (var i = 0; i < 6; i++) FrameAnalysis(quad: _page, signature: _signature(1)),
+        FrameAnalysis(quad: _page, signature: _signature(2)),
+        for (var i = 0; i < 7; i++) FrameAnalysis(quad: _page, signature: _signature(3)),
+      ];
+      var next = 0;
+      await open(
+        tester,
+        analyzer: (frame) async => seen[next < seen.length ? next++ : seen.length - 1],
+        overrides: [ocrEngineProvider.overrideWithValue(_FakeOcr(photoText: pageText))],
+      );
+
+      await frames(tester, 6);
+      await frames(tester, 8);
+      expect(camera.shots, 2);
+      expect(harness.pages, hasLength(1), reason: 'the text reads as the same page');
+      expect(find.text('Same page as page 1, not kept'), findsOneWidget);
+    });
+
+    testWidgets('short of memory, the text check is skipped and the page kept', (tester) async {
+      final seen = [
+        for (var i = 0; i < 6; i++) FrameAnalysis(quad: _page, signature: _signature(1)),
+        FrameAnalysis(quad: _page, signature: _signature(2)),
+        for (var i = 0; i < 7; i++) FrameAnalysis(quad: _page, signature: _signature(3)),
+      ];
+      var next = 0;
+      final ocr = _FakeOcr(photoText: pageText);
+      await open(
+        tester,
+        analyzer: (frame) async => seen[next < seen.length ? next++ : seen.length - 1],
+        overrides: [
+          ocrEngineProvider.overrideWithValue(ocr),
+          deviceLoadProbeProvider.overrideWithValue(
+            _FakeLoad(const DeviceLoad(availableMb: 200, totalMb: 4000, lowMemory: true)),
+          ),
+        ],
+      );
+
+      await frames(tester, 6);
+      await frames(tester, 8);
+      expect(camera.shots, 2);
+      expect(harness.pages, hasLength(2), reason: 'not read, so not dropped');
+      expect(ocr.fileReads, 0);
+    });
+
+    testWidgets('the same page taken with the shutter is always kept', (tester) async {
+      await open(tester, overrides: [ocrEngineProvider.overrideWithValue(_FakeOcr(photoText: pageText))]);
+      await tester.tap(find.bySemanticsLabel('Auto On'));
+      await tester.pump();
+      await shoot(tester, 'Take photo');
+      await shoot(tester, 'Take photo');
+      expect(harness.pages, hasLength(2));
     });
 
     testWidgets('with Auto off the page outline shows but nothing is taken', (tester) async {
