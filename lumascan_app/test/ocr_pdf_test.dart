@@ -48,7 +48,8 @@ void main() {
     ]);
     final out = await OcrPdfBuilder(PageStore(rootDir: () async => tmp))
         .build([OcrPdfPage(page: page, number: 1, text: layout.text, layout: layout)], fileName: 'x.pdf');
-    final bytes = Uint8List.fromList(out.readAsBytesSync());
+    expect(out.pageCount, 1);
+    final bytes = Uint8List.fromList(out.file.readAsBytesSync());
     expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
     // The picture is an embedded JPEG.
     expect(String.fromCharCodes(bytes), contains('DCTDecode'));

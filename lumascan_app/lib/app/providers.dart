@@ -12,6 +12,8 @@ import '../domain/photo_import.dart';
 import '../domain/qr_reader.dart';
 import '../domain/scanner_service.dart';
 import '../export/pdf_exporter.dart';
+import '../export/text_pdf_service.dart';
+import '../pdf_edit/pdf_edit_controller.dart';
 import '../features/batch_capture/batch_camera.dart';
 import '../imaging/render_service.dart';
 
@@ -26,6 +28,12 @@ final renderServiceProvider = Provider<RenderService>(
 );
 
 final pdfExporterProvider = Provider<PdfExporter>((ref) => PdfExporter(ref.watch(pageStoreProvider)));
+
+/// Makes text PDFs: OCR on the pages, then a PDF of the text with the
+/// pictures kept (Pro and Gold).
+final textPdfServiceProvider = Provider<TextPdfService>(
+  (ref) => TextPdfService(ref.watch(pageStoreProvider), ref.watch(ocrEngineProvider), ref.watch(pdfRasterizerProvider)),
+);
 
 final libraryStoreProvider = Provider<LibraryStore>((ref) => LibraryStore(ref.watch(pageStoreProvider)));
 

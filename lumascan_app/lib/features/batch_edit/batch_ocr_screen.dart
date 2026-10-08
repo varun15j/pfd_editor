@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../domain/ocr.dart';
+import '../../domain/plan.dart';
+import '../../ui/upgrade_dialog.dart';
 import '../../export/ocr_pdf_builder.dart';
 import '../share/pdf_sharer.dart';
 import '../pages/scan_controller.dart';
@@ -56,6 +58,7 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
 
   /// Builds a text PDF of the pages that were read, then offers it to share.
   Future<void> _createPdf(BatchOcrJob job, int? Function(String) numberOf) async {
+    if (!await ensurePlan(context, ref, PlanFeature.textPdf, what: 'Text PDF') || !mounted) return;
     final state = ref.read(scanControllerProvider);
     final pages = <OcrPdfPage>[
       for (final r in job.results)
@@ -71,7 +74,7 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _building = true);
     try {
-      final file = await OcrPdfBuilder(ref.read(pageStoreProvider)).build(pages);
+      final file = (await OcrPdfBuilder(ref.read(pageStoreProvider)).build(pages)).file;
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text('Saved ${file.uri.pathSegments.last}')));
       await ref.read(pdfSharerProvider).send(file.path);

@@ -24,6 +24,15 @@ class OcrPdfPage {
   final OcrLayout? layout;
 }
 
+/// The saved text PDF and how many PDF pages it came to (text can run
+/// longer than the scanned page it came from).
+class OcrPdfFile {
+  const OcrPdfFile(this.file, this.pageCount);
+
+  final File file;
+  final int pageCount;
+}
+
 /// One piece of a page in the PDF, top to bottom.
 sealed class _Piece {
   const _Piece(this.top);
@@ -51,19 +60,23 @@ class OcrPdfBuilder {
 
   final PageStore _store;
 
-  Future<File> build(List<OcrPdfPage> pages, {String? fileName, void Function(int done, int total)? onProgress}) async {
+  Future<OcrPdfFile> build(
+    List<OcrPdfPage> pages, {
+    String? fileName,
+    void Function(int done, int total)? onProgress,
+  }) async {
     if (pages.isEmpty) throw ArgumentError('No pages to build a PDF from');
     final built = <(int, List<_Piece>)>[];
     for (final (i, p) in pages.indexed) {
       built.add((p.number, await Isolate.run(() => _pieces(p))));
       onProgress?.call(i + 1, pages.length + 1);
     }
-    final bytes = await Isolate.run(() => _document(built));
+    final (bytes, pageCount) = await Isolate.run(() => _document(built));
     onProgress?.call(pages.length + 1, pages.length + 1);
     final now = DateTime.now();
     String two(int v) => v.toString().padLeft(2, '0');
     final name = fileName ?? 'Text_${now.year}${two(now.month)}${two(now.day)}_${two(now.hour)}${two(now.minute)}.pdf';
-    return _store.writeExportAtomically(await _store.freeExportName(name), bytes);
+    return OcrPdfFile(await _store.writeExportAtomically(await _store.freeExportName(name), bytes), pageCount);
   }
 }
 
@@ -81,7 +94,7 @@ List<_Piece> _pieces(OcrPdfPage p) {
 _ImagePiece _picture(double top, RgbImage image) =>
     _ImagePiece(top, image.encodeJpg(quality: 80), image.width, image.height);
 
-Future<Uint8List> _document(List<(int, List<_Piece>)> pages) {
+Future<(Uint8List, int)> _document(List<(int, List<_Piece>)> pages) async {
   final doc = pw.Document(title: 'Recognized text', creator: 'LumaScan');
   for (final (number, pieces) in pages) {
     doc.addPage(
@@ -110,7 +123,8 @@ Future<Uint8List> _document(List<(int, List<_Piece>)> pages) {
       ),
     );
   }
-  return doc.save();
+  final bytes = await doc.save();
+  return (bytes, doc.document.pdfPageList.pages.length);
 }
 
 /// The picture's width on the page: its own size at 150 dpi, but never more
