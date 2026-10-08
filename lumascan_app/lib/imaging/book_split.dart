@@ -14,10 +14,10 @@ const rightHalf = CropQuad(NormPoint(0.5, 0), NormPoint(1, 0), NormPoint(1, 1), 
 /// region found in the photo (the whole photo when none is found), and the
 /// spine is the darkest column in its middle third: the gutter shadow, the
 /// "luminance valley" of the design. Returns the left page, then the right.
-(CropQuad, CropQuad) splitSpread(RgbImage photo) {
+(CropQuad, CropQuad) splitSpread(RgbImage photo, {bool smart = true}) {
   // The gutter can cut the paper in two, so a region that does not reach
   // across the middle is one page, not the spread: use the whole photo.
-  final found = detectPageQuad(photo, minArea: 0.2);
+  final found = detectPageQuad(photo, minArea: 0.2, smart: smart);
   final spread = found != null && showsSpread(found) ? found : CropQuad.full;
   final s = spineFraction(photo, spread);
   final top = _lerp(spread.tl, spread.tr, s);

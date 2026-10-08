@@ -279,6 +279,14 @@ As a user who holds a page in front of the camera for half a minute or more befo
 - The text is read only when the phone has memory and CPU to spare; otherwise the page is kept unread.
 - A page turned slowly is still taken, and the next page is taken sooner after a turn.
 
+**US-03.12 — Every page photo is cropped to the page**  
+As a user scanning a book or sheets of any colour, I want every photo cropped to the page in the middle of the frame, and to crop or uncrop many pages at once.
+
+- The page is found by its colour against the background, the contrast across its edges and its place in the middle of the frame, so cream, yellowed or coloured paper is found too.
+- The outline on the preview does not flicker out when the page is lost for a moment.
+- A photo in which no page is found is cropped to the outline that was on the preview.
+- In Batch Review, Crop offers Auto crop, Full photo or Adjust each page for the selected pages; Auto crop and Full photo are one undo step each.
+
 ---
 
 ## EP-04 — Import and alternate acquisition
