@@ -168,12 +168,12 @@ void main() {
 
     testWidgets('deleted documents also leave Home', (tester) async {
       await pumpApp(tester, library: MemoryLibraryStore(threeDocs()));
-      expect(find.byType(RecentDocumentCard), findsNWidgets(3));
+      expect(find.textContaining('· PDF'), findsNWidgets(3));
       await openLibrary(tester);
       await menu(tester, 'Lease', 'Delete');
       await tester.tap(find.bySemanticsLabel('Home'));
       await tester.pumpAndSettle();
-      expect(find.byType(RecentDocumentCard), findsNWidgets(2));
+      expect(find.textContaining('· PDF'), findsNWidgets(2));
     });
 
     testWidgets('rename asks for a name and rejects an empty one', (tester) async {
@@ -199,11 +199,19 @@ void main() {
   });
 
   group('home', () {
-    testWidgets('recent documents show as cards', (tester) async {
-      await pumpApp(tester, library: MemoryLibraryStore(threeDocs()));
-      expect(find.byType(RecentDocumentCard), findsNWidgets(3));
+    testWidgets('documents show as a gallery by default, and as a list once picked', (tester) async {
+      final prefs = MemoryUiPrefsStore();
+      await pumpApp(tester, prefs: prefs, library: MemoryLibraryStore(threeDocs()));
+      expect(find.textContaining('· PDF'), findsNWidgets(3));
       expect(find.text('Your scans will show up here.'), findsNothing);
-      expect(find.bySemanticsLabel('Lease, 9 Mar 2026'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp(r'^Lease, 9 Mar 2026 · \d+ pages? · PDF$')), findsOneWidget);
+      expect(find.byTooltip('Show as list'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Show as list'));
+      await tester.pumpAndSettle();
+      expect(prefs.prefs.homeView, LibraryView.list);
+      expect(find.byTooltip('Show as gallery'), findsOneWidget);
+      expect(find.textContaining('· PDF'), findsNWidgets(3));
     });
 
     testWidgets('the photos card can be dismissed for good', (tester) async {
@@ -246,6 +254,7 @@ void main() {
       final file = File(path.join(tmp.path, UiPrefsStore.prefsFile));
       expect(jsonDecode(file.readAsStringSync()), {
         'libraryView': 'grid',
+        'homeView': 'grid',
         'dismissedCards': ['photos_to_pdf'],
       });
 

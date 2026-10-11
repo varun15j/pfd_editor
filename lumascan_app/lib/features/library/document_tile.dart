@@ -330,56 +330,6 @@ class DocumentGridCard extends StatelessWidget {
   }
 }
 
-/// Compact card for Home's Recent row.
-class RecentDocumentCard extends StatelessWidget {
-  const RecentDocumentCard({super.key, required this.document, required this.onTap});
-
-  final SavedDocument document;
-  final VoidCallback onTap;
-
-  static const width = 132.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Semantics(
-      button: true,
-      label: '${document.name}, ${formatModified(document.modifiedAt, DateTime.now())}',
-      excludeSemantics: true,
-      child: SizedBox(
-        width: width,
-        child: Card(
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: DocumentThumbnail(document: document, iconSize: 36)),
-                Padding(
-                  padding: const EdgeInsets.all(Space.sm),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(document.name, style: text.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      Text(
-                        formatModified(document.modifiedAt, DateTime.now()),
-                        style: text.bodySmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// "Just now", "5 min ago", "Today 14:05", "Yesterday", or "3 Oct 2026".
 String formatModified(DateTime t, DateTime now) {
   final diff = now.difference(t);

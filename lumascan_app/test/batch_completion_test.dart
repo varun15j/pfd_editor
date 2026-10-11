@@ -7,6 +7,7 @@ import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/features/batch_capture/batch_capture_screen.dart';
 import 'package:lumascan/features/batch_edit/batch_review_screen.dart';
+import 'package:lumascan/domain/scan_document.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 
 import 'support/fake_batch_camera.dart';
@@ -19,10 +20,10 @@ class _GatedDraftStore extends MemoryDraftStore {
   bool fail = false;
 
   @override
-  Future<void> save(List<ScanPage> pages) async {
+  Future<void> save(List<ScanPage> pages, {ScanDocInfo? info}) async {
     await gate?.future;
     if (fail) throw StateError('disk full');
-    await super.save(pages);
+    await super.save(pages, info: info);
   }
 }
 

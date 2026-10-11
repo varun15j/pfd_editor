@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/app/theme.dart';
 import 'package:lumascan/data/page_store.dart';
@@ -55,10 +56,15 @@ class ScreenHarness {
         pageStoreProvider.overrideWithValue(store),
         renderServiceProvider.overrideWithValue(_NoRender(store)),
         libraryStoreProvider.overrideWithValue(MemoryLibraryStore()),
+        appSettingsStoreProvider.overrideWithValue(plainPagesSettings()),
         ...overrides,
       ],
     );
-    await container.read(scanControllerProvider.notifier).scan(ScanSource.camera);
+    await container.read(appSettingsProvider.notifier).loaded;
+    final scan = container.read(scanControllerProvider.notifier);
+    await scan.scan(ScanSource.camera);
+    // A fixed name, so screens that show it look the same on any day.
+    scan.rename('2026-10-03 Scan');
   }
 
   void dispose() {

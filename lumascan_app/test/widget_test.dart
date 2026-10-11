@@ -5,10 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/app/theme.dart';
+import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/domain/models.dart';
+import 'package:lumascan/domain/scan_document.dart';
 import 'package:lumascan/domain/ui_prefs.dart';
 import 'package:lumascan/features/capture/scan_tips.dart';
+import 'package:lumascan/imaging/page_renderer.dart';
+import 'package:lumascan/imaging/render_service.dart';
 import 'package:lumascan/ui/state_views.dart';
 
 import 'support/fake_batch_camera.dart';
@@ -17,6 +21,18 @@ import 'support/pump_app.dart';
 
 /// A camera whose access is turned off; it never takes a photo.
 FakeBatchCamera _blockedCamera() => FakeBatchCamera(Directory.systemTemp, deny: true);
+
+/// Page images that cannot be drawn, so screens showing pages that are not
+/// on disk settle at once with the broken-image icon.
+class _NoImages extends RenderService {
+  _NoImages() : super(PageStore());
+
+  @override
+  Future<RenderedImage> render(ScanPage page, {EditRecipe? recipe, int maxDimension = RenderService.previewSize}) =>
+      Future.error(const FileSystemException('not in tests'));
+}
+
+final _noImages = renderServiceProvider.overrideWithValue(_NoImages());
 
 class _BrokenLibraryStore extends MemoryLibraryStore {
   @override
@@ -159,45 +175,74 @@ void main() {
       expect(find.text('Your scans will show up here.'), findsNothing);
     });
 
-    testWidgets('a draft saved before the app was killed is offered on home', (tester) async {
-      await pumpApp(
-        tester,
-        draft: MemoryDraftStore(const [
-          ScanPage(id: 'a', originalPath: '/nowhere/a.jpg'),
-          ScanPage(id: 'b', originalPath: '/nowhere/b.jpg'),
-        ]),
-      );
-      expect(find.text('Continue draft'), findsOneWidget);
-      expect(find.text('2 pages not saved yet'), findsOneWidget);
+    testWidgets('a scan saved before the app was killed is on home under its name', (tester) async {
+      final store = MemoryDraftStore(const [
+        ScanPage(id: 'a', originalPath: '/nowhere/a.jpg'),
+        ScanPage(id: 'b', originalPath: '/nowhere/b.jpg'),
+      ])..info = ScanDocInfo(name: '2026-10-11 Scan', createdAt: DateTime(2026, 10, 11, 9));
+      await pumpApp(tester, draft: store, overrides: [_noImages]);
+      expect(find.text('2026-10-11 Scan'), findsOneWidget);
+      expect(find.textContaining('2 pages · Images'), findsOneWidget);
     });
 
     testWidgets('earlier scans are listed on home and open again to add pages', (tester) async {
       final store = MemoryDraftStore(const [
         ScanPage(id: 'a', originalPath: '/nowhere/a.jpg'),
         ScanPage(id: 'b', originalPath: '/nowhere/b.jpg'),
-      ]);
-      await store.park(const [
-        ScanPage(id: 'x', originalPath: '/nowhere/x.jpg'),
-        ScanPage(id: 'y', originalPath: '/nowhere/y.jpg'),
-        ScanPage(id: 'z', originalPath: '/nowhere/z.jpg'),
-      ], exported: true);
-      await pumpApp(tester, draft: store);
-      expect(find.text('2 pages not saved yet'), findsOneWidget);
-      expect(find.text('3 pages, saved as PDF'), findsOneWidget);
+      ])..info = ScanDocInfo(name: '2026-10-11 Scan 2', createdAt: DateTime(2026, 10, 11, 10));
+      await store.park(
+        const [
+          ScanPage(id: 'x', originalPath: '/nowhere/x.jpg'),
+          ScanPage(id: 'y', originalPath: '/nowhere/y.jpg'),
+          ScanPage(id: 'z', originalPath: '/nowhere/z.jpg'),
+        ],
+        exported: true,
+        info: ScanDocInfo(name: '2026-10-11 Scan', createdAt: DateTime(2026, 10, 11, 9)),
+      );
+      await pumpApp(tester, draft: store, overrides: [_noImages]);
+      expect(find.text('2026-10-11 Scan 2'), findsOneWidget);
+      expect(find.textContaining('3 pages · Images, PDF made'), findsOneWidget);
 
-      await tester.tap(find.text('3 pages, saved as PDF'));
+      await tester.tap(find.text('2026-10-11 Scan'));
       // Page images that do not exist keep their spinners going, so no settle.
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       expect(store.pages.map((p) => p.id), ['x', 'y', 'z']);
+      expect(store.info?.name, '2026-10-11 Scan');
       await tester.pageBack();
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
-      // The other document is kept, now as the earlier scan.
-      expect(find.text('Continue draft'), findsOneWidget);
-      expect(find.text('3 pages, saved as PDF'), findsOneWidget);
-      expect(find.text('2 pages not saved yet'), findsOneWidget);
-      expect(find.textContaining('Scan, '), findsOneWidget);
+      // The other scan is kept, now as an earlier one, with its own name.
+      expect(find.text('2026-10-11 Scan'), findsOneWidget);
+      expect(find.text('2026-10-11 Scan 2'), findsOneWidget);
+    });
+
+    testWidgets('a scan on home can be renamed and deleted from its menu', (tester) async {
+      final store = MemoryDraftStore();
+      await store.park(const [
+        ScanPage(id: 'x', originalPath: '/nowhere/x.jpg'),
+      ], info: ScanDocInfo(name: '2026-10-11 Scan', createdAt: DateTime(2026, 10, 11, 9)));
+      await pumpApp(tester, draft: store, overrides: [_noImages]);
+      await tester.tap(find.byTooltip('More for 2026-10-11 Scan'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Rename'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), 'Bills');
+      await tester.tap(find.widgetWithText(FilledButton, 'Rename'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Bills'), findsOneWidget);
+      expect(store.parkedPages.values.single.$1.name, 'Bills');
+
+      await tester.tap(find.byTooltip('More for Bills'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Bills'), findsNothing);
+      expect(store.parkedPages, isEmpty);
     });
 
     testWidgets('a library that fails to load offers a retry', (tester) async {
