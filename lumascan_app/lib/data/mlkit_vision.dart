@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'dart:ui' show Size;
 
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
@@ -12,7 +13,7 @@ import '../features/batch_capture/camera_frame.dart';
 
 /// Text recognition with ML Kit, on the device. The Latin-script model ships
 /// with the app, so nothing is downloaded and pages never leave the phone.
-class MlKitOcrEngine implements OcrEngine {
+class MlKitOcrEngine implements OcrEngine, OcrLayoutEngine {
   MlKitOcrEngine({required this.imageFor});
 
   /// The page as rendered with its crop, rotation and filter, as an image
@@ -55,6 +56,30 @@ class MlKitOcrEngine implements OcrEngine {
 
   @override
   Future<String> recognize(ScanPage page, {required String languageCode}) async => recognizeFile(await imageFor(page));
+
+  @override
+  Future<OcrLayout> recognizeLayout(ScanPage page, {required String languageCode}) async {
+    final path = await imageFor(page);
+    final recognizer = _recognizer ??= TextRecognizer(script: TextRecognitionScript.latin);
+    final result = await recognizer.processImage(InputImage.fromFilePath(path));
+    final buffer = await ui.ImmutableBuffer.fromUint8List(await File(path).readAsBytes());
+    final descriptor = await ui.ImageDescriptor.encoded(buffer);
+    final w = descriptor.width.toDouble(), h = descriptor.height.toDouble();
+    descriptor.dispose();
+    buffer.dispose();
+    double unit(double v, double of) => (v / of).clamp(0.0, 1.0);
+    return OcrLayout([
+      for (final b in result.blocks)
+        if (b.text.trim().isNotEmpty)
+          OcrBlock(
+            text: b.text,
+            left: unit(b.boundingBox.left, w),
+            top: unit(b.boundingBox.top, h),
+            right: unit(b.boundingBox.right, w),
+            bottom: unit(b.boundingBox.bottom, h),
+          ),
+    ]);
+  }
 
   @override
   Future<String> recognizeFile(String path) async {

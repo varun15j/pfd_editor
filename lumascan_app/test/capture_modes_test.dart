@@ -336,6 +336,7 @@ void main() {
       List overrides = const [],
       FrameAnalyzer? analyzer,
       PhotoAnalyzer? photos,
+      AppPlan plan = AppPlan.pro,
     }) async {
       shots = Directory.systemTemp.createTempSync('lumascan_shots');
       camera = FakeBatchCamera(shots);
@@ -348,7 +349,7 @@ void main() {
             frameAnalyzerProvider.overrideWithValue(analyzer ?? (frame) async => const FrameAnalysis(quad: _page)),
             spreadSplitterProvider.overrideWithValue((path) async => (_left, _right)),
             appSettingsStoreProvider.overrideWithValue(MemoryAppSettingsStore()),
-            planProvider.overrideWithValue(AppPlan.pro),
+            planProvider.overrideWithValue(plan),
             ...overrides,
           ],
         ),
@@ -497,6 +498,52 @@ void main() {
       await tester.pump();
       await frames(tester, 4);
       expect(find.byKey(const ValueKey('page-outline')), findsOneWidget);
+    });
+
+    group('on the Basic plan', () {
+      testWidgets('a held page taken again is kept, and the text is not read', (tester) async {
+        final seen = [
+          for (var i = 0; i < 6; i++) FrameAnalysis(quad: _page, signature: _signature(1)),
+          FrameAnalysis(quad: _page, signature: _signature(2)),
+          for (var i = 0; i < 7; i++) FrameAnalysis(quad: _page, signature: _signature(3)),
+        ];
+        var next = 0;
+        final ocr = _FakeOcr(photoText: pageText);
+        await open(
+          tester,
+          plan: AppPlan.basic,
+          analyzer: (frame) async => seen[next < seen.length ? next++ : seen.length - 1],
+          overrides: [ocrEngineProvider.overrideWithValue(ocr)],
+        );
+
+        await frames(tester, 6);
+        await frames(tester, 8);
+        expect(camera.shots, 2);
+        expect(harness.pages, hasLength(2), reason: 'no repeat check on Basic');
+        expect(ocr.fileReads, 0);
+        expect(find.textContaining('not kept'), findsNothing);
+      });
+
+      testWidgets('a photo with no page found is not cropped to the preview outline', (tester) async {
+        await open(tester, plan: AppPlan.basic, photos: _NoPage());
+        await frames(tester, 6);
+        expect(camera.shots, 1);
+        expect(harness.pages.single.recipe.crop.isFull, isTrue);
+      });
+
+      testWidgets('the outline is not held when the page is lost for a frame', (tester) async {
+        final seen = [for (var i = 0; i < 3; i++) const FrameAnalysis(quad: _page), const FrameAnalysis()];
+        var next = 0;
+        await open(
+          tester,
+          plan: AppPlan.basic,
+          analyzer: (frame) async => seen[next < seen.length ? next++ : seen.length - 1],
+        );
+        await tester.tap(find.bySemanticsLabel('Auto On'));
+        await tester.pump();
+        await frames(tester, 4);
+        expect(find.byKey(const ValueKey('page-outline')), findsNothing);
+      });
     });
 
     testWidgets('with Auto off the page outline shows but nothing is taken', (tester) async {

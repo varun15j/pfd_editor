@@ -5,12 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/app/theme.dart';
 import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/domain/models.dart';
+import 'package:lumascan/domain/plan.dart';
 import 'package:lumascan/domain/scanner_service.dart';
+import 'package:lumascan/export/ocr_pdf_builder.dart';
 import 'package:lumascan/export/pdf_exporter.dart';
+import 'package:lumascan/export/text_pdf_service.dart';
 import 'package:lumascan/features/export/export_sheet.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 
@@ -48,7 +52,37 @@ class _FakeExporter implements PdfExporter {
   }
 }
 
+/// Makes a "text PDF" at once, noting what it was asked to read.
+class _FakeTextPdf implements TextPdfService {
+  _FakeTextPdf(this.output);
+  final File output;
+  final names = <String>[];
+
+  @override
+  Future<OcrPdfFile> fromPages(
+    List<ScanPage> pages, {
+    required String fileName,
+    String languageCode = 'en',
+    void Function(double fraction)? onProgress,
+  }) async {
+    names.add(fileName);
+    onProgress?.call(0.5);
+    return OcrPdfFile(output, 7);
+  }
+
+  @override
+  Future<OcrPdfFile> fromPdf(
+    String sourcePath, {
+    required int pageCount,
+    required String fileName,
+    String languageCode = 'en',
+    void Function(double fraction)? onProgress,
+  }) => throw UnimplementedError();
+}
+
 void main() {
+  var plan = AppPlan.basic;
+  late _FakeTextPdf textPdf;
   late Directory tmp;
   late _FakeExporter exporter;
   late ProviderContainer container;
@@ -59,12 +93,16 @@ void main() {
       for (var i = 0; i < 4; i++)
         (File('${tmp.path}/scan$i.jpg')..writeAsBytesSync(img.encodeJpg(img.Image(width: 30, height: 40)))).path,
     ];
+    plan = AppPlan.basic;
+    textPdf = _FakeTextPdf(File('${tmp.path}/text.pdf')..writeAsBytesSync(List.filled(4096, 0)));
     exporter = _FakeExporter(File('${tmp.path}/out.pdf')..writeAsBytesSync(List.filled(2048, 0)));
     container = ProviderContainer(
       overrides: [
         scannerServiceProvider.overrideWithValue(_FakeScanner(paths)),
         pageStoreProvider.overrideWithValue(PageStore(rootDir: () async => tmp)),
         pdfExporterProvider.overrideWithValue(exporter),
+        textPdfServiceProvider.overrideWithValue(textPdf),
+        planProvider.overrideWith((ref) => plan),
         libraryStoreProvider.overrideWithValue(MemoryLibraryStore()),
       ],
     );
@@ -117,6 +155,47 @@ void main() {
     expect(nameField(tester), matches(RegExp(r'^Scan \d{4}-\d{2}-\d{2} \d{2}\.\d{2}$')));
     expect(find.text('.pdf'), findsOneWidget);
   });
+
+  testWidgets('on Basic the Text PDF choice is shown with Pro, and tapping it offers the upgrade', (tester) async {
+    await pumpSheet(tester);
+    expect(find.text('Text PDF · Pro'), findsOneWidget);
+
+    await tester.tap(find.text('Text PDF · Pro'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Upgrade to Pro'), findsWidgets);
+    expect(find.textContaining('part of the Pro plan'), findsOneWidget);
+    await tester.tap(find.text('Not now'));
+    await tester.pumpAndSettle();
+    // Still a plain PDF export.
+    expect(find.text('Save PDF'), findsOneWidget);
+    expect(textPdf.names, isEmpty);
+  });
+
+  for (final pro in [AppPlan.pro, AppPlan.gold]) {
+    testWidgets('on ${pro.label} Text PDF reads the pages and saves a text PDF', (tester) async {
+      plan = pro;
+      await pumpSheet(tester);
+      await tester.tap(find.text('Text PDF'));
+      await tester.pumpAndSettle();
+      expect(find.text('Upgrade to Pro'), findsNothing);
+      // The plain PDF options are not offered for a text PDF.
+      expect(find.text('Small file'), findsNothing);
+
+      await tester.enterText(find.byType(TextField), 'Lease');
+      await tester.tap(find.text('Save text PDF'));
+      await tester.pump();
+      for (var i = 0; i < 6; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+        await tester.pump();
+      }
+
+      expect(textPdf.names, ['Lease (text).pdf']);
+      expect(exporter.calls, isEmpty);
+      expect(find.text('Text PDF saved'), findsOneWidget);
+      expect(find.textContaining('7 pages'), findsOneWidget);
+    });
+  }
 
   testWidgets('every quality shows an estimated size for this document', (tester) async {
     await pumpSheet(tester);

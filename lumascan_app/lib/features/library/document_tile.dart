@@ -1,11 +1,15 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/preferences.dart';
 import '../../app/theme.dart';
 import '../../domain/library.dart';
+import '../../domain/plan.dart';
+import '../../ui/state_views.dart';
 
-enum DocumentMenuAction { rename, move, tags, share, delete }
+enum DocumentMenuAction { rename, move, tags, share, textPdf, delete }
 
 /// First-page thumbnail on a white page, or a PDF icon when there is none.
 class DocumentThumbnail extends StatelessWidget {
@@ -116,7 +120,7 @@ class _DocumentInteraction {
     return PopupMenuButton<DocumentMenuAction>(
       tooltip: 'More for ${document.name}',
       onSelected: onMenu,
-      itemBuilder: (_) => const [
+      itemBuilder: (menuContext) => [
         PopupMenuItem(
           value: DocumentMenuAction.rename,
           child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Rename')),
@@ -134,6 +138,17 @@ class _DocumentInteraction {
           child: ListTile(leading: Icon(Icons.ios_share), title: Text('Share')),
         ),
         PopupMenuItem(
+          value: DocumentMenuAction.textPdf,
+          child: ListTile(
+            leading: const Icon(Icons.text_snippet_outlined),
+            title: const Text('Create text PDF'),
+            // Shown to everyone; on Basic it opens the upgrade pop-up.
+            trailing: ProviderScope.containerOf(menuContext).read(planIncludesProvider(PlanFeature.textPdf))
+                ? null
+                : const PremiumBadge(label: 'Pro'),
+          ),
+        ),
+        const PopupMenuItem(
           value: DocumentMenuAction.delete,
           child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Delete')),
         ),
