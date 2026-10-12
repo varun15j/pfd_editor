@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/app/providers.dart';
+import 'package:lumascan/app/shell.dart';
 import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/features/batch_capture/batch_capture_screen.dart';
 import 'package:lumascan/features/batch_edit/batch_review_screen.dart';
+import 'package:lumascan/features/pages/pages_screen.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 
 import 'support/fake_batch_camera.dart';
@@ -101,7 +103,9 @@ void main() {
       shots.deleteSync(recursive: true);
     });
 
-    Future<void> open(WidgetTester tester, {int pageCount = 0, bool deny = false}) async {
+    /// [fromHome] opens the camera the way Home's Scan does, so the document
+    /// opens after the camera closes.
+    Future<void> open(WidgetTester tester, {int pageCount = 0, bool deny = false, bool fromHome = false}) async {
       shots = Directory.systemTemp.createTempSync('lumascan_shots');
       camera = FakeBatchCamera(shots, deny: deny);
       await tester.runAsync(
@@ -113,7 +117,18 @@ void main() {
           ],
         ),
       );
-      await harness.pumpRoute(tester, (_) => const BatchCaptureScreen());
+      if (!fromHome) return harness.pumpRoute(tester, (_) => const BatchCaptureScreen());
+      await harness.pump(
+        tester,
+        Scaffold(
+          body: Consumer(
+            builder: (context, ref, _) =>
+                TextButton(onPressed: () => openBatchCapture(context, ref), child: const Text('home')),
+          ),
+        ),
+      );
+      await tester.tap(find.text('home'));
+      await harness.settle(tester);
     }
 
     Future<void> shoot(WidgetTester tester, {int times = 1}) async {
@@ -259,6 +274,37 @@ void main() {
 
       expect(find.byType(BatchCaptureScreen), findsNothing);
       expect(camera.closed, isTrue);
+    });
+
+    testWidgets('Review document from Batch Review opens the document after the camera', (tester) async {
+      await open(tester, fromHome: true);
+      await shoot(tester);
+      await review(tester);
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Review document'));
+      await harness.settle(tester);
+
+      expect(find.byType(BatchCaptureScreen), findsNothing);
+      expect(find.byType(PagesScreen), findsOneWidget);
+    });
+
+    testWidgets('Save and go home from Batch Review keeps the pages and goes back to Home', (tester) async {
+      await open(tester, fromHome: true);
+      await shoot(tester, times: 2);
+      await review(tester);
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save and go home'));
+      await harness.settle(tester);
+
+      expect(find.byType(BatchCaptureScreen), findsNothing);
+      expect(find.byType(BatchReviewScreen), findsNothing);
+      expect(find.byType(PagesScreen), findsNothing);
+      expect(find.text('home'), findsOneWidget);
+      expect(camera.closed, isTrue);
+      expect(harness.pages, hasLength(2));
+      expect(harness.container.read(showHomeProvider), 1);
     });
 
     testWidgets('Continue scanning closes Captured photos and keeps the camera open', (tester) async {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../domain/models.dart';
 import '../batch_capture/batch_capture_screen.dart';
@@ -42,6 +43,8 @@ class _BatchReviewScreenState extends ConsumerState<BatchReviewScreen> {
         await openBatchCapture(context, ref, openDraftAfter: false);
       case BatchOutcome.review:
         Navigator.of(context).pop();
+      case BatchOutcome.home:
+        await saveAndGoHome(context, ref);
       case BatchOutcome.export:
         await showExportSheet(context);
     }
