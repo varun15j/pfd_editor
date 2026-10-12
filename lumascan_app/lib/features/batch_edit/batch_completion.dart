@@ -8,6 +8,7 @@ import '../pages/scan_controller.dart';
 enum BatchOutcome {
   camera('Return to camera', 'Scan more pages into this document', Icons.document_scanner_outlined),
   review('Review document', 'Go back to the document pages', Icons.description_outlined),
+  home('Save and go home', 'Keep this document and start a new one from Home', Icons.home_outlined),
   export('Export PDF', 'Choose the PDF settings and save it', Icons.picture_as_pdf_outlined);
 
   const BatchOutcome(this.label, this.hint, this.icon);

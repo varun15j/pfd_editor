@@ -33,7 +33,8 @@ import 'page_identity.dart';
 
 /// Opens the camera. Pages join the current draft as they are taken. When
 /// the camera closes with pages taken, the draft opens; [openDraftAfter] is
-/// false when the caller is already inside the draft. When camera access is
+/// false when the caller is already inside the draft. Save and go home in
+/// Batch Review goes back to Home instead. When camera access is
 /// blocked and photo import is picked instead, that runs here.
 Future<void> openBatchCapture(BuildContext context, WidgetRef ref, {bool openDraftAfter = true}) async {
   final before = ref.read(scanControllerProvider).pages;
@@ -46,6 +47,7 @@ Future<void> openBatchCapture(BuildContext context, WidgetRef ref, {bool openDra
     if (added && openDraftAfter && context.mounted) openDraft(context);
     return;
   }
+  if (exit == BatchOutcome.home) return saveAndGoHome(context, ref);
   final taken = !identical(ref.read(scanControllerProvider).pages, before);
   if (openDraftAfter && (taken || exit != null)) openDraft(context);
   if (exit == BatchOutcome.export && context.mounted) await showExportSheet(context);
@@ -748,7 +750,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     final outcome = await Navigator.of(context)
         .push<BatchOutcome>(MaterialPageRoute(builder: (_) => const BatchReviewScreen(fromCamera: true)));
     if (!mounted) return;
-    if (outcome == BatchOutcome.review || outcome == BatchOutcome.export) {
+    if (outcome == BatchOutcome.review || outcome == BatchOutcome.home || outcome == BatchOutcome.export) {
       Navigator.of(context).pop(outcome);
       return;
     }

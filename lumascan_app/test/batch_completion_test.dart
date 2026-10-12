@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/app/providers.dart';
+import 'package:lumascan/app/shell.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/features/batch_capture/batch_capture_screen.dart';
 import 'package:lumascan/features/batch_edit/batch_review_screen.dart';
@@ -88,10 +89,11 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('offers camera, review and export, and shows the draft is saved', (tester) async {
+    testWidgets('offers camera, review, go home and export, and shows the draft is saved', (tester) async {
       await openDone(tester);
       expect(find.text('Return to camera'), findsOneWidget);
       expect(find.text('Review document'), findsOneWidget);
+      expect(find.text('Save and go home'), findsOneWidget);
       expect(find.text('Export PDF'), findsOneWidget);
       expect(find.bySemanticsLabel('Draft: Saved on this device'), findsWidgets);
     });
@@ -102,6 +104,16 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Batch review'), findsNothing);
       expect(find.text('open'), findsOneWidget);
+    });
+
+    testWidgets('Save and go home closes every screen and keeps the document', (tester) async {
+      await openDone(tester);
+      await tester.tap(find.text('Save and go home'));
+      await harness.settle(tester);
+      expect(find.text('Batch review'), findsNothing);
+      expect(find.text('open'), findsOneWidget);
+      expect(harness.pages, hasLength(2));
+      expect(harness.container.read(showHomeProvider), 1);
     });
 
     testWidgets('Return to camera opens Batch capture into the same draft and keeps the selection', (tester) async {
