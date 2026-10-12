@@ -1519,23 +1519,31 @@ class _ModeStrip extends StatelessWidget {
                 selected: m == mode,
                 label: '${m.label} capture mode',
                 excludeSemantics: true,
-                child: GestureDetector(
-                  onTap: () => onMode(m),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    constraints: const BoxConstraints(minHeight: 36),
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: m == mode ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      m.label,
-                      style: TextStyle(
-                        color: m == mode ? Colors.black : Colors.white,
-                        fontWeight: m == mode ? FontWeight.w700 : FontWeight.w500,
-                        fontSize: 13,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: () => onMode(m),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: minTapTarget),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        constraints: const BoxConstraints(minHeight: ControlMetrics.visualHeight),
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: m == mode ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          m.label,
+                          style: TextStyle(
+                            color: m == mode ? Colors.black : Colors.white,
+                            fontWeight: m == mode ? FontWeight.w700 : FontWeight.w500,
+                            fontSize: 13,
+                          ),
+                        ),
                       ),
                     ),
                   ),

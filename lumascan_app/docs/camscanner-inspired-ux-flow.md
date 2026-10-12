@@ -233,3 +233,22 @@ Reference coverage: account/storage summary, settings, OCR language, document de
 - Preserve originals until the user explicitly deletes them; destructive edits need undo or confirmation.
 - Show premium gates before processing starts, not after the user waits.
 - Keep camera, crop and export usable without an account; require sign-in only for sync and collaborative link features.
+
+### Compact scanner control system
+
+The implementation uses the reference app's compact information density as a behavioral cue, while retaining LumaScan's own colors, typography, icons and component shapes.
+
+- Every interactive control keeps a minimum 48 × 48 dp hit area even when its visible icon or pill is smaller.
+- Persistent toolbars use 20 dp icons, short labels and 10 dp corner radii. Secondary actions move to **More** instead of competing with the primary task.
+- Camera mode pills are visually 36 dp high inside a 48 dp target; selected state uses fill, weight and semantics rather than color alone.
+- Home shortcuts, the Tools catalog, creation sheet, document actions, markup tools and page export controls share the same compact sizing tokens.
+- Buttons and text fields use tighter internal padding globally, but text still scales to 200% and labels may not be removed merely to save space.
+- The centered Create/Scan action remains visually prominent at 56 dp because capture is the product's primary action.
+- Destructive, disabled and selected states retain explicit TalkBack labels and explanations.
+
+Implementation acceptance criteria:
+
+- Android and iOS tap-target guidelines pass on Home, Library, Tools, Settings and task screens.
+- Compact controls do not overflow at 200% text scale; grids switch to one column when necessary.
+- Icon-only buttons have tooltips and semantic labels; icon-and-label toolbar actions expose one combined semantic node.
+- The raw mobile screenshots remain private. PR review uses the sanitized reference sheet above to explain design provenance.

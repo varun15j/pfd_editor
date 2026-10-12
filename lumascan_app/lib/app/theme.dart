@@ -97,7 +97,8 @@ class LumaColors extends ThemeExtension<LumaColors> {
     canvas: Color(0xFFFFFFFF),
   );
 
-  static LumaColors of(BuildContext context) => Theme.of(context).extension<LumaColors>()!;
+  static LumaColors of(BuildContext context) =>
+      Theme.of(context).extension<LumaColors>()!;
 
   @override
   LumaColors copyWith({
@@ -177,9 +178,21 @@ abstract final class Radii {
   static const lg = 20.0;
 }
 
+/// Compact scanner controls keep the chrome quiet without making touch
+/// targets smaller. The visual icon or pill can be 20–36 dp while its hit
+/// area remains [tapTarget].
+abstract final class ControlMetrics {
+  static const tapTarget = 48.0;
+  static const visualHeight = 36.0;
+  static const icon = 20.0;
+  static const smallIcon = 18.0;
+  static const radius = 10.0;
+  static const horizontalPadding = 12.0;
+}
+
 /// Smallest tap target in logical pixels (spec section 6 asks for 44; the
 /// Material guideline of 48 is used).
-const minTapTarget = 48.0;
+const minTapTarget = ControlMetrics.tapTarget;
 
 ThemeData buildLumaTheme(Brightness brightness) {
   final c = brightness == Brightness.dark ? LumaColors.dark : LumaColors.light;
@@ -194,7 +207,9 @@ ThemeData buildLumaTheme(Brightness brightness) {
     tertiary: c.premium,
     onTertiary: c.onPremium,
     error: c.danger,
-    onError: brightness == Brightness.dark ? const Color(0xFF3B0A07) : Colors.white,
+    onError: brightness == Brightness.dark
+        ? const Color(0xFF3B0A07)
+        : Colors.white,
     surface: c.surface,
     onSurface: c.ink,
     onSurfaceVariant: c.muted,
@@ -206,16 +221,28 @@ ThemeData buildLumaTheme(Brightness brightness) {
     outline: c.muted,
     outlineVariant: c.line,
   );
-  final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.md));
+  final shape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(ControlMetrics.radius),
+  );
   const minSize = Size(minTapTarget, minTapTarget);
+  const compactPadding = EdgeInsets.symmetric(
+    horizontal: ControlMetrics.horizontalPadding,
+    vertical: Space.sm,
+  );
   final base = ThemeData(colorScheme: scheme, brightness: brightness);
   final text = base.textTheme.apply(bodyColor: c.ink, displayColor: c.ink);
+  final compactLabel = text.labelLarge?.copyWith(fontWeight: FontWeight.w600);
 
   return base.copyWith(
     scaffoldBackgroundColor: c.background,
+    visualDensity: VisualDensity.standard,
+    materialTapTargetSize: MaterialTapTargetSize.padded,
     extensions: [c],
     textTheme: text.copyWith(
-      headlineMedium: text.headlineMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.3),
+      headlineMedium: text.headlineMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.3,
+      ),
       headlineSmall: text.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
       titleLarge: text.titleLarge?.copyWith(fontWeight: FontWeight.w600),
       titleMedium: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -227,6 +254,8 @@ ThemeData buildLumaTheme(Brightness brightness) {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
+      toolbarHeight: 56,
+      actionsPadding: const EdgeInsets.symmetric(horizontal: Space.xs),
     ),
     cardTheme: CardThemeData(
       color: c.surface,
@@ -239,18 +268,84 @@ ThemeData buildLumaTheme(Brightness brightness) {
     ),
     dividerTheme: DividerThemeData(color: c.line, space: 1, thickness: 1),
     filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(minimumSize: minSize, shape: shape),
+      style: FilledButton.styleFrom(
+        minimumSize: minSize,
+        padding: compactPadding,
+        shape: shape,
+        textStyle: compactLabel,
+        iconSize: ControlMetrics.smallIcon,
+        tapTargetSize: MaterialTapTargetSize.padded,
+      ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         minimumSize: minSize,
+        padding: compactPadding,
         shape: shape,
         foregroundColor: c.ink,
         side: BorderSide(color: c.line),
+        textStyle: compactLabel,
+        iconSize: ControlMetrics.smallIcon,
+        tapTargetSize: MaterialTapTargetSize.padded,
       ),
     ),
-    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(minimumSize: minSize)),
-    iconButtonTheme: IconButtonThemeData(style: IconButton.styleFrom(minimumSize: minSize)),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        minimumSize: minSize,
+        padding: compactPadding,
+        shape: shape,
+        textStyle: compactLabel,
+        iconSize: ControlMetrics.smallIcon,
+        tapTargetSize: MaterialTapTargetSize.padded,
+      ),
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        minimumSize: minSize,
+        iconSize: ControlMetrics.icon,
+        padding: const EdgeInsets.all((minTapTarget - ControlMetrics.icon) / 2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ControlMetrics.radius),
+        ),
+        tapTargetSize: MaterialTapTargetSize.padded,
+      ),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: c.surfaceRaised,
+      selectedColor: c.accentSoft,
+      disabledColor: c.surfaceRaised.withValues(alpha: 0.45),
+      labelStyle: text.labelMedium?.copyWith(
+        color: c.ink,
+        fontWeight: FontWeight.w600,
+      ),
+      secondaryLabelStyle: text.labelMedium?.copyWith(
+        color: c.ink,
+        fontWeight: FontWeight.w700,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: Space.xs),
+      labelPadding: const EdgeInsets.symmetric(horizontal: Space.xs),
+      side: BorderSide(color: c.line),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(ControlMetrics.radius),
+      ),
+      checkmarkColor: c.accent,
+      iconTheme: IconThemeData(size: ControlMetrics.smallIcon, color: c.muted),
+      brightness: brightness,
+      elevation: 0,
+      pressElevation: 0,
+    ),
+    listTileTheme: ListTileThemeData(
+      dense: true,
+      minTileHeight: 52,
+      minLeadingWidth: 28,
+      horizontalTitleGap: Space.md,
+      minVerticalPadding: Space.sm,
+      contentPadding: const EdgeInsets.symmetric(horizontal: Space.lg),
+      iconColor: c.muted,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(ControlMetrics.radius),
+      ),
+    ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: c.accent,
       foregroundColor: c.onAccent,
@@ -262,8 +357,55 @@ ThemeData buildLumaTheme(Brightness brightness) {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: c.surfaceRaised,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(Radii.md), borderSide: BorderSide.none),
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: ControlMetrics.horizontalPadding,
+        vertical: Space.md,
+      ),
+      prefixIconConstraints: const BoxConstraints(
+        minWidth: minTapTarget,
+        minHeight: minTapTarget,
+      ),
+      suffixIconConstraints: const BoxConstraints(
+        minWidth: minTapTarget,
+        minHeight: minTapTarget,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(ControlMetrics.radius),
+        borderSide: BorderSide.none,
+      ),
     ),
-    segmentedButtonTheme: SegmentedButtonThemeData(style: SegmentedButton.styleFrom(minimumSize: minSize)),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: SegmentedButton.styleFrom(
+        minimumSize: minSize,
+        padding: compactPadding,
+        textStyle: compactLabel,
+        iconSize: ControlMetrics.smallIcon,
+        shape: shape,
+      ),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: c.surface,
+      surfaceTintColor: Colors.transparent,
+      showDragHandle: true,
+      dragHandleColor: c.line,
+      dragHandleSize: const Size(32, 4),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.lg)),
+      ),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: c.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Radii.lg),
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(
+        Space.lg,
+        0,
+        Space.lg,
+        Space.md,
+      ),
+    ),
   );
 }
