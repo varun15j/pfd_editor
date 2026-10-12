@@ -6,6 +6,12 @@ Private source screenshots were used as **behavioral references**. They show use
 
 ![LumaScan Android UX storyboard](../design/document-scanner-ux-flow.png)
 
+### Sanitized mobile references
+
+The following sheet preserves representative information architecture from the private research captures while replacing personal data, real document content and third-party branding. It is included for design comparison only and is not the final product UI.
+
+![Sanitized mobile UX reference screens](../design/mobile-ux-reference-sanitized.png)
+
 ## Product expectation
 
 The product should feel like a fast, local-first scanner rather than a general file browser. A user must be able to open the app, capture a multipage document, correct it and create a PDF without signing in. Account, sync and premium features enhance that path but must not block it.

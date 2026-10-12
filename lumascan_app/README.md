@@ -2,7 +2,7 @@
 
 A working first cut of the document scanning flow from `pfd_editor/docs`: camera capture with automatic edge detection and crop, multi-page capture, manual corner crop, rotation, document filters (Original, Magic Color, Grayscale, B&W) and export of all pages to one PDF that can be shared or saved.
 
-Design references for the planned custom camera are [the clickable iOS prototype](design/ios-flow/prototype.html), [the six-mode SVG board](design/UI_UX_screen/lumascan-capture-modes-flow.svg), [the research-informed Android UX flow and sanitized storyboard](docs/camscanner-inspired-ux-flow.md), and [the capture algorithms and quality plan](docs/capture-modes-algorithms.md). They cover Docs, Book, live Text, OCR Doc, QR, Photo, library organization, PDF tools, sync and settings. These references are not claims that every engine is implemented in the current Flutter build.
+Design references for the planned custom camera are [the clickable iOS prototype](design/ios-flow/prototype.html), [the six-mode SVG board](design/UI_UX_screen/lumascan-capture-modes-flow.svg), [the research-informed Android UX flow, sanitized storyboard and mobile reference sheet](docs/camscanner-inspired-ux-flow.md), and [the capture algorithms and quality plan](docs/capture-modes-algorithms.md). They cover Docs, Book, live Text, OCR Doc, QR, Photo, library organization, PDF tools, sync and settings. These references are not claims that every engine is implemented in the current Flutter build.
 
 ## How it fits the design docs
 
