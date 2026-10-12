@@ -1477,12 +1477,15 @@ class _ControlPanel extends StatelessWidget {
                         excludeSemantics: true,
                         child: IconButton(
                           onPressed: onDiscard,
+                          // Kept small and outlined so it never competes
+                          // with the shutter; it still asks before discarding.
                           style: IconButton.styleFrom(
-                            backgroundColor: colors.danger,
-                            foregroundColor: Colors.white,
-                            fixedSize: const Size(56, 56),
+                            backgroundColor: Colors.black26,
+                            foregroundColor: Colors.white70,
+                            side: const BorderSide(color: Colors.white24),
+                            fixedSize: const Size(minTapTarget, minTapTarget),
                           ),
-                          icon: const Icon(Icons.close, size: 28),
+                          icon: const Icon(Icons.close, size: 20),
                         ),
                       ),
                     ),
