@@ -121,7 +121,7 @@ class DraftStore {
       savedAt: now,
       exported: exported,
       cover: pages.first,
-      info: info ?? ScanDocInfo(name: newScanName(now, const []), createdAt: now),
+      info: info ?? ScanDocInfo(name: scanDocumentName(now), createdAt: now),
     );
     final json = {
       'version': version,
@@ -192,7 +192,7 @@ class DraftStore {
     final stored = ScanDocInfo.fromJson(json);
     if (stored != null) return stored;
     final t = fallback ?? DateTime.tryParse(json['savedAt'] as String? ?? '')?.toLocal() ?? DateTime.now();
-    return ScanDocInfo(name: newScanName(t, const []), createdAt: t);
+    return ScanDocInfo(name: scanDocumentName(t), createdAt: t);
   }
 
   static List<ScanPage> _pages(Map<String, Object?> json, String originals) =>

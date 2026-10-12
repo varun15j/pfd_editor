@@ -203,7 +203,7 @@ void main() {
   testWidgets('leaving never asks: the scan stays saved under its date name', (tester) async {
     await pumpPushed(tester);
     final name = container.read(scanControllerProvider).info!.name;
-    expect(name, matches(RegExp(r'^\d{4}-\d{2}-\d{2} Scan$')));
+    expect(name, matches(RegExp(r'^\d\d-[A-Z][a-z]{2}-\d{4}_\d\d-\d\d_SCAN$')));
     expect(find.text(name), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();

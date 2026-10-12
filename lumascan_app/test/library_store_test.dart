@@ -219,14 +219,14 @@ void main() {
       expect(File(path.join(tmp.path, DraftStore.parkedDir, '$parkedId.json')).existsSync(), isFalse);
     });
 
-    test('every scan is named by its date, later ones that day get a number, and names survive a restart', () async {
+    test('every scan is named by its date and time, with no number added, and names survive a restart', () async {
+      final scanName = matches(RegExp(r'^\d\d-[A-Z][a-z]{2}-\d{4}_\d\d-\d\d_SCAN$'));
       final first = launch();
       final controller = first.read(scanControllerProvider.notifier);
       await controller.draftSaved;
       expect(first.read(scanControllerProvider).info, isNull);
       await controller.scan(ScanSource.camera);
-      final today = scanDatePrefix(DateTime.now());
-      expect(first.read(scanControllerProvider).info!.name, '$today Scan');
+      expect(first.read(scanControllerProvider).info!.name, scanName);
 
       await controller.startNewDocument();
       await controller.scan(ScanSource.camera);
@@ -234,13 +234,14 @@ void main() {
       await controller.scan(ScanSource.camera);
       controller.rename('Receipts');
       await controller.draftSaved;
-      expect(first.read(scanControllerProvider).parked.map((d) => d.name), ['$today Scan 2', '$today Scan']);
+      final parked = first.read(scanControllerProvider).parked.map((d) => d.name).toList();
+      expect(parked, [scanName, scanName]);
 
       final second = launch();
       await second.read(scanControllerProvider.notifier).draftSaved;
       final state = second.read(scanControllerProvider);
       expect(state.info!.name, 'Receipts');
-      expect(state.parked.map((d) => d.name), unorderedEquals(['$today Scan', '$today Scan 2']));
+      expect(state.parked.map((d) => d.name), unorderedEquals(parked));
     });
 
     test('an earlier scan can be renamed, and deleting it removes its page images', () async {
@@ -276,15 +277,16 @@ void main() {
 
       final next = launch();
       await next.read(scanControllerProvider.notifier).draftSaved;
-      expect(next.read(scanControllerProvider).info!.name, '${scanDatePrefix(DateTime.now())} Scan');
+      expect(
+        next.read(scanControllerProvider).info!.name,
+        matches(RegExp(r'^\d\d-[A-Z][a-z]{2}-\d{4}_\d\d-\d\d_SCAN$')),
+      );
     });
 
     test('scan names', () {
-      final day = DateTime(2026, 10, 11, 16, 40);
-      expect(newScanName(day, const []), '2026-10-11 Scan');
-      expect(newScanName(day, const ['2026-10-11 scan']), '2026-10-11 Scan 2');
-      expect(newScanName(day, const ['2026-10-11 Scan', '2026-10-11 Scan 2', 'Other']), '2026-10-11 Scan 3');
-      expect(newScanName(DateTime(2026, 1, 5), const ['2026-10-11 Scan']), '2026-01-05 Scan');
+      expect(scanDocumentName(DateTime(2026, 10, 11, 16, 47)), '11-Oct-2026_16-47_SCAN');
+      expect(scanDocumentName(DateTime(2027, 1, 5, 9, 3)), '05-Jan-2027_09-03_SCAN');
+      expect(scanDocumentName(DateTime(2026, 12, 31, 23, 59)), '31-Dec-2026_23-59_SCAN');
     });
 
     test('starting a new document with nothing on screen sets nothing aside', () async {

@@ -3,10 +3,12 @@ import 'package:flutter/material.dart' show ThemeMode;
 
 import 'models.dart';
 import 'plan.dart';
+import 'scan_document.dart';
 
-/// How a new PDF is named in the save sheet. The name can still be edited
-/// before saving, and a saved file is never renamed when this changes.
+/// How a new scan is named, and the PDF offered for it in the save sheet.
+/// Either can still be renamed, and nothing is renamed when this changes.
 enum FileNamePattern {
+  scan('Date, time and SCAN'),
   dateTime('Date and time'),
   date('Date only'),
   compact('Compact');
@@ -18,6 +20,7 @@ enum FileNamePattern {
     String two(int v) => v.toString().padLeft(2, '0');
     final date = '${t.year}-${two(t.month)}-${two(t.day)}';
     return switch (this) {
+      FileNamePattern.scan => scanDocumentName(t),
       FileNamePattern.dateTime => 'Scan $date ${two(t.hour)}.${two(t.minute)}',
       FileNamePattern.date => 'Scan $date',
       FileNamePattern.compact => 'Scan_${t.year}${two(t.month)}${two(t.day)}_${two(t.hour)}${two(t.minute)}',
@@ -61,7 +64,7 @@ class AppSettings {
     this.defaultFilter = DocumentFilter.magicColor,
     this.autoCropOnImport = true,
     this.keepOriginals = true,
-    this.fileNamePattern = FileNamePattern.dateTime,
+    this.fileNamePattern = FileNamePattern.scan,
     this.onboardingSeen = false,
     this.analytics,
     this.captureResolution = CaptureResolution.high,
@@ -151,8 +154,9 @@ class AppSettings {
   static const Object _keep = Object();
 
   /// Written with the choices. Files without it are from before 2, when
-  /// Original was the default filter.
-  static const version = 2;
+  /// Original was the default filter; before 3, Date and time was the
+  /// default file name.
+  static const version = 3;
 
   Map<String, Object?> toJson() => {
     'version': version,
@@ -177,7 +181,7 @@ class AppSettings {
     defaultFilter: _filterFromJson(json),
     autoCropOnImport: json['autoCropOnImport'] as bool? ?? true,
     keepOriginals: json['keepOriginals'] as bool? ?? true,
-    fileNamePattern: FileNamePattern.values.asNameMap()[json['fileNamePattern']] ?? FileNamePattern.dateTime,
+    fileNamePattern: _patternFromJson(json),
     onboardingSeen: json['onboardingSeen'] as bool? ?? false,
     analytics: json['analytics'] as bool?,
     captureResolution: CaptureResolution.values.asNameMap()[json['captureResolution']] ?? CaptureResolution.high,
@@ -187,6 +191,16 @@ class AppSettings {
         AutoCaptureSteadiness.values.asNameMap()[json['autoCaptureSteadiness']] ?? AutoCaptureSteadiness.normal,
     debugPlan: AppPlan.values.asNameMap()[json['debugPlan']],
   );
+
+  /// Files before 3 always held Date and time, the default then, chosen or
+  /// not; scans are now named like "11-Oct-2026_16-47_SCAN", so those move
+  /// to that once.
+  static FileNamePattern _patternFromJson(Map<String, Object?> json) {
+    final known = FileNamePattern.values.asNameMap()[json['fileNamePattern']];
+    final old = ((json['version'] as num?) ?? 0) < 3;
+    if (known == null || (old && known == FileNamePattern.dateTime)) return FileNamePattern.scan;
+    return known;
+  }
 
   /// Older files always held Original, the default then, chosen or not; scans
   /// are now enhanced by default, so those move to Auto colour once.
