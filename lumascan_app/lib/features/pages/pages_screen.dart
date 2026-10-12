@@ -148,7 +148,7 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
           ? null
           : SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
                 child: Row(
                   children: [
                     Expanded(
@@ -159,7 +159,7 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
                         label: const Text('Add pages'),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: FilledButton.icon(
                         onPressed: state.busy ? null : () => showExportChoice(context, ref),

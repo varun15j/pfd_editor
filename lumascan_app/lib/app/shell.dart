@@ -58,11 +58,11 @@ class _AppShellState extends ConsumerState<AppShell> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: SizedBox.square(
-        dimension: 64,
+        dimension: 56,
         child: FloatingActionButton(
           tooltip: 'Create',
           onPressed: busy ? null : () => showCreateSheet(context, ref),
-          child: const Icon(Icons.add, size: 32),
+          child: const Icon(Icons.add, size: 26),
         ),
       ),
       bottomNavigationBar: _BottomBar(selected: _tab, onSelect: _select),
@@ -137,14 +137,14 @@ class _BottomBar extends StatelessWidget {
       ),
       child: BottomAppBar(
         shape: const CircularNotchedRectangle(),
-        notchMargin: 6,
-        height: 68,
+        notchMargin: 5,
+        height: 64,
         padding: EdgeInsets.zero,
         child: Row(
           children: [
             item(AppTab.home),
             item(AppTab.library),
-            const SizedBox(width: 80),
+            const SizedBox(width: 68),
             item(AppTab.tools),
             item(AppTab.settings),
           ],
@@ -181,7 +181,7 @@ class _NavItem extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(selected ? tab.selectedIcon : tab.icon, color: color),
+              Icon(selected ? tab.selectedIcon : tab.icon, color: color, size: ControlMetrics.icon),
               const SizedBox(height: 2),
               Text(
                 tab.label,

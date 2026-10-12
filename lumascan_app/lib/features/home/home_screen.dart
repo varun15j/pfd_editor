@@ -142,25 +142,29 @@ class _QuickAction extends StatelessWidget {
       child: Material(
         color: primary ? c.accent : c.surface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Radii.lg),
+          borderRadius: BorderRadius.circular(ControlMetrics.radius),
           side: primary ? BorderSide.none : BorderSide(color: c.line),
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(Radii.lg),
+          borderRadius: BorderRadius.circular(ControlMetrics.radius),
           onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: Space.lg, horizontal: Space.sm),
-            child: Column(
-              children: [
-                Icon(icon, size: 28, color: primary ? fg : c.accent),
-                const SizedBox(height: Space.sm),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(color: fg, fontWeight: FontWeight.w600),
-                ),
-              ],
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 68),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: Space.sm, horizontal: Space.xs),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 22, color: primary ? fg : c.accent),
+                  const SizedBox(height: Space.xs),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(color: fg, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

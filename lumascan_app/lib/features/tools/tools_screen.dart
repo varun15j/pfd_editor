@@ -51,7 +51,7 @@ class ToolsScreen extends ConsumerWidget {
           crossAxisSpacing: Space.md,
           // Padding, icon and gaps, plus room for a two-line title and hint
           // that grows with the text size.
-          mainAxisExtent: 104 + 80 * scale,
+          mainAxisExtent: 88 + 72 * scale,
         ),
         children: [for (final tool in tools) _ToolCard(tool)],
       ),
@@ -83,20 +83,23 @@ class _ToolCard extends StatelessWidget {
       child: InkWell(
         onTap: tool.onTap,
         child: Padding(
-          padding: const EdgeInsets.all(Space.lg),
+          padding: const EdgeInsets.all(Space.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(color: c.accentSoft, borderRadius: BorderRadius.circular(Radii.md)),
-                child: Icon(tool.icon, color: c.accent),
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: c.accentSoft,
+                  borderRadius: BorderRadius.circular(ControlMetrics.radius),
+                ),
+                child: Icon(tool.icon, color: c.accent, size: ControlMetrics.icon),
               ),
-              const SizedBox(height: Space.md),
-              Text(tool.title, style: text.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
-              const SizedBox(height: Space.xs),
+              const SizedBox(height: Space.sm),
+              Text(tool.title, style: text.titleSmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 2),
               Text(
                 tool.hint,
                 style: text.bodySmall?.copyWith(color: c.muted),

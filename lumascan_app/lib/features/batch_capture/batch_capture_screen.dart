@@ -1477,12 +1477,15 @@ class _ControlPanel extends StatelessWidget {
                         excludeSemantics: true,
                         child: IconButton(
                           onPressed: onDiscard,
+                          // Kept small and outlined so it never competes
+                          // with the shutter; it still asks before discarding.
                           style: IconButton.styleFrom(
-                            backgroundColor: colors.danger,
-                            foregroundColor: Colors.white,
-                            fixedSize: const Size(56, 56),
+                            backgroundColor: Colors.black26,
+                            foregroundColor: Colors.white70,
+                            side: const BorderSide(color: Colors.white24),
+                            fixedSize: const Size(minTapTarget, minTapTarget),
                           ),
-                          icon: const Icon(Icons.close, size: 28),
+                          icon: const Icon(Icons.close, size: 20),
                         ),
                       ),
                     ),
@@ -1499,51 +1502,128 @@ class _ControlPanel extends StatelessWidget {
 
 /// Docs, Book, Text, OCR Doc, QR and Photo, scrolling sideways when they do
 /// not fit.
-class _ModeStrip extends StatelessWidget {
+class _ModeStrip extends StatefulWidget {
   const _ModeStrip({required this.mode, required this.onMode});
 
   final CameraMode mode;
   final ValueChanged<CameraMode> onMode;
 
   @override
+  State<_ModeStrip> createState() => _ModeStripState();
+}
+
+/// Keeps the picked mode scrolled into view and fades the strip's right edge
+/// while more modes are off screen, so it reads as scrollable.
+class _ModeStripState extends State<_ModeStrip> {
+  final _keys = {for (final m in CameraMode.values) m: GlobalKey()};
+  final _scroll = ScrollController();
+  bool _moreRight = false;
+
+  CameraMode get mode => widget.mode;
+  ValueChanged<CameraMode> get onMode => widget.onMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_updateFade);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _reveal(animate: false));
+  }
+
+  @override
+  void didUpdateWidget(_ModeStrip old) {
+    super.didUpdateWidget(old);
+    if (old.mode != widget.mode) WidgetsBinding.instance.addPostFrameCallback((_) => _reveal());
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _reveal({bool animate = true}) {
+    if (!mounted) return;
+    final target = _keys[widget.mode]!.currentContext;
+    if (target != null) {
+      Scrollable.ensureVisible(
+        target,
+        alignment: 0.5,
+        duration: animate ? const Duration(milliseconds: 200) : Duration.zero,
+      );
+    }
+    _updateFade();
+  }
+
+  void _updateFade() {
+    if (!_scroll.hasClients) return;
+    final more = _scroll.position.extentAfter > 1;
+    if (more != _moreRight) setState(() => _moreRight = more);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final strip = NotificationListener<ScrollMetricsNotification>(
+      onNotification: (_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _updateFade());
+        return false;
+      },
+      child: SingleChildScrollView(
+        controller: _scroll,
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [for (final m in CameraMode.values) KeyedSubtree(key: _keys[m], child: _modeButton(m))],
+        ),
+      ),
+    );
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(color: const Color(0xFF3C4648), borderRadius: BorderRadius.circular(20)),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final m in CameraMode.values)
-              Semantics(
-                button: true,
-                selected: m == mode,
-                label: '${m.label} capture mode',
-                excludeSemantics: true,
-                child: GestureDetector(
-                  onTap: () => onMode(m),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    constraints: const BoxConstraints(minHeight: 36),
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: m == mode ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      m.label,
-                      style: TextStyle(
-                        color: m == mode ? Colors.black : Colors.white,
-                        fontWeight: m == mode ? FontWeight.w700 : FontWeight.w500,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
+      // Always wrapped, so the scroll position survives the fade toggling.
+      child: ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (rect) => LinearGradient(
+          colors: [Colors.white, Colors.white, _moreRight ? Colors.transparent : Colors.white],
+          stops: const [0, 0.88, 1],
+        ).createShader(rect),
+        child: strip,
+      ),
+    );
+  }
+
+  Widget _modeButton(CameraMode m) {
+    return Semantics(
+      button: true,
+      selected: m == mode,
+      label: '${m.label} capture mode',
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => onMode(m),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: minTapTarget),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              margin: const EdgeInsets.symmetric(vertical: 6),
+              constraints: const BoxConstraints(minHeight: ControlMetrics.visualHeight),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: m == mode ? Colors.white : Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text(
+                m.label,
+                style: TextStyle(
+                  color: m == mode ? Colors.black : Colors.white,
+                  fontWeight: m == mode ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 13,
                 ),
               ),
-          ],
+            ),
+          ),
         ),
       ),
     );

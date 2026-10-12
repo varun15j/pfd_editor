@@ -55,18 +55,20 @@ class CreateSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(Space.xl, 0, Space.xl, Space.sm),
+              padding: const EdgeInsets.fromLTRB(Space.lg, 0, Space.lg, Space.xs),
               child: Semantics(header: true, child: Text('Create', style: text.titleLarge)),
             ),
             for (final (icon, title, subtitle, run) in options)
               ListTile(
-                minVerticalPadding: Space.md,
-                contentPadding: const EdgeInsets.symmetric(horizontal: Space.xl),
+                contentPadding: const EdgeInsets.symmetric(horizontal: Space.lg),
                 leading: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(color: c.accentSoft, borderRadius: BorderRadius.circular(Radii.md)),
-                  child: Icon(icon, color: c.accent),
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: c.accentSoft,
+                    borderRadius: BorderRadius.circular(ControlMetrics.radius),
+                  ),
+                  child: Icon(icon, color: c.accent, size: ControlMetrics.icon),
                 ),
                 title: Text(title),
                 subtitle: Text(subtitle),
