@@ -9,7 +9,7 @@ import '../../domain/library.dart';
 import '../../domain/plan.dart';
 import '../../ui/state_views.dart';
 
-enum DocumentMenuAction { rename, move, tags, share, textPdf, delete }
+enum DocumentMenuAction { rename, move, tags, share, textPdf, word, delete }
 
 /// First-page thumbnail on a white page, or a PDF icon when there is none.
 class DocumentThumbnail extends StatelessWidget {
@@ -147,6 +147,10 @@ class _DocumentInteraction {
                 ? null
                 : const PremiumBadge(label: 'Pro'),
           ),
+        ),
+        const PopupMenuItem(
+          value: DocumentMenuAction.word,
+          child: ListTile(leading: Icon(Icons.description_outlined), title: Text('Convert to Word')),
         ),
         const PopupMenuItem(
           value: DocumentMenuAction.delete,

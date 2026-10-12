@@ -5,6 +5,7 @@ import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../domain/scanner_service.dart';
 import '../pdf_editor/open_pdf.dart';
+import '../word/word_actions.dart';
 
 /// The centre Create button's sheet: every way to start a document in one
 /// place (US-03.1). Each option closes the sheet before it starts.
@@ -41,6 +42,12 @@ class CreateSheet extends StatelessWidget {
       (context, ref) => scanThenReview(context, ref, ScanSource.gallery),
     ),
     (Icons.edit_document, 'Edit a PDF', 'Add text, drawings or a signature', pickAndEditPdf),
+    (
+      Icons.description_outlined,
+      'Open a Word file',
+      'Turn a .docx from your files into a PDF in your Library',
+      importWordFile,
+    ),
   ];
 
   @override
