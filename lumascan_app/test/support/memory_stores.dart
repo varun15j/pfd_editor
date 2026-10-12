@@ -55,7 +55,7 @@ class MemoryDraftStore extends DraftStore {
       savedAt: now,
       exported: exported,
       cover: pages.first,
-      info: info ?? ScanDocInfo(name: newScanName(now, const []), createdAt: now),
+      info: info ?? ScanDocInfo(name: scanDocumentName(now), createdAt: now),
     );
     parkedPages[draft.id] = (draft, pages);
     return draft;

@@ -29,21 +29,11 @@ class ScanDocInfo {
   int get hashCode => Object.hash(name, createdAt);
 }
 
-/// The date part of a scan name, such as `2026-10-11`.
-String scanDatePrefix(DateTime t) {
-  String two(int v) => v.toString().padLeft(2, '0');
-  return '${t.year}-${two(t.month)}-${two(t.day)}';
-}
+const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-/// Name for a new scan made at [now]: `2026-10-11 Scan`, then
-/// `2026-10-11 Scan 2`, `2026-10-11 Scan 3` and so on for later scans that
-/// day. [taken] are the names already in use; case is ignored.
-String newScanName(DateTime now, Iterable<String> taken) {
-  final base = '${scanDatePrefix(now)} Scan';
-  final used = {for (final t in taken) t.trim().toLowerCase()};
-  if (!used.contains(base.toLowerCase())) return base;
-  for (var n = 2; ; n++) {
-    final name = '$base $n';
-    if (!used.contains(name.toLowerCase())) return name;
-  }
+/// Name for a scan made at [t], like `11-Oct-2026_16-47_SCAN`. Two scans in
+/// the same minute share the name; either can be renamed.
+String scanDocumentName(DateTime t) {
+  String two(int v) => v.toString().padLeft(2, '0');
+  return '${two(t.day)}-${_months[t.month - 1]}-${t.year}_${two(t.hour)}-${two(t.minute)}_SCAN';
 }

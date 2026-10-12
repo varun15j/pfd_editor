@@ -646,10 +646,6 @@ class ScanController extends Notifier<ScanState> {
     _draftIo = _draftIo.then((_) => store.deleteParked(id));
   }
 
-  /// Names of the documents on screen and on Home, so a new one gets a
-  /// name of its own.
-  Iterable<String> get _namesInUse => [?state.info?.name, for (final d in state.parked) d.name];
-
   /// Renames the document on screen. Blank names are ignored.
   void rename(String name) {
     final info = state.info;
@@ -715,11 +711,11 @@ class ScanController extends Notifier<ScanState> {
   void _commit(List<ScanPage> pages) {
     var stack = [...state.undoStack, state.pages];
     if (stack.length > _undoLimit) stack = stack.sublist(stack.length - _undoLimit);
-    // A document is named when its first page arrives, from the day it was
-    // scanned: "2026-10-11 Scan", then "2026-10-11 Scan 2" and so on.
+    // A document is named when its first page arrives, by the File name
+    // setting: "11-Oct-2026_16-47_SCAN" unless the user picked another.
     final now = DateTime.now();
-    final info =
-        state.info ?? (pages.isEmpty ? null : ScanDocInfo(name: newScanName(now, _namesInUse), createdAt: now));
+    final name = ref.read(appSettingsProvider).fileNamePattern.format(now);
+    final info = state.info ?? (pages.isEmpty ? null : ScanDocInfo(name: name, createdAt: now));
     state = state.copyWith(
       pages: List.unmodifiable(pages),
       undoStack: stack,
