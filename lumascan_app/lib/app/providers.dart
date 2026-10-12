@@ -15,6 +15,7 @@ import '../domain/scanner_service.dart';
 import '../export/jpg_exporter.dart';
 import '../export/pdf_exporter.dart';
 import '../export/text_pdf_service.dart';
+import '../export/word/word_service.dart';
 import '../pdf_edit/pdf_edit_controller.dart';
 import '../features/batch_capture/batch_camera.dart';
 import '../imaging/render_service.dart';
@@ -39,6 +40,11 @@ final jpgExporterProvider = Provider<JpgExporter>((ref) => JpgExporter(ref.watch
 /// pictures kept (Pro and Gold).
 final textPdfServiceProvider = Provider<TextPdfService>(
   (ref) => TextPdfService(ref.watch(pageStoreProvider), ref.watch(ocrEngineProvider), ref.watch(pdfRasterizerProvider)),
+);
+
+/// Converts saved PDFs to Word files and Word files to PDFs.
+final wordServiceProvider = Provider<WordService>(
+  (ref) => WordService(ref.watch(pageStoreProvider), ref.watch(pdfRasterizerProvider)),
 );
 
 final libraryStoreProvider = Provider<LibraryStore>((ref) => LibraryStore(ref.watch(pageStoreProvider)));
