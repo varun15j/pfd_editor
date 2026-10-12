@@ -30,8 +30,11 @@ enum CropStepResult { applied, skipped, back, finish }
 const _cornerNames = ['Top left', 'Top right', 'Bottom right', 'Bottom left'];
 const _edgeNames = ['Top', 'Right', 'Bottom', 'Left'];
 
-/// Size of a handle's touch area on screen, whatever the zoom.
-const _handleTouch = 48.0;
+/// Size of a handle's touch area on screen, whatever the zoom. Four times
+/// the area of the first size, so a finger lands on a corner or side more
+/// often; the drawn handle keeps its size.
+const _handleTouch = 96.0;
+
 const _loupeSize = 104.0;
 const _loupeMagnification = 2.5;
 const _maxZoom = 6.0;

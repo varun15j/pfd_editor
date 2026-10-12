@@ -19,6 +19,12 @@ import 'rgb_image.dart';
 ///    lowered for warm tones, above an Otsu cut, and nearly colourless), and
 ///    pixels the colour of the paper in the middle of the frame, where the
 ///    page is held, which finds cream, yellowed or coloured paper too.
+///    A third mask is everything that differs from the background, whose
+///    colour is read from the frame border: the background is usually one
+///    surface, while a page can be printed in two or three colour bands
+///    (a white page with a coloured header, a pink and blue form). This mask
+///    takes in every band, where the other two find only the white band or
+///    the band in the middle.
 /// 2. Each mask is eroded to cut thin bridges to other pages and fingers,
 ///    one region is kept (the largest, or the one nearest the middle), and
 ///    it is grown back.
@@ -28,7 +34,9 @@ import 'rgb_image.dart';
 ///    bridged over.
 /// 4. The outlines found are rated by the contrast across their edges
 ///    (paper on one side, background on the other) and by how near the
-///    middle of the frame they are, and the best is kept.
+///    middle of the frame they are, and the best is kept. An edge with
+///    another part of the page beyond it, rather than the background, counts
+///    for less, so one colour band of a page loses to the whole page.
 /// 5. A second page that is only partly in view, joined to the page at a
 ///    gutter or a sheet edge, is cut off ([focusOnePage]).
 ///
@@ -49,6 +57,7 @@ CropQuad? detectPageQuad(RgbImage src, {int workSize = 320, double minArea = 0.1
   final candidates = <CropQuad>{
     ..._outlines(work.paperMask(), w, h, central: smart ? const [false, true] : const [false]),
     if (smart) ..._outlines(work.seededMask(), w, h, central: const [true]),
+    if (smart) ..._outlines(work.backgroundMask(), w, h, central: const [true]),
   }..removeWhere((q) => !q.isValid(minArea: minArea) || !_pageShaped(q, src));
   if (candidates.isEmpty) return null;
   final CropQuad quad;
@@ -112,7 +121,9 @@ const _coolBonus = 2.0;
 /// The photo shrunk to the work size, as per-pixel measures the page is
 /// told apart by.
 class _Work {
-  _Work(this.w, this.h, this.luma, this.score, this.sat, this.redGreen, this.yellowBlue);
+  _Work(this.w, this.h, this.luma, this.score, this.sat, this.redGreen, this.yellowBlue) {
+    _readBackground();
+  }
 
   final int w, h;
 
@@ -211,6 +222,58 @@ class _Work {
     return _close(mask, w, h);
   }
 
+  /// Colour distance from the background ([backgroundCut] and below is
+  /// background), or null when the frame border is not one surface, such as
+  /// a page filling the frame.
+  Uint8List? _fromBackground;
+  int backgroundCut = 0;
+
+  /// Reads the background colour from a ring along the frame border: the
+  /// page is held over the middle, so most of the ring is the surface it
+  /// lies on. The median is taken, so a page or a hand reaching the border
+  /// on one side does not move it.
+  void _readBackground() {
+    final ring = <int>[];
+    final band = math.max(2, (math.min(w, h) * 0.04).round());
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        if (x < band || y < band || x >= w - band || y >= h - band) ring.add(y * w + x);
+      }
+    }
+    int median(Iterable<int> values) {
+      final list = values.toList()..sort();
+      return list[list.length ~/ 2];
+    }
+
+    final l0 = median(ring.map((i) => luma[i]));
+    final rg0 = median(ring.map((i) => redGreen[i]));
+    final yb0 = median(ring.map((i) => yellowBlue[i]));
+    final distance = Uint8List(w * h);
+    for (var i = 0; i < w * h; i++) {
+      final dl = (luma[i] - l0).abs();
+      final dc = 2 * ((redGreen[i] - rg0).abs() + (yellowBlue[i] - yb0).abs());
+      distance[i] = (dl + dc).clamp(0, 255);
+    }
+    final cut = _otsu(distance).clamp(_minBackgroundCut, _maxBackgroundCut);
+    // The ring must be mostly one surface for its colour to mean anything.
+    final plain = ring.where((i) => distance[i] <= cut).length;
+    if (plain < ring.length * _minPlainRing) return;
+    _fromBackground = distance;
+    backgroundCut = cut;
+  }
+
+  /// Everything that is not the background: the whole page, whatever
+  /// colours it is printed in. Null when the background could not be read.
+  Uint8List? backgroundMask() {
+    final distance = _fromBackground;
+    if (distance == null) return null;
+    final mask = Uint8List(w * h);
+    for (var i = 0; i < w * h; i++) {
+      if (distance[i] > backgroundCut) mask[i] = 1;
+    }
+    return _close(mask, w, h);
+  }
+
   /// How much [quad] looks like the page being scanned: strong contrast
   /// across its edges (paper on one side, background on the other), close
   /// to the middle of the frame, and a page-like share of it.
@@ -256,7 +319,8 @@ class _Work {
       ny = -ny;
     }
     final values = <double>[];
-    var border = 0;
+    final fromBackground = _fromBackground;
+    var border = 0, beyond = 0, background = 0;
     for (var j = 0; j < samples; j++) {
       final t = 0.1 + 0.8 * j / (samples - 1);
       final px = ax + (bx - ax) * t, py = ay + (by - ay) * t;
@@ -268,6 +332,8 @@ class _Work {
       }
       if (ix < 0 || iy < 0 || ix >= w || iy >= h) continue;
       final o = oy * w + ox, i = iy * w + ix;
+      beyond++;
+      if (fromBackground != null && fromBackground[o] <= backgroundCut) background++;
       values.add(
         (luma[i] - luma[o]).abs() +
             (redGreen[i] - redGreen[o]).abs() +
@@ -277,7 +343,11 @@ class _Work {
     if (border > samples / 2) return null;
     if (values.isEmpty) return 0;
     values.sort();
-    return values[values.length ~/ 2];
+    final contrast = values[values.length ~/ 2];
+    if (fromBackground == null || beyond == 0) return contrast;
+    // Another part of the page beyond the edge, such as the next colour
+    // band, rather than the surface the page lies on.
+    return contrast * (_bandEdgeWeight + (1 - _bandEdgeWeight) * background / beyond);
   }
 }
 
@@ -295,6 +365,17 @@ const _minSeedLuma = 70;
 
 /// Bounds on the colour distance that still counts as the seeded paper.
 const _minColourCut = 14, _maxColourCut = 60;
+
+/// Bounds on the colour distance that still counts as the background.
+const _minBackgroundCut = 18, _maxBackgroundCut = 70;
+
+/// Share of the border ring that must be one surface to read the
+/// background from it.
+const _minPlainRing = 0.55;
+
+/// Weight of an edge's contrast when nothing beyond it looks like the
+/// background.
+const _bandEdgeWeight = 0.35;
 
 /// Contrast at least one edge of a page must show.
 const _minEdge = 6.0;

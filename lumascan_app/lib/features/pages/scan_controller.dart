@@ -341,8 +341,22 @@ class ScanController extends Notifier<ScanState> {
   /// so far. Returns the new page, or null when it could not be saved.
   ///
   /// [plain] keeps the photo as it is, with no filter (Photo mode).
-  Future<ScanPage?> addCapture(String photoPath, {String? replacing, bool plain = false}) async {
-    final pages = await addCaptureSplit(photoPath, const [CropQuad.full], replacing: replacing, plain: plain);
+  ///
+  /// [filter] overrides the Settings default for this capture (the camera's
+  /// filter choice).
+  Future<ScanPage?> addCapture(
+    String photoPath, {
+    String? replacing,
+    bool plain = false,
+    DocumentFilter? filter,
+  }) async {
+    final pages = await addCaptureSplit(
+      photoPath,
+      const [CropQuad.full],
+      replacing: replacing,
+      plain: plain,
+      filter: filter,
+    );
     return pages?.first;
   }
 
@@ -354,6 +368,7 @@ class ScanController extends Notifier<ScanState> {
     List<CropQuad> crops, {
     String? replacing,
     bool plain = false,
+    DocumentFilter? filter,
   }) {
     final result = _captureIo.then((_) async {
       if (!ref.mounted) return null;
@@ -361,7 +376,11 @@ class ScanController extends Notifier<ScanState> {
       try {
         final id = store.newId();
         final original = await store.adoptOriginal(photoPath, id);
-        final recipe = plain ? const EditRecipe() : _newPageRecipe;
+        final recipe = plain
+            ? const EditRecipe()
+            : filter == null
+            ? _newPageRecipe
+            : EditRecipe(filter: filter);
         final added = [
           for (var i = 0; i < crops.length; i++)
             ScanPage(
