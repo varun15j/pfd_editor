@@ -97,8 +97,13 @@ class LumaColors extends ThemeExtension<LumaColors> {
     canvas: Color(0xFFFFFFFF),
   );
 
-  static LumaColors of(BuildContext context) =>
-      Theme.of(context).extension<LumaColors>()!;
+  /// Falls back to the palette for the theme's brightness when a widget is
+  /// built under a plain Material theme, such as a screen pumped on its own.
+  static LumaColors of(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.extension<LumaColors>() ??
+        (theme.brightness == Brightness.dark ? dark : light);
+  }
 
   @override
   LumaColors copyWith({

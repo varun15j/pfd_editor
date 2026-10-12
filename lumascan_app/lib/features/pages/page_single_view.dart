@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../domain/models.dart';
 import '../../imaging/render_service.dart';
+import '../../ui/compact_action_button.dart';
 import 'adding_progress.dart';
 import 'page_actions.dart';
 import 'page_image.dart';
@@ -149,31 +150,31 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
                   ),
           ),
         ),
-        // One toolbar for the page's actions; it scrolls when large text
-        // makes the buttons wider than the screen.
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: MediaQuery.sizeOf(context).width - 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                for (final a in PageAction.values)
-                  TextButton(
-                    style: TextButton.styleFrom(minimumSize: const Size(56, 56)),
+        // One toolbar for the page's actions. At normal text sizes every
+        // action gets an equal slot so all seven fit on screen; large text
+        // keeps full-width buttons and lets the row scroll instead.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              Widget button(PageAction a, {double minWidth = 48}) => CompactActionButton(
+                    icon: a.icon,
+                    label: a.shortLabel,
+                    semanticsLabel: a.label,
+                    minWidth: minWidth,
+                    enabled: !busy,
                     onPressed: busy ? null : () => runPageAction(context, ref, a, page, index),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(a.icon),
-                        const SizedBox(height: 4),
-                        Text(a.shortLabel, maxLines: 1, style: const TextStyle(fontSize: 12)),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
+                  );
+              final fits = MediaQuery.textScalerOf(context).scale(1) <= 1.3 &&
+                  constraints.maxWidth / PageAction.values.length >= minTapTarget;
+              if (fits) {
+                return Row(children: [for (final a in PageAction.values) Expanded(child: button(a, minWidth: 0))]);
+              }
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(children: [for (final a in PageAction.values) button(a, minWidth: 64)]),
+              );
+            },
           ),
         ),
       ],
