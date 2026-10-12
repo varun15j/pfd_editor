@@ -149,8 +149,7 @@ class ScanController extends Notifier<ScanState> {
   Future<void> _draftIo = Future.value();
 
   /// Completes once the restored draft is loaded and every change made so
-  /// far is on disk.
-  @visibleForTesting
+  /// far is on disk. Save and go home waits for it.
   Future<void> get draftSaved => _draftIo;
 
   @override

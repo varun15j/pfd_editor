@@ -44,6 +44,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(showHomeProvider, (_, _) => _select(AppTab.home));
     final busy = ref.watch(scanControllerProvider.select((s) => s.busy));
     return Scaffold(
       body: IndexedStack(
@@ -90,6 +91,26 @@ Future<void> scanThenReview(BuildContext context, WidgetRef ref, ScanSource sour
     // Nothing could be added (every photo unreadable): do not leave an empty draft open.
     navigator.removeRoute(draft!);
   }
+}
+
+/// Asks the shell to show the Home tab; each request bumps the count.
+final showHomeProvider = NotifierProvider<ShowHomeRequests, int>(ShowHomeRequests.new);
+
+class ShowHomeRequests extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void request() => state++;
+}
+
+/// Save and go home: waits for the document to be written, then closes every
+/// screen over the shell and shows Home, where the next scan starts a new
+/// document. The scan stays on Home to open again.
+Future<void> saveAndGoHome(BuildContext context, WidgetRef ref) async {
+  await ref.read(scanControllerProvider.notifier).draftSaved;
+  if (!context.mounted) return;
+  ref.read(showHomeProvider.notifier).request();
+  Navigator.of(context).popUntil((route) => route.isFirst);
 }
 
 Route<void> openDraft(BuildContext context) {
