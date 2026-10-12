@@ -330,8 +330,6 @@ void main() {
         300,
         scrollable: find.byType(Scrollable).last,
       );
-      await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
-      await tester.pumpAndSettle();
       await tester.tap(find.text('Image loading profile'));
       await tester.pumpAndSettle();
       expect(find.textContaining('Nothing measured yet'), findsOneWidget);

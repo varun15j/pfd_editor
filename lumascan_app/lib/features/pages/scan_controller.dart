@@ -6,6 +6,7 @@ import '../../app/providers.dart';
 import '../../data/library_store.dart';
 import '../../domain/models.dart';
 import '../../domain/photo_import.dart';
+import '../../domain/scan_document.dart';
 import '../../domain/scanner_service.dart';
 import '../../pdf_edit/annotations.dart';
 
@@ -38,9 +39,14 @@ class ScanState {
     this.unsaved = false,
     this.exported = false,
     this.parked = const [],
+    this.info,
   });
 
   final List<ScanPage> pages;
+
+  /// Name and start time of the document on screen. Given when its first
+  /// page arrives; null while there are no pages.
+  final ScanDocInfo? info;
 
   /// True while the scanner is open or pages are being imported. Repeat
   /// taps on the scan button are ignored while busy (LLD section 6).
@@ -80,6 +86,7 @@ class ScanState {
     bool? unsaved,
     bool? exported,
     List<ParkedDraft>? parked,
+    Object? info = _keep,
   }) => ScanState(
     pages: pages ?? this.pages,
     busy: busy ?? this.busy,
@@ -90,6 +97,7 @@ class ScanState {
     // Any change after the export makes the PDF out of date.
     exported: exported ?? (unsaved == true ? false : this.exported),
     parked: parked ?? this.parked,
+    info: identical(info, _keep) ? this.info : info as ScanDocInfo?,
   );
 }
 
@@ -159,10 +167,14 @@ class ScanController extends Notifier<ScanState> {
     final parked = await store.parked();
     if (!ref.mounted) return;
     if (parked.isNotEmpty) state = state.copyWith(parked: parked);
-    if (saved.isEmpty) return;
+    if (saved.pages.isEmpty) return;
     // Pages scanned while the draft was loading go after the restored ones;
     // their own save is queued behind this restore and writes the merge.
-    state = state.copyWith(pages: List.unmodifiable([...saved, ...state.pages]), unsaved: true);
+    state = state.copyWith(
+      pages: List.unmodifiable([...saved.pages, ...state.pages]),
+      unsaved: true,
+      info: saved.info ?? state.info,
+    );
   }
 
   /// Saves queued and not yet written, for [draftSaveStatusProvider].
@@ -177,7 +189,7 @@ class ScanController extends Notifier<ScanState> {
     status.set(DraftSaveStatus.saving);
     _draftIo = _draftIo.then((_) async {
       if (!ref.mounted) return;
-      final ok = await _saveQuietly(store, state.pages);
+      final ok = await _saveQuietly(store, state.pages, state.info);
       _pendingSaves--;
       if (!ref.mounted) return;
       if (!ok) {
@@ -188,9 +200,9 @@ class ScanController extends Notifier<ScanState> {
     });
   }
 
-  static Future<bool> _saveQuietly(DraftStore store, List<ScanPage> pages) async {
+  static Future<bool> _saveQuietly(DraftStore store, List<ScanPage> pages, ScanDocInfo? info) async {
     try {
-      await store.save(pages);
+      await store.save(pages, info: info);
       return true;
     } catch (e) {
       // The draft stays in memory; the next change tries again.
@@ -601,7 +613,7 @@ class ScanController extends Notifier<ScanState> {
   Future<void> startNewDocument() async {
     await _draftIo;
     if (!ref.mounted || state.pages.isEmpty || state.busy) return;
-    final parked = await ref.read(draftStoreProvider).park(state.pages, exported: state.exported);
+    final parked = await ref.read(draftStoreProvider).park(state.pages, exported: state.exported, info: state.info);
     if (!ref.mounted) return;
     state = ScanState(parked: [parked, ...state.parked]);
     _persistDraft();
@@ -617,7 +629,7 @@ class ScanController extends Notifier<ScanState> {
     if (entry == null) return;
     final pages = await store.loadParked(id);
     final parked = [
-      if (state.pages.isNotEmpty) await store.park(state.pages, exported: state.exported),
+      if (state.pages.isNotEmpty) await store.park(state.pages, exported: state.exported, info: state.info),
       for (final d in state.parked)
         if (d.id != id) d,
     ];
@@ -627,10 +639,55 @@ class ScanController extends Notifier<ScanState> {
       exported: entry.exported,
       unsaved: !entry.exported,
       parked: parked,
+      info: entry.info,
     );
     _persistDraft();
     // Only once the pages are the draft on disk, so a crash loses nothing.
     _draftIo = _draftIo.then((_) => store.deleteParked(id));
+  }
+
+  /// Renames the document on screen. Blank names are ignored.
+  void rename(String name) {
+    final info = state.info;
+    final n = name.trim();
+    if (info == null || n.isEmpty || n == info.name) return;
+    state = state.copyWith(info: info.copyWith(name: n));
+    _persistDraft();
+  }
+
+  /// Renames earlier document [id]. Blank names are ignored.
+  Future<void> renameParked(String id, String name) async {
+    final n = name.trim();
+    if (n.isEmpty || !state.parked.any((d) => d.id == id)) return;
+    state = state.copyWith(parked: [for (final d in state.parked) d.id == id ? d.renamed(n) : d]);
+    _draftIo = _draftIo.then((_) => ref.read(draftStoreProvider).renameParked(id, n)).catchError((Object e) {
+      debugPrint('Could not rename scan: $e');
+    });
+    await _draftIo;
+  }
+
+  /// Deletes earlier document [id] and its page images. Exported PDFs and
+  /// JPGs are kept.
+  Future<void> deleteParked(String id) async {
+    if (!state.parked.any((d) => d.id == id)) return;
+    state = state.copyWith(
+      parked: [
+        for (final d in state.parked)
+          if (d.id != id) d,
+      ],
+    );
+    final drafts = ref.read(draftStoreProvider);
+    final files = ref.read(pageStoreProvider);
+    _draftIo = _draftIo
+        .then((_) async {
+          final pages = await drafts.loadParked(id);
+          await drafts.deleteParked(id);
+          for (final path in {for (final p in pages) p.originalPath}) {
+            await files.deleteOriginal(path);
+          }
+        })
+        .catchError((Object e) => debugPrint('Could not delete scan: $e'));
+    await _draftIo;
   }
 
   /// The pages were saved as a PDF.
@@ -654,7 +711,18 @@ class ScanController extends Notifier<ScanState> {
   void _commit(List<ScanPage> pages) {
     var stack = [...state.undoStack, state.pages];
     if (stack.length > _undoLimit) stack = stack.sublist(stack.length - _undoLimit);
-    state = state.copyWith(pages: List.unmodifiable(pages), undoStack: stack, redoStack: const [], unsaved: true);
+    // A document is named when its first page arrives, by the File name
+    // setting: "11-Oct-2026_16-47_SCAN" unless the user picked another.
+    final now = DateTime.now();
+    final name = ref.read(appSettingsProvider).fileNamePattern.format(now);
+    final info = state.info ?? (pages.isEmpty ? null : ScanDocInfo(name: name, createdAt: now));
+    state = state.copyWith(
+      pages: List.unmodifiable(pages),
+      undoStack: stack,
+      redoStack: const [],
+      unsaved: true,
+      info: info,
+    );
     _persistDraft();
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/app/theme.dart';
 import 'package:lumascan/data/page_store.dart';
@@ -13,6 +14,8 @@ import 'package:lumascan/features/filters/filter_screen.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 import 'package:lumascan/imaging/page_renderer.dart';
 import 'package:lumascan/imaging/render_service.dart';
+
+import 'support/memory_stores.dart';
 
 class _FakeScanner implements ScannerService {
   _FakeScanner(this.paths);
@@ -51,8 +54,10 @@ void main() {
         scannerServiceProvider.overrideWithValue(_FakeScanner(paths)),
         pageStoreProvider.overrideWithValue(store),
         renderServiceProvider.overrideWithValue(_NoRender(store)),
+        appSettingsStoreProvider.overrideWithValue(plainPagesSettings()),
       ],
     );
+    await container.read(appSettingsProvider.notifier).loaded;
     await container.read(scanControllerProvider.notifier).scan(ScanSource.camera);
     ready = true;
   }

@@ -200,53 +200,47 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('leaving with unsaved pages asks; Keep draft stays quiet next time', (tester) async {
+  testWidgets('leaving never asks: the scan stays saved under its date name', (tester) async {
     await pumpPushed(tester);
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    expect(find.text('Leave without exporting?'), findsOneWidget);
-
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
-    expect(find.byType(PagesScreen), findsOneWidget);
-
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Keep draft'));
-    await tester.pumpAndSettle();
-    expect(find.byType(PagesScreen), findsNothing);
-    expect(container.read(scanControllerProvider).pages, hasLength(3));
-    expect(container.read(scanControllerProvider).unsaved, isFalse);
-  });
-
-  testWidgets('Discard on leave clears the draft', (tester) async {
-    await pumpPushed(tester);
-    // Let the page images finish loading before their files are deleted.
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
-    await tester.pump();
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Discard'));
-    await tester.pump();
-    // clear() deletes files, which needs real time.
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
-    await tester.pump();
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
-    await tester.pump(const Duration(seconds: 1));
-    await tester.pumpAndSettle();
-    expect(container.read(scanControllerProvider).pages, isEmpty);
-    expect(find.byType(PagesScreen), findsNothing);
-    expect(container.read(scanControllerProvider).pages, isEmpty);
-  });
-
-  testWidgets('after markSaved, leaving does not ask', (tester) async {
-    await pumpPushed(tester);
-    container.read(scanControllerProvider.notifier).markSaved();
-    await tester.pump();
+    final name = container.read(scanControllerProvider).info!.name;
+    expect(name, matches(RegExp(r'^\d\d-[A-Z][a-z]{2}-\d{4}_\d\d-\d\d_SCAN$')));
+    expect(find.text(name), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.text('Leave without exporting?'), findsNothing);
     expect(find.byType(PagesScreen), findsNothing);
+    expect(container.read(scanControllerProvider).pages, hasLength(3));
+  });
+
+  testWidgets('tapping the name renames the scan', (tester) async {
+    await pumpPushed(tester);
+    final name = container.read(scanControllerProvider).info!.name;
+    await tester.tap(find.text(name));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)), 'Bills');
+    await tester.tap(find.widgetWithText(FilledButton, 'Rename'));
+    await tester.pumpAndSettle();
+    expect(container.read(scanControllerProvider).info!.name, 'Bills');
+    expect(find.text('Bills'), findsOneWidget);
+  });
+
+  testWidgets('Delete scan asks, then deletes the pages and leaves', (tester) async {
+    await pumpPushed(tester);
+    // Let the page images finish loading before their files are deleted.
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Delete scan'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('PDFs and JPGs you exported are kept'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pump();
+    // clear() deletes files, which needs real time.
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(find.byType(PagesScreen), findsNothing);
+    // clear() deleting the image files is covered in scan_flow_test.
+    expect(container.read(scanControllerProvider).pages, isEmpty);
   });
 
   testWidgets('undo and redo buttons walk the edit history', (tester) async {

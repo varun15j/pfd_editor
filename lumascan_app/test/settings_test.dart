@@ -93,10 +93,38 @@ void main() {
       const defaults = AppSettings();
       expect(defaults.keepOriginals, isTrue);
       expect(defaults.autoCropOnImport, isTrue);
+      expect(defaults.defaultFilter, DocumentFilter.magicColor);
+    });
+
+    test('a file from before scans were enhanced by default moves to Auto colour once', () {
+      // Older files always held Original, chosen or not.
+      expect(AppSettings.fromJson(const {'defaultFilter': 'original'}).defaultFilter, DocumentFilter.magicColor);
+      expect(AppSettings.fromJson(const {'defaultFilter': 'grayscale'}).defaultFilter, DocumentFilter.grayscale);
+      // Original picked after the change is kept.
+      const plain = AppSettings(defaultFilter: DocumentFilter.original);
+      expect(AppSettings.fromJson(jsonDecode(jsonEncode(plain.toJson())) as Map<String, Object?>), plain);
+    });
+
+    test('a file from before scans were named like 11-Oct-2026_16-47_SCAN moves to that once', () {
+      // Files before version 3 always held Date and time, chosen or not.
+      expect(AppSettings.fromJson(const {'fileNamePattern': 'dateTime'}).fileNamePattern, FileNamePattern.scan);
+      expect(
+        AppSettings.fromJson(const {'version': 2, 'fileNamePattern': 'dateTime'}).fileNamePattern,
+        FileNamePattern.scan,
+      );
+      expect(
+        AppSettings.fromJson(const {'version': 2, 'fileNamePattern': 'date'}).fileNamePattern,
+        FileNamePattern.date,
+      );
+      // Date and time picked after the change is kept.
+      const picked = AppSettings(fileNamePattern: FileNamePattern.dateTime);
+      expect(AppSettings.fromJson(jsonDecode(jsonEncode(picked.toJson())) as Map<String, Object?>), picked);
     });
 
     test('file name patterns', () {
       final t = DateTime(2026, 10, 3, 14, 5);
+      expect(FileNamePattern.scan.format(t), '03-Oct-2026_14-05_SCAN');
+      expect(const AppSettings().fileNamePattern, FileNamePattern.scan);
       expect(FileNamePattern.dateTime.format(t), 'Scan 2026-10-03 14.05');
       expect(FileNamePattern.date.format(t), 'Scan 2026-10-03');
       expect(FileNamePattern.compact.format(t), 'Scan_20261003_1405');
@@ -163,16 +191,17 @@ void main() {
       await setUpContainer();
       final scan = container.read(scanControllerProvider.notifier);
       await scan.scan(ScanSource.camera);
+      // Scans are enhanced unless the user picks another filter.
       expect(
         container.read(scanControllerProvider).pages.map((p) => p.recipe.filter),
-        everyElement(DocumentFilter.original),
+        everyElement(DocumentFilter.magicColor),
       );
 
       container.read(appSettingsProvider.notifier).setDefaultFilter(DocumentFilter.blackWhite);
       await scan.scan(ScanSource.camera);
       expect(container.read(scanControllerProvider).pages.map((p) => p.recipe.filter), [
-        DocumentFilter.original,
-        DocumentFilter.original,
+        DocumentFilter.magicColor,
+        DocumentFilter.magicColor,
         DocumentFilter.blackWhite,
         DocumentFilter.blackWhite,
       ]);
@@ -271,11 +300,11 @@ void main() {
 
     String nameField(WidgetTester tester) => tester.widget<TextField>(find.byType(TextField)).controller!.text;
 
-    testWidgets('the name offered follows the file name setting', (tester) async {
+    testWidgets('the name offered is the scan\'s own name, whatever the file name setting', (tester) async {
       await tester.runAsync(setUpContainer);
       container.read(appSettingsProvider.notifier).setFileNamePattern(FileNamePattern.compact);
       await openSheetAndSave(tester);
-      expect(nameField(tester), matches(RegExp(r'^Scan_\d{8}_\d{4}$')));
+      expect(nameField(tester), matches(RegExp(r'^\d\d-[A-Z][a-z]{2}-\d{4}_\d\d-\d\d_SCAN$')));
     });
 
     testWidgets('by default the page images stay after saving', (tester) async {
@@ -337,7 +366,7 @@ void main() {
       expect(find.textContaining('New scans only'), findsOneWidget);
       expect(find.textContaining('Applies to future imports'), findsOneWidget);
       expect(find.textContaining('Saved PDFs are never affected'), findsOneWidget);
-      expect(find.textContaining('saved files keep their names'), findsOneWidget);
+      expect(find.textContaining('existing documents keep their names'), findsOneWidget);
       expect(find.textContaining('No files are affected'), findsOneWidget);
     });
 

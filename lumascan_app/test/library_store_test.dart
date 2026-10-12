@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import 'package:lumascan/data/library_store.dart';
 import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/domain/models.dart';
+import 'package:lumascan/domain/scan_document.dart';
 import 'package:lumascan/domain/scanner_service.dart';
 import 'package:lumascan/export/pdf_exporter.dart';
 import 'package:lumascan/features/library/document_tile.dart';
@@ -55,12 +57,21 @@ void main() {
     ];
   });
 
-  tearDown(() {
+  tearDown(() async {
     for (final c in containers) {
       c.dispose();
     }
     containers.clear();
-    tmp.deleteSync(recursive: true);
+    // Working copies made in the background after a scan may still be landing.
+    for (var attempt = 0; ; attempt++) {
+      try {
+        tmp.deleteSync(recursive: true);
+        return;
+      } on FileSystemException {
+        if (attempt == 20) rethrow;
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+    }
   });
 
   group('page model JSON', () {
@@ -206,6 +217,76 @@ void main() {
       expect(state.parked.single.id, isNot(parkedId));
       expect(state.unsaved, isFalse);
       expect(File(path.join(tmp.path, DraftStore.parkedDir, '$parkedId.json')).existsSync(), isFalse);
+    });
+
+    test('every scan is named by its date and time, with no number added, and names survive a restart', () async {
+      final scanName = matches(RegExp(r'^\d\d-[A-Z][a-z]{2}-\d{4}_\d\d-\d\d_SCAN$'));
+      final first = launch();
+      final controller = first.read(scanControllerProvider.notifier);
+      await controller.draftSaved;
+      expect(first.read(scanControllerProvider).info, isNull);
+      await controller.scan(ScanSource.camera);
+      expect(first.read(scanControllerProvider).info!.name, scanName);
+
+      await controller.startNewDocument();
+      await controller.scan(ScanSource.camera);
+      await controller.startNewDocument();
+      await controller.scan(ScanSource.camera);
+      controller.rename('Receipts');
+      await controller.draftSaved;
+      final parked = first.read(scanControllerProvider).parked.map((d) => d.name).toList();
+      expect(parked, [scanName, scanName]);
+
+      final second = launch();
+      await second.read(scanControllerProvider.notifier).draftSaved;
+      final state = second.read(scanControllerProvider);
+      expect(state.info!.name, 'Receipts');
+      expect(state.parked.map((d) => d.name), unorderedEquals(parked));
+    });
+
+    test('an earlier scan can be renamed, and deleting it removes its page images', () async {
+      final c = launch();
+      final controller = c.read(scanControllerProvider.notifier);
+      await controller.scan(ScanSource.camera);
+      final images = [for (final p in c.read(scanControllerProvider).pages) p.originalPath];
+      await controller.startNewDocument();
+      final id = c.read(scanControllerProvider).parked.single.id;
+
+      await controller.renameParked(id, 'Lease');
+      expect(c.read(scanControllerProvider).parked.single.name, 'Lease');
+      final again = launch();
+      await again.read(scanControllerProvider.notifier).draftSaved;
+      expect(again.read(scanControllerProvider).parked.single.name, 'Lease');
+
+      await controller.deleteParked(id);
+      expect(c.read(scanControllerProvider).parked, isEmpty);
+      expect(File(path.join(tmp.path, DraftStore.parkedDir, '$id.json')).existsSync(), isFalse);
+      expect(images.any((p) => File(p).existsSync()), isFalse);
+    });
+
+    test('a draft saved before scans had names gets one from its date', () async {
+      final c = launch();
+      final controller = c.read(scanControllerProvider.notifier);
+      await controller.scan(ScanSource.camera);
+      await controller.draftSaved;
+      final file = File(path.join(tmp.path, DraftStore.draftFile));
+      final json = (jsonDecode(file.readAsStringSync()) as Map)
+        ..remove('name')
+        ..remove('createdAt');
+      file.writeAsStringSync(jsonEncode(json));
+
+      final next = launch();
+      await next.read(scanControllerProvider.notifier).draftSaved;
+      expect(
+        next.read(scanControllerProvider).info!.name,
+        matches(RegExp(r'^\d\d-[A-Z][a-z]{2}-\d{4}_\d\d-\d\d_SCAN$')),
+      );
+    });
+
+    test('scan names', () {
+      expect(scanDocumentName(DateTime(2026, 10, 11, 16, 47)), '11-Oct-2026_16-47_SCAN');
+      expect(scanDocumentName(DateTime(2027, 1, 5, 9, 3)), '05-Jan-2027_09-03_SCAN');
+      expect(scanDocumentName(DateTime(2026, 12, 31, 23, 59)), '31-Dec-2026_23-59_SCAN');
     });
 
     test('starting a new document with nothing on screen sets nothing aside', () async {

@@ -59,8 +59,12 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
   @override
   void initState() {
     super.initState();
-    _name = TextEditingController(text: ref.read(appSettingsProvider).fileNamePattern.format(DateTime.now()))
-      ..addListener(_onNameChanged);
+    // The scan's own name, such as "2026-10-11 Scan"; the pattern from
+    // Settings only for pages that have none.
+    final scanName = ref.read(scanControllerProvider).info?.name;
+    _name = TextEditingController(
+      text: scanName ?? ref.read(appSettingsProvider).fileNamePattern.format(DateTime.now()),
+    )..addListener(_onNameChanged);
   }
 
   @override

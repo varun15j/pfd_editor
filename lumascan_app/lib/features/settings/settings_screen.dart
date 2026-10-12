@@ -63,7 +63,7 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('File name'),
             subtitle: Text(
               '${settings.fileNamePattern.label}, like ${settings.fileNamePattern.example}. '
-              'Offered for the next PDF; saved files keep their names.',
+              'Given to new scans; existing documents keep their names.',
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _choosePattern(context, settings.fileNamePattern, controller.setFileNamePattern),

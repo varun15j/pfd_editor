@@ -20,7 +20,6 @@ import 'package:lumascan/imaging/rgb_image.dart';
 
 import 'support/fake_batch_camera.dart';
 import 'support/fake_photos.dart';
-import 'support/memory_stores.dart';
 import 'support/screen_harness.dart';
 
 const _page = CropQuad(NormPoint(0.2, 0.15), NormPoint(0.8, 0.15), NormPoint(0.8, 0.85), NormPoint(0.2, 0.85));
@@ -348,7 +347,7 @@ void main() {
             photoAnalyzerProvider.overrideWithValue(photos ?? FakePhotoAnalyzer()),
             frameAnalyzerProvider.overrideWithValue(analyzer ?? (frame) async => const FrameAnalysis(quad: _page)),
             spreadSplitterProvider.overrideWithValue((path) async => (_left, _right)),
-            appSettingsStoreProvider.overrideWithValue(MemoryAppSettingsStore()),
+            // The harness gives a settings store kept in memory.
             planProvider.overrideWithValue(plan),
             ...overrides,
           ],

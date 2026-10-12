@@ -5,12 +5,14 @@ import '../../app/preferences.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../domain/scanner_service.dart';
-import '../library/document_tile.dart';
+import '../../domain/ui_prefs.dart';
 import '../library/library_actions.dart';
 import '../pages/scan_controller.dart';
 import '../pdf_editor/open_pdf.dart';
+import 'home_documents.dart';
 
-/// Home: start something new or pick up the draft (LumaScan v2 screen 1).
+/// Home: start something new, or open a scan or PDF from the documents,
+/// shown as a gallery of page previews or as a list (LumaScan v2 screen 1).
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key, required this.onOpenLibrary});
 
@@ -22,7 +24,9 @@ class HomeScreen extends ConsumerWidget {
     final c = LumaColors.of(context);
     final text = Theme.of(context).textTheme;
     final busy = state.busy;
-    final recent = ref.watch(visibleDocumentsProvider).take(10).toList();
+    // Every scan is kept as page images, so it is listed with the saved PDFs.
+    final docs = homeDocuments(state, ref.watch(visibleDocumentsProvider).take(10).toList());
+    final grid = ref.watch(uiPrefsProvider.select((p) => p.homeView)) == LibraryView.grid;
     final dismissed = ref.watch(uiPrefsProvider.select((p) => p.dismissedCards));
     final discovery = [
       for (final card in _DiscoveryCard.all)
@@ -82,50 +86,22 @@ class HomeScreen extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: Semantics(header: true, child: Text('Recent', style: text.titleMedium)),
+                child: Semantics(header: true, child: Text('Documents', style: text.titleMedium)),
               ),
+              if (docs.isNotEmpty)
+                IconButton(
+                  tooltip: grid ? 'Show as list' : 'Show as gallery',
+                  icon: Icon(grid ? Icons.view_list_outlined : Icons.grid_view_outlined),
+                  onPressed: () =>
+                      ref.read(uiPrefsProvider.notifier).setHomeView(grid ? LibraryView.list : LibraryView.grid),
+                ),
               TextButton(onPressed: onOpenLibrary, child: const Text('See all')),
             ],
           ),
           const SizedBox(height: Space.sm),
-          if (state.pages.isNotEmpty) ...[
-            _DraftCard(
-              title: 'Continue draft',
-              pageCount: state.pages.length,
-              exported: state.exported,
-              onTap: () => openDraft(context),
-            ),
-            const SizedBox(height: Space.sm),
-          ],
-          // Earlier scans, set aside when a new scan started (each new scan
-          // is a new document). Opening one brings it back to add pages.
-          for (final draft in state.parked) ...[
-            _DraftCard(
-              title: 'Scan, ${formatModified(draft.savedAt, DateTime.now())}',
-              pageCount: draft.pageCount,
-              exported: draft.exported,
-              onTap: busy
-                  ? null
-                  : () async {
-                      await ref.read(scanControllerProvider.notifier).openParked(draft.id);
-                      if (context.mounted) openDraft(context);
-                    },
-            ),
-            const SizedBox(height: Space.sm),
-          ],
-          if (recent.isNotEmpty)
-            SizedBox(
-              height: RecentDocumentCard.width * 1.1 + MediaQuery.textScalerOf(context).scale(44) + Space.lg + Space.xs,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                clipBehavior: Clip.none,
-                itemCount: recent.length,
-                separatorBuilder: (_, _) => const SizedBox(width: Space.md),
-                itemBuilder: (_, i) =>
-                    RecentDocumentCard(document: recent[i], onTap: () => openDocument(context, ref, recent[i])),
-              ),
-            ),
-          if (state.pages.isEmpty && state.parked.isEmpty && recent.isEmpty)
+          if (docs.isNotEmpty)
+            HomeDocumentsView(docs: docs, grid: grid)
+          else
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(Space.lg),
@@ -186,51 +162,6 @@ class _QuickAction extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DraftCard extends StatelessWidget {
-  const _DraftCard({required this.title, required this.pageCount, required this.exported, required this.onTap});
-
-  final String title;
-  final int pageCount;
-  final bool exported;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = LumaColors.of(context);
-    final text = Theme.of(context).textTheme;
-    return Card(
-      color: c.surfaceRaised,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(Space.lg),
-          child: Row(
-            children: [
-              Icon(Icons.layers_outlined, color: c.accent, size: 32),
-              const SizedBox(width: Space.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: text.titleMedium),
-                    const SizedBox(height: 2),
-                    Text(
-                      '$pageCount page${pageCount == 1 ? '' : 's'}${exported ? ', saved as PDF' : ' not saved yet'}',
-                      style: text.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right, color: c.muted),
-            ],
           ),
         ),
       ),

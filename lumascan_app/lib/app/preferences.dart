@@ -110,6 +110,8 @@ class UiPrefsController extends Notifier<UiPrefs> {
 
   void setLibraryView(LibraryView view) => _set(state.copyWith(libraryView: view));
 
+  void setHomeView(LibraryView view) => _set(state.copyWith(homeView: view));
+
   void dismissCard(String id) => _set(state.copyWith(dismissedCards: {...state.dismissedCards, id}));
 
   void _set(UiPrefs prefs) {

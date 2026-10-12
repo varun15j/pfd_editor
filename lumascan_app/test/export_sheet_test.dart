@@ -150,9 +150,9 @@ void main() {
 
   FilledButton saveButton(WidgetTester tester) => tester.widget<FilledButton>(find.byType(FilledButton));
 
-  testWidgets('offers a default name like "Scan 2026-10-03 14.30"', (tester) async {
+  testWidgets('offers the scan\'s name, like "11-Oct-2026_16-47_SCAN"', (tester) async {
     await pumpSheet(tester);
-    expect(nameField(tester), matches(RegExp(r'^Scan \d{4}-\d{2}-\d{2} \d{2}\.\d{2}$')));
+    expect(nameField(tester), matches(RegExp(r'^\d\d-[A-Z][a-z]{2}-\d{4}_\d\d-\d\d_SCAN$')));
     expect(find.text('.pdf'), findsOneWidget);
   });
 
