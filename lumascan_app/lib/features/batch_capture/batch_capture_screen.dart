@@ -138,6 +138,10 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
   bool _autoCrop = true;
   bool _grid = false;
 
+  /// The filter applied to each new capture. Starts from the Settings
+  /// default and is changed on the camera; pages already taken keep theirs.
+  late DocumentFilter _filter;
+
   /// Coverage of the camera by another screen or a sheet over it, or the
   /// app going to the background.
   bool _covered = false;
@@ -196,6 +200,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     _startedEmpty = ref.read(scanControllerProvider).pages.isEmpty;
     _container;
     _tracker.stableFrames = _settings.autoCaptureSteadiness.frames;
+    _filter = _settings.defaultFilter;
     WidgetsBinding.instance.addObserver(this);
     _open();
   }
@@ -378,9 +383,19 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     // Book mode makes two pages only when both are in view; held over one
     // page, with the other cut off, it makes just that page.
     if (mode == CameraMode.book && showsSpread(_frame.quad)) {
-      pages = await _controller.addCaptureSplit(path, const [leftHalf, rightHalf], replacing: replacing);
+      pages = await _controller.addCaptureSplit(
+        path,
+        const [leftHalf, rightHalf],
+        replacing: replacing,
+        filter: _filter,
+      );
     } else {
-      final page = await _controller.addCapture(path, replacing: replacing, plain: mode == CameraMode.photo);
+      final page = await _controller.addCapture(
+        path,
+        replacing: replacing,
+        plain: mode == CameraMode.photo,
+        filter: _filter,
+      );
       pages = page == null ? null : [page];
     }
     if (!mounted) {
@@ -655,6 +670,34 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     await _camera.setTorch(on);
   }
 
+  /// Picks the filter for the next captures. Shown as a sheet so the choice
+  /// is read in full, and it stays until changed here or the screen closes.
+  Future<void> _chooseFilter() async {
+    final picked = await showModalBottomSheet<DocumentFilter>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text('Filter for new pages', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+            ),
+            for (final f in DocumentFilter.values)
+              ListTile(
+                title: Text(f.label),
+                trailing: f == _filter ? const Icon(Icons.check) : null,
+                onTap: () => Navigator.pop(context, f),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null && mounted) setState(() => _filter = picked);
+  }
+
   void _setOption(_Option option, bool on) {
     switch (option) {
       case _Option.batch:
@@ -838,7 +881,11 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
                           children: [
                             Row(
                               children: [
-                                const SizedBox(width: 48),
+                                _RoundButton(
+                                  tooltip: 'Filter: ${_filter.label}',
+                                  icon: Icons.filter_b_and_w_outlined,
+                                  onPressed: _chooseFilter,
+                                ),
                                 Expanded(
                                   child: Center(
                                     child: _retakeId != null ? const SizedBox.shrink() : _Chip(text: _guidance),
