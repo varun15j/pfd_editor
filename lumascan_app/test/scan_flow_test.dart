@@ -198,12 +198,13 @@ void main() {
     expect(pages[1].recipe.brightness, 0.3);
     expect(pages[1].recipe.contrast, -0.2);
     expect(pages[1].recipe.quarterTurns, 1);
-    expect(pages[2].recipe, const EditRecipe());
+    // New scans start with Auto colour.
+    expect(pages[2].recipe, const EditRecipe(filter: DocumentFilter.magicColor));
 
     // One undo reverts the whole batch.
     controller().undo();
-    expect(state().pages[0].recipe, const EditRecipe());
-    expect(state().pages[1].recipe, const EditRecipe(quarterTurns: 1));
+    expect(state().pages[0].recipe, const EditRecipe(filter: DocumentFilter.magicColor));
+    expect(state().pages[1].recipe, const EditRecipe(quarterTurns: 1, filter: DocumentFilter.magicColor));
   });
 
   test('clear deletes originals', () async {

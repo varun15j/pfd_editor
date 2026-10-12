@@ -93,6 +93,16 @@ void main() {
       const defaults = AppSettings();
       expect(defaults.keepOriginals, isTrue);
       expect(defaults.autoCropOnImport, isTrue);
+      expect(defaults.defaultFilter, DocumentFilter.magicColor);
+    });
+
+    test('a file from before scans were enhanced by default moves to Auto colour once', () {
+      // Older files always held Original, chosen or not.
+      expect(AppSettings.fromJson(const {'defaultFilter': 'original'}).defaultFilter, DocumentFilter.magicColor);
+      expect(AppSettings.fromJson(const {'defaultFilter': 'grayscale'}).defaultFilter, DocumentFilter.grayscale);
+      // Original picked after the change is kept.
+      const plain = AppSettings(defaultFilter: DocumentFilter.original);
+      expect(AppSettings.fromJson(jsonDecode(jsonEncode(plain.toJson())) as Map<String, Object?>), plain);
     });
 
     test('file name patterns', () {
@@ -163,16 +173,17 @@ void main() {
       await setUpContainer();
       final scan = container.read(scanControllerProvider.notifier);
       await scan.scan(ScanSource.camera);
+      // Scans are enhanced unless the user picks another filter.
       expect(
         container.read(scanControllerProvider).pages.map((p) => p.recipe.filter),
-        everyElement(DocumentFilter.original),
+        everyElement(DocumentFilter.magicColor),
       );
 
       container.read(appSettingsProvider.notifier).setDefaultFilter(DocumentFilter.blackWhite);
       await scan.scan(ScanSource.camera);
       expect(container.read(scanControllerProvider).pages.map((p) => p.recipe.filter), [
-        DocumentFilter.original,
-        DocumentFilter.original,
+        DocumentFilter.magicColor,
+        DocumentFilter.magicColor,
         DocumentFilter.blackWhite,
         DocumentFilter.blackWhite,
       ]);
@@ -271,11 +282,11 @@ void main() {
 
     String nameField(WidgetTester tester) => tester.widget<TextField>(find.byType(TextField)).controller!.text;
 
-    testWidgets('the name offered follows the file name setting', (tester) async {
+    testWidgets('the name offered is the scan\'s own name, whatever the file name setting', (tester) async {
       await tester.runAsync(setUpContainer);
       container.read(appSettingsProvider.notifier).setFileNamePattern(FileNamePattern.compact);
       await openSheetAndSave(tester);
-      expect(nameField(tester), matches(RegExp(r'^Scan_\d{8}_\d{4}$')));
+      expect(nameField(tester), matches(RegExp(r'^\d{4}-\d{2}-\d{2} Scan$')));
     });
 
     testWidgets('by default the page images stay after saving', (tester) async {
