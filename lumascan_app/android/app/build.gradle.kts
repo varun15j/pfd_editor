@@ -29,6 +29,9 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // OneDrive sign-in returns to the app through this scheme. It must
+        // match CloudConfig.microsoftRedirectUri (lib/app/cloud_config.dart).
+        manifestPlaceholders["appAuthRedirectScheme"] = "com.lumascan.lumascan"
     }
 
     buildTypes {

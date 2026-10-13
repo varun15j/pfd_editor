@@ -9,6 +9,7 @@ import '../../debug/sample_pages.dart';
 import '../../debug/sample_pages_tile.dart';
 import '../../domain/app_settings.dart';
 import '../../domain/models.dart';
+import '../cloud/accounts_screen.dart';
 import '../onboarding/onboarding_screen.dart';
 import 'about_section.dart';
 import 'storage_section.dart';
@@ -30,6 +31,15 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(Space.page, Space.sm, Space.page, Space.xxl),
         children: [
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.cloud_outlined),
+            title: const Text('Accounts'),
+            subtitle: const Text('Google Drive, OneDrive and iCloud Drive. Import documents into your Library.'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountsScreen())),
+          ),
+          const SizedBox(height: Space.lg),
           const _Header('Scanning'),
           ListTile(
             contentPadding: EdgeInsets.zero,
