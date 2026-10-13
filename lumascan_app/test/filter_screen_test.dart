@@ -109,15 +109,31 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('the carousel offers the five presets in order', (tester) async {
+  testWidgets('the carousel offers every preset in order', (tester) async {
     await pumpEnhance(tester);
-    final labels = ['Original', 'Auto colour', 'Grayscale', 'B&W', 'Whiteboard'];
-    for (final label in labels) {
-      await tester.ensureVisible(find.text(label));
-      expect(find.text(label), findsOneWidget, reason: label);
+    final labels = [
+      'Original',
+      'Auto colour',
+      'Grayscale',
+      'B&W',
+      'Whiteboard',
+      'No shadow',
+      'Lighten',
+      'Eco ink',
+      'Shading',
+    ];
+    // The list is wider than the screen and builds tiles lazily, so walk it
+    // left to right and compare each tile with the one before it.
+    final carousel = find.byWidget(
+      tester.widget(find.ancestor(of: find.text('Original'), matching: find.byType(Scrollable)).first),
+    );
+    expect(find.text(labels.first), findsOneWidget);
+    for (var i = 1; i < labels.length; i++) {
+      await tester.scrollUntilVisible(find.text(labels[i]), 60, scrollable: carousel);
+      expect(find.text(labels[i]), findsOneWidget, reason: labels[i]);
+      expect(find.text(labels[i - 1]), findsOneWidget, reason: '${labels[i - 1]} sits next to ${labels[i]}');
+      expect(tester.getTopLeft(find.text(labels[i])).dx, greaterThan(tester.getTopLeft(find.text(labels[i - 1])).dx));
     }
-    final lefts = [for (final l in labels) tester.getTopLeft(find.text(l)).dx];
-    expect(lefts, orderedEquals([...lefts]..sort()));
   });
 
   testWidgets('the selected preset has a border and a check, and only one does', (tester) async {
@@ -136,7 +152,8 @@ void main() {
         .where((d) => d.border != null && d.border!.top.color != Colors.transparent);
     expect(borders, hasLength(1));
     // The check sits in Grayscale's tile, not Original's.
-    expect(tester.getCenter(find.byIcon(Icons.check)).dx, greaterThan(tester.getCenter(find.text('Original')).dx));
+    final tile = find.ancestor(of: find.byIcon(Icons.check), matching: find.byType(Column)).first;
+    expect(find.descendant(of: tile, matching: find.text('Grayscale')), findsOneWidget);
   });
 
   testWidgets('press and hold shows the original and letting go restores the edit', (tester) async {

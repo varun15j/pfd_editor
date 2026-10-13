@@ -11,6 +11,10 @@ RgbImage applyFilter(RgbImage src, DocumentFilter filter) => switch (filter) {
   DocumentFilter.blackWhite => blackAndWhite(src),
   DocumentFilter.magicColor => magicColor(src),
   DocumentFilter.whiteboard => whiteboard(src),
+  DocumentFilter.noShadow => removeShadows(src),
+  DocumentFilter.lighten => lighten(src),
+  DocumentFilter.ecoInk => ecoInk(src),
+  DocumentFilter.shading => shading(src),
 };
 
 /// Manual brightness and contrast, each from -1 to 1. Brightness shifts every
@@ -212,6 +216,144 @@ RgbImage whiteboard(RgbImage src) {
     d[j + 2] = (l + (d[j + 2] - l) * saturation).round().clamp(0, 255);
   }
   return out;
+}
+
+/// Estimates the paper brightness under each pixel (docs/document.md 4.6):
+/// the brightest value in each block, so ink is ignored, spread to the
+/// neighbouring blocks to cover blocks filled with print, smoothed, then
+/// interpolated back to full size. Shadows and uneven light show up here;
+/// text, being much smaller than a block, does not.
+Float32List paperLevel(Uint8List gray, int w, int h) {
+  final block = math.max(8, math.max(w, h) ~/ 32);
+  final bw = (w + block - 1) ~/ block, bh = (h + block - 1) ~/ block;
+  final peak = Float32List(bw * bh);
+  for (var y = 0; y < h; y++) {
+    final row = (y ~/ block) * bw;
+    for (var x = 0; x < w; x++) {
+      final v = gray[y * w + x].toDouble();
+      final b = row + x ~/ block;
+      if (v > peak[b]) peak[b] = v;
+    }
+  }
+  // Max over the 3x3 block neighbourhood, then a 3x3 mean to soften steps.
+  Float32List pass(Float32List src, bool useMax) {
+    final out = Float32List(bw * bh);
+    for (var by = 0; by < bh; by++) {
+      for (var bx = 0; bx < bw; bx++) {
+        var acc = 0.0;
+        var n = 0;
+        for (var dy = -1; dy <= 1; dy++) {
+          final yy = by + dy;
+          if (yy < 0 || yy >= bh) continue;
+          for (var dx = -1; dx <= 1; dx++) {
+            final xx = bx + dx;
+            if (xx < 0 || xx >= bw) continue;
+            final v = src[yy * bw + xx];
+            if (useMax) {
+              if (v > acc) acc = v;
+            } else {
+              acc += v;
+              n++;
+            }
+          }
+        }
+        out[by * bw + bx] = useMax ? acc : acc / n;
+      }
+    }
+    return out;
+  }
+
+  final grid = pass(pass(peak, true), false);
+  final out = Float32List(w * h);
+  for (var y = 0; y < h; y++) {
+    final gy = ((y + 0.5) / block - 0.5).clamp(0.0, bh - 1.0);
+    final y0 = gy.floor(), y1 = math.min(bh - 1, y0 + 1);
+    final fy = gy - y0;
+    for (var x = 0; x < w; x++) {
+      final gx = ((x + 0.5) / block - 0.5).clamp(0.0, bw - 1.0);
+      final x0 = gx.floor(), x1 = math.min(bw - 1, x0 + 1);
+      final fx = gx - x0;
+      final top = grid[y0 * bw + x0] * (1 - fx) + grid[y0 * bw + x1] * fx;
+      final bottom = grid[y1 * bw + x0] * (1 - fx) + grid[y1 * bw + x1] * fx;
+      out[y * w + x] = math.max(1.0, top * (1 - fy) + bottom * fy);
+    }
+  }
+  return out;
+}
+
+/// No shadow: divides every pixel by the paper brightness around it, so hand
+/// shadows, page curl and uneven room light become even white paper. All
+/// three channels get the same gain, which keeps ink and stamp colours.
+RgbImage removeShadows(RgbImage src) {
+  final w = src.width, h = src.height;
+  final paper = paperLevel(luminance(src), w, h);
+  final s = src.data;
+  final out = RgbImage(w, h);
+  final d = out.data;
+  for (var i = 0, j = 0; i < paper.length; i++, j += 3) {
+    // Aim a little above the paper level so paper lands on white.
+    final gain = 255 / (paper[i] * 0.96);
+    d[j] = (s[j] * gain).round().clamp(0, 255);
+    d[j + 1] = (s[j + 1] * gain).round().clamp(0, 255);
+    d[j + 2] = (s[j + 2] * gain).round().clamp(0, 255);
+  }
+  return out;
+}
+
+/// Lighten (docs/document.md 4.2): lifts dim pages. The paper level is
+/// pushed to white and mid tones are raised with a gamma curve, which leaves
+/// black text dark and rolls off near white instead of clipping it.
+RgbImage lighten(RgbImage src) {
+  final (_, paper) = _percentiles(luminance(src), 0.01, 0.90);
+  final white = math.max(64, paper);
+  final lut = Uint8List(256);
+  for (var v = 0; v < 256; v++) {
+    final t = (v / white).clamp(0.0, 1.0);
+    lut[v] = (255 * math.pow(t, 0.7)).round();
+  }
+  final out = RgbImage(src.width, src.height);
+  for (var i = 0; i < src.data.length; i++) {
+    out.data[i] = lut[src.data[i]];
+  }
+  return out;
+}
+
+/// Eco ink (docs/document.md 4.4, Ink Saving): a grey page for printing with
+/// less toner. Shadows and background tints become pure white, and text is
+/// printed dark grey instead of solid black, so it stays readable but uses
+/// less ink.
+RgbImage ecoInk(RgbImage src, {int darkest = 90}) {
+  final w = src.width, h = src.height;
+  final gray = luminance(src);
+  final paper = paperLevel(gray, w, h);
+  final out = Uint8List(w * h);
+  for (var i = 0; i < out.length; i++) {
+    final t = (gray[i] / paper[i]).clamp(0.0, 1.0);
+    // Anything close to the paper (tints, paper grain, faint shading) is
+    // printed as nothing.
+    if (t > 0.82) {
+      out[i] = 255;
+    } else {
+      out[i] = (darkest + (255 - darkest) * (t / 0.82)).round();
+    }
+  }
+  return _fromGray(w, h, out);
+}
+
+/// Shading: a grey page that keeps tone. Shadows from the camera are evened
+/// out, but pencil shading, grey fills and photos keep their grey levels
+/// instead of being pushed to black or white the way B&W does.
+RgbImage shading(RgbImage src) {
+  final w = src.width, h = src.height;
+  final gray = luminance(src);
+  final paper = paperLevel(gray, w, h);
+  final out = Uint8List(w * h);
+  for (var i = 0; i < out.length; i++) {
+    final t = (gray[i] / (paper[i] * 0.94)).clamp(0.0, 1.0);
+    // Soft curve: a little deeper in the darks, mid greys kept.
+    out[i] = (255 * math.pow(t, 1.15)).round();
+  }
+  return _fromGray(w, h, out);
 }
 
 (int, int) _percentiles(Uint8List values, double low, double high) {

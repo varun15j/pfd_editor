@@ -209,6 +209,94 @@ void main() {
       expect(px(im, 5, 5), (120, 120, 120));
     });
 
+    // Paper lit from the left (dim, 120) to the right (bright, 230), with a
+    // dark text line and a mid-grey shaded box on each side.
+    RgbImage shadowedPage() {
+      final im = RgbImage(160, 80);
+      for (var y = 0; y < 80; y++) {
+        for (var x = 0; x < 160; x++) {
+          final paper = 120 + (x * 110 / 159);
+          final ink = (y >= 38 && y <= 40 && (x % 80) >= 10 && (x % 80) < 30);
+          final box = (y >= 50 && y < 56 && (x % 80) >= 40 && (x % 80) < 46);
+          final v = ink ? paper * 0.15 : (box ? paper * 0.55 : paper);
+          final i = (y * 160 + x) * 3;
+          im.data[i] = im.data[i + 1] = im.data[i + 2] = v.round();
+        }
+      }
+      return im;
+    }
+
+    test('No shadow evens out the paper and keeps text dark and colour intact', () {
+      final out = removeShadows(shadowedPage());
+      expect(px(out, 5, 5).$1, greaterThan(240), reason: 'shadowed paper turns white');
+      expect(px(out, 155, 5).$1, greaterThan(240));
+      expect(px(out, 20, 39).$1, lessThan(70));
+      expect(px(out, 100, 39).$1, lessThan(70));
+
+      final red = solid(64, 64, 200, 190, 180);
+      for (var x = 20; x < 30; x++) {
+        final i = (30 * 64 + x) * 3;
+        red.data[i] = 180;
+        red.data[i + 1] = 30;
+        red.data[i + 2] = 30;
+      }
+      final (r, g, b) = px(removeShadows(red), 25, 30);
+      expect(r, greaterThan(g + 100), reason: 'a red stamp stays red');
+      expect(b, lessThan(80));
+    });
+
+    test('Lighten brightens a dim page but keeps black text dark', () {
+      final im = solid(40, 40, 140, 140, 140);
+      for (var x = 5; x < 35; x++) {
+        setPx(im, x, 20, 10);
+      }
+      setPx(im, 2, 2, 90);
+      final out = lighten(im);
+      expect(px(out, 10, 10).$1, 255);
+      expect(px(out, 10, 20).$1, lessThan(60));
+      expect(px(out, 2, 2).$1, greaterThan(150), reason: 'mid tones are lifted');
+      expect(px(out, 2, 2).$1, lessThan(255));
+    });
+
+    test('Eco ink prints white paper and grey, not black, text', () {
+      final out = ecoInk(shadowedPage());
+      expect(px(out, 5, 5).$1, 255);
+      expect(px(out, 155, 75).$1, 255);
+      final (r, g, b) = px(out, 20, 39);
+      expect(r, inInclusiveRange(90, 140), reason: 'text is dark grey to save ink');
+      expect((g, b), (r, r));
+      final tinted = solid(30, 30, 230, 215, 170); // yellowish paper
+      setPx(tinted, 15, 15, 30);
+      expect(px(ecoInk(tinted), 3, 3), (255, 255, 255));
+    });
+
+    test('Shading evens the light but keeps grey tones', () {
+      final out = shading(shadowedPage());
+      expect(px(out, 5, 5).$1, greaterThan(240));
+      expect(px(out, 155, 5).$1, greaterThan(240));
+      for (final x in [42, 122]) {
+        final grey = px(out, x, 52).$1;
+        expect(grey, inInclusiveRange(100, 180), reason: 'the shaded box stays mid grey');
+      }
+      expect(px(out, 20, 39).$1, lessThan(60));
+    });
+
+    test('New filters leave the input untouched and follow the preset ids', () {
+      final im = shadowedPage();
+      final before = Uint8List.fromList(im.data);
+      for (final f in [
+        DocumentFilter.noShadow,
+        DocumentFilter.lighten,
+        DocumentFilter.ecoInk,
+        DocumentFilter.shading,
+      ]) {
+        final out = applyFilter(im, f);
+        expect((out.width, out.height), (im.width, im.height));
+        expect(DocumentFilter.fromId(f.id), f);
+      }
+      expect(im.data, before);
+    });
+
     test('Original returns the input untouched', () {
       final im = solid(4, 4, 1, 2, 3);
       expect(identical(applyFilter(im, DocumentFilter.original), im), isTrue);

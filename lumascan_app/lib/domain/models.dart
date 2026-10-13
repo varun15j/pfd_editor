@@ -12,7 +12,11 @@ enum DocumentFilter {
   magicColor('magic_color', 'Auto colour'),
   grayscale('grayscale', 'Grayscale'),
   blackWhite('black_white', 'B&W'),
-  whiteboard('whiteboard', 'Whiteboard');
+  whiteboard('whiteboard', 'Whiteboard'),
+  noShadow('shadow_remove', 'No shadow'),
+  lighten('lighten', 'Lighten'),
+  ecoInk('ink_saving', 'Eco ink'),
+  shading('shading', 'Shading');
 
   const DocumentFilter(this.id, this.label);
 
