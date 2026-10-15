@@ -72,5 +72,19 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Google Drive sign-in returns to the app through the reversed iOS
+	     client ID. Replace YOUR_IOS_CLIENT_ID with the part before
+	     ".apps.googleusercontent.com" (see docs/cloud-accounts.md). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.YOUR_IOS_CLIENT_ID</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
