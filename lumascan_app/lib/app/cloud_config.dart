@@ -40,7 +40,7 @@ class CloudClientIds {
 
 /// Used by `flutter run` and debug APKs, signed with the debug keystore.
 const debugCloudClientIds = CloudClientIds(
-  googleServerClientId: '', // "....apps.googleusercontent.com", type Web application
+  googleServerClientId: '786720786625-1bd0vbe1n2gs11esd49sm1sijl3k1ov7.apps.googleusercontent.com', // "....apps.googleusercontent.com", type Web application
   googleIosClientId: '', // "....apps.googleusercontent.com", type iOS
   microsoftClientId: '', // Application (client) ID, a GUID
 );
