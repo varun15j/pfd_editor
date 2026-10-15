@@ -73,8 +73,8 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<!-- Google Drive sign-in returns to the app through the reversed iOS
-	     client ID. Replace YOUR_IOS_CLIENT_ID with the part before
-	     ".apps.googleusercontent.com" (see docs/cloud-accounts.md). -->
+	     client ID. It differs between debug and release builds, so it is set
+	     in ios/Flutter/Debug.xcconfig and Release.xcconfig. -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -82,7 +82,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.YOUR_IOS_CLIENT_ID</string>
+				<string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
 			</array>
 		</dict>
 	</array>
