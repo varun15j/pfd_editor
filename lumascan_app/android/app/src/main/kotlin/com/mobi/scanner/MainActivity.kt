@@ -1,4 +1,4 @@
-package com.lumascan.lumascan
+package com.mobi.scanner
 
 import io.flutter.embedding.android.FlutterActivity
 
