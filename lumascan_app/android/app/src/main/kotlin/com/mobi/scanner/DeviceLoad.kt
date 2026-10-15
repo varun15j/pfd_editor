@@ -1,4 +1,4 @@
-package com.lumascan.lumascan
+package com.mobi.scanner
 
 import android.app.ActivityManager
 import android.content.Context

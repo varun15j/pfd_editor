@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.lumascan.lumascan"
+    namespace = "com.mobi.scanner"
     // permission_handler_android 13.x requires Android API 37 at compile time.
     compileSdk = 37
     ndkVersion = flutter.ndkVersion
@@ -17,7 +17,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.lumascan.lumascan"
+        applicationId = "com.mobi.scanner"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // cunning_document_scanner needs 24; the design docs propose 26.
@@ -31,7 +31,7 @@ android {
         versionName = flutter.versionName
         // OneDrive sign-in returns to the app through this scheme. It must
         // match CloudConfig.microsoftRedirectUri (lib/app/cloud_config.dart).
-        manifestPlaceholders["appAuthRedirectScheme"] = "com.lumascan.lumascan"
+        manifestPlaceholders["appAuthRedirectScheme"] = "com.mobi.scanner"
     }
 
     buildTypes {
