@@ -7,9 +7,11 @@ import '../../domain/ocr.dart';
 import '../../domain/plan.dart';
 import '../../ui/upgrade_dialog.dart';
 import '../../export/ocr_pdf_builder.dart';
-import '../share/pdf_sharer.dart';
+import '../library/library_controller.dart';
+import '../share/text_pdf_next_sheet.dart';
 import '../pages/scan_controller.dart';
 import 'batch_ocr_job.dart';
+import '../../app/preferences.dart';
 
 /// Batch OCR (BE-07): checks that text recognition can run, then reads the
 /// selected pages one by one with progress and Cancel, and ends with which
@@ -56,7 +58,7 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
 
   bool _building = false;
 
-  /// Builds a text PDF of the pages that were read, then offers it to share.
+  /// Builds a text PDF of the pages that were read, then asks what to do with it.
   Future<void> _createPdf(BatchOcrJob job, int? Function(String) numberOf) async {
     if (!await ensurePlan(context, ref, PlanFeature.textPdf, what: 'Text PDF') || !mounted) return;
     final state = ref.read(scanControllerProvider);
@@ -72,17 +74,26 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
     ];
     if (pages.isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
+    final keepLayout = ref.read(planIncludesProvider(PlanFeature.smartScan));
     setState(() => _building = true);
+    OcrPdfFile? made;
     try {
-      final file = (await OcrPdfBuilder(ref.read(pageStoreProvider)).build(pages)).file;
-      if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text('Saved ${file.uri.pathSegments.last}')));
-      await ref.read(pdfSharerProvider).send(file.path);
-    } catch (e) {
+      made = await OcrPdfBuilder(ref.read(pageStoreProvider)).build(pages, keepLayout: keepLayout);
+    } on Object catch (_) {
       messenger.showSnackBar(const SnackBar(content: Text('Could not create the PDF. Try again.')));
     } finally {
       if (mounted) setState(() => _building = false);
     }
+    final file = made;
+    if (file == null || !mounted) return;
+    await showTextPdfNextSheet(
+      context,
+      pdfPath: file.file.path,
+      pageCount: file.pageCount,
+      saveToLibrary: () async {
+        await ref.read(libraryProvider.notifier).addPdf(file.file, pageCount: file.pageCount);
+      },
+    );
   }
 
   void _start() {

@@ -43,7 +43,7 @@ void main() {
 
   test('the 20 book photos are bundled at 1080 x 1920 and copy for import', () async {
     expect(bookSamples.assets, hasLength(20));
-    expect(sampleSets, [mathSamples, bookSamples]);
+    expect(sampleSets, [mathSamples, bookSamples, oddsBookSamples]);
     for (final asset in bookSamples.assets) {
       final photo = RgbImage.decode((await rootBundle.load(asset)).buffer.asUint8List());
       expect((photo.width, photo.height), (1080, 1920), reason: asset);
@@ -57,6 +57,16 @@ void main() {
     addTearDown(() => temp.deleteSync(recursive: true));
     final photos = await loadSamplePages(set: bookSamples);
     expect(photos.map((p) => p.name), [for (final a in bookSamples.assets) a.split('/').last]);
+  });
+
+  test('the 6 odds book photos are bundled at 1080 x 1920 and have line boxes for OCR tests', () async {
+    expect(oddsBookSamples.assets, hasLength(6));
+    final fixtures = File('test/fixtures/ocr_lines_samples.json').readAsStringSync();
+    for (final asset in oddsBookSamples.assets) {
+      final photo = RgbImage.decode((await rootBundle.load(asset)).buffer.asUint8List());
+      expect((photo.width, photo.height), (1080, 1920), reason: asset);
+      expect(fixtures, contains('"$asset"'), reason: asset);
+    }
   });
 
   test('a flat book page is outlined', () async {

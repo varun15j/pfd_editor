@@ -100,9 +100,11 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
       final File file;
       var savedPages = pages.length;
       if (textPdf) {
+        final keepLayout = ref.read(planIncludesProvider(PlanFeature.smartScan));
         final made = await textService.fromPages(
           pages,
           fileName: await store.freeExportName(fileName),
+          keepLayout: keepLayout,
           onProgress: (f) {
             if (mounted) setState(() => _progress = f);
           },

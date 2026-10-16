@@ -66,23 +66,38 @@ class UnavailableOcrEngine implements OcrEngine {
   Future<String> recognizeFile(String path) => Future.error(UnsupportedError('No OCR engine'));
 }
 
-/// A block of text and where it sits on the page, as fractions (0 to 1) of
+/// A piece of text and where it sits on the page, as fractions (0 to 1) of
 /// the page's width and height.
 @immutable
-class OcrBlock {
-  const OcrBlock({
-    required this.text,
-    required this.left,
-    required this.top,
-    required this.right,
-    required this.bottom,
-  });
+class OcrBox {
+  const OcrBox({required this.text, required this.left, required this.top, required this.right, required this.bottom});
 
   final String text;
   final double left;
   final double top;
   final double right;
   final double bottom;
+}
+
+/// One line of text on a page.
+class OcrLine extends OcrBox {
+  const OcrLine({required super.text, required super.left, required super.top, required super.right, required super.bottom});
+}
+
+/// A block of text and where it sits on the page. [lines] are the lines in
+/// it, when the engine reports them.
+@immutable
+class OcrBlock extends OcrBox {
+  const OcrBlock({
+    required super.text,
+    required super.left,
+    required super.top,
+    required super.right,
+    required super.bottom,
+    this.lines = const [],
+  });
+
+  final List<OcrLine> lines;
 }
 
 /// The text on a page, block by block with positions.

@@ -27,11 +27,13 @@ class TextPdfService {
   }
 
   /// Reads [pages] and saves the text PDF as [fileName]. Progress counts
-  /// each page read, then the PDF being built.
+  /// each page read, then the PDF being built. [keepLayout] puts the text
+  /// where it was on the page (see [OcrPdfBuilder.build]).
   Future<OcrPdfFile> fromPages(
     List<ScanPage> pages, {
     required String fileName,
     String languageCode = 'en',
+    bool keepLayout = false,
     void Function(double fraction)? onProgress,
   }) async {
     if (pages.isEmpty) throw ArgumentError('No pages to read');
@@ -59,6 +61,7 @@ class TextPdfService {
           OcrPdfPage(page: snapshot[i], number: i + 1, text: r.text ?? '', layout: r.layout),
       ],
       fileName: fileName,
+      keepLayout: keepLayout,
       onProgress: (done, total) => onProgress?.call(0.9 + 0.1 * done / total),
     );
   }
@@ -70,6 +73,7 @@ class TextPdfService {
     required int pageCount,
     required String fileName,
     String languageCode = 'en',
+    bool keepLayout = false,
     void Function(double fraction)? onProgress,
   }) async {
     if (pageCount <= 0) throw ArgumentError('No pages to read');
@@ -93,6 +97,7 @@ class TextPdfService {
         pages,
         fileName: fileName,
         languageCode: languageCode,
+        keepLayout: keepLayout,
         onProgress: onProgress == null ? null : (f) => onProgress(0.1 + f * 0.9),
       );
     } finally {
