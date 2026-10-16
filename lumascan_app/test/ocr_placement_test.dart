@@ -85,5 +85,16 @@ void main() {
     expect(out.pageCount, 1);
     final bytes = out.file.readAsBytesSync();
     expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
+    // The text layer is fully transparent, so the photo shows unchanged.
+    expect(latin1.decode(bytes), contains('/ca 0'));
+  });
+
+  test('without keepLayout the text is not made transparent, as in Basic', () async {
+    final path = fixtures.keys.firstWhere((k) => k.endsWith('05_bend_a_straw.jpg'));
+    final tmp = Directory.systemTemp.createTempSync('lumascan_flow');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    final out = await OcrPdfBuilder(PageStore(rootDir: () async => tmp))
+        .build([_pageFor(path, fixtures[path]!)], fileName: 'flow.pdf');
+    expect(latin1.decode(out.file.readAsBytesSync()), isNot(contains('/ca 0')));
   });
 }

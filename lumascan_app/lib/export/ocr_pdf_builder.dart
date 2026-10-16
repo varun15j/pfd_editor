@@ -110,13 +110,12 @@ PageDraft pageDraft(OcrPdfPage p, {bool keepLayout = false}) {
   final blocks = p.layout?.blocks ?? const <OcrBlock>[];
   if (blocks.isEmpty && p.text.trim().isEmpty) return PageDraft(aspect, [_picture(0, 0, 1, 1, image)]);
   if (keepLayout && blocks.isNotEmpty) {
-    // The page as it was, with each line's old letters painted over in white;
-    // the same text is set in those boxes. Pictures, drawings and blank paper
-    // stay where they were on the scan.
+    // The photo of the page, as it was, on a white page. The recognized text
+    // is set over it in a transparent layer at each line's place: it can be
+    // searched and copied, and the photo shows through unchanged.
     final lines = [for (final b in blocks) ...(b.lines.isEmpty ? [b] : b.lines)];
-    final background = _whiteOut(image, lines);
     return PageDraft(aspect, [
-      _picture(0, 0, 1, 1, background),
+      _picture(0, 0, 1, 1, image),
       for (final l in lines) TextPiece(l.text, top: l.top, left: l.left, bottom: l.bottom, right: l.right),
     ]);
   }
@@ -125,21 +124,6 @@ PageDraft pageDraft(OcrPdfPage p, {bool keepLayout = false}) {
     for (final f in findFigures(image, [for (final b in blocks) (b.top, b.bottom)])) _picture(f.top, 0, 1, 1, f.image),
   ];
   return PageDraft(aspect, pieces..sort((a, b) => a.top.compareTo(b.top)));
-}
-
-/// A copy of [image] with each box in [boxes] painted white.
-RgbImage _whiteOut(RgbImage image, List<OcrBox> boxes) {
-  final out = RgbImage(image.width, image.height, Uint8List.fromList(image.data));
-  for (final b in boxes) {
-    final x0 = (b.left * out.width).floor().clamp(0, out.width);
-    final x1 = (b.right * out.width).ceil().clamp(0, out.width);
-    final y0 = (b.top * out.height).floor().clamp(0, out.height);
-    final y1 = (b.bottom * out.height).ceil().clamp(0, out.height);
-    for (var y = y0; y < y1; y++) {
-      out.data.fillRange((y * out.width + x0) * 3, (y * out.width + x1) * 3, 255);
-    }
-  }
-  return out;
 }
 
 ImagePiece _picture(double top, double left, double bottom, double right, RgbImage image) =>
@@ -183,9 +167,10 @@ Future<(Uint8List, int)> _document(List<(int, PageDraft)> pages, {required bool 
   return (bytes, doc.document.pdfPageList.pages.length);
 }
 
-/// A page with every piece at its place on the scan. Each line's font is
-/// sized to its box, and the text is shrunk where it would run past the
-/// box's width.
+/// A page with every piece at its place on the scan: a white layer, the photo
+/// on it, and the text on top in a transparent layer. Each line's font is
+/// sized to its box, and the text is shrunk where it would run past the box's
+/// width.
 pw.Page _placedPage(int number, PageDraft draft) {
   final width = _placedWidth;
   final height = width * draft.aspect;
@@ -193,6 +178,7 @@ pw.Page _placedPage(int number, PageDraft draft) {
     pageFormat: PdfPageFormat(width, height, marginAll: 0),
     build: (_) => pw.Stack(
       children: [
+        pw.Positioned(left: 0, top: 0, child: pw.Container(width: width, height: height, color: PdfColors.white)),
         for (final piece in draft.pieces)
           pw.Positioned(
             left: piece.left * width,
@@ -201,12 +187,16 @@ pw.Page _placedPage(int number, PageDraft draft) {
               width: (piece.right - piece.left) * width,
               height: (piece.bottom - piece.top) * height,
               child: switch (piece) {
-                TextPiece() => pw.FittedBox(
-                  fit: pw.BoxFit.scaleDown,
-                  alignment: pw.Alignment.centerLeft,
-                  child: pw.Text(
-                    _printable(piece.text),
-                    style: pw.TextStyle(fontSize: (piece.bottom - piece.top) * height * _lineFontShare),
+                TextPiece() => pw.Opacity(
+                  // Fully transparent: the text is there to search and copy.
+                  opacity: 0,
+                  child: pw.FittedBox(
+                    fit: pw.BoxFit.scaleDown,
+                    alignment: pw.Alignment.centerLeft,
+                    child: pw.Text(
+                      _printable(piece.text),
+                      style: pw.TextStyle(fontSize: (piece.bottom - piece.top) * height * _lineFontShare),
+                    ),
                   ),
                 ),
                 ImagePiece() => pw.Image(pw.MemoryImage(piece.jpeg), fit: pw.BoxFit.fill),
