@@ -10,6 +10,7 @@ import '../../export/ocr_pdf_builder.dart';
 import '../share/pdf_sharer.dart';
 import '../pages/scan_controller.dart';
 import 'batch_ocr_job.dart';
+import '../../app/preferences.dart';
 
 /// Batch OCR (BE-07): checks that text recognition can run, then reads the
 /// selected pages one by one with progress and Cancel, and ends with which
@@ -74,7 +75,8 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _building = true);
     try {
-      final file = (await OcrPdfBuilder(ref.read(pageStoreProvider)).build(pages)).file;
+      final keepLayout = ref.read(planIncludesProvider(PlanFeature.smartScan));
+      final file = (await OcrPdfBuilder(ref.read(pageStoreProvider)).build(pages, keepLayout: keepLayout)).file;
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text('Saved ${file.uri.pathSegments.last}')));
       await ref.read(pdfSharerProvider).send(file.path);

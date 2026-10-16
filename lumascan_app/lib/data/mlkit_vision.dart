@@ -77,6 +77,17 @@ class MlKitOcrEngine implements OcrEngine, OcrLayoutEngine {
             top: unit(b.boundingBox.top, h),
             right: unit(b.boundingBox.right, w),
             bottom: unit(b.boundingBox.bottom, h),
+            lines: [
+              for (final l in b.lines)
+                if (l.text.trim().isNotEmpty)
+                  OcrLine(
+                    text: l.text,
+                    left: unit(l.boundingBox.left, w),
+                    top: unit(l.boundingBox.top, h),
+                    right: unit(l.boundingBox.right, w),
+                    bottom: unit(l.boundingBox.bottom, h),
+                  ),
+            ],
           ),
     ]);
   }

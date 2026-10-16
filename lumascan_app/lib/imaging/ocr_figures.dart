@@ -6,9 +6,24 @@ import 'rgb_image.dart';
 /// a drawing, a table the reader could not make out. [top] is where it sat
 /// on the page (0 to 1), for placing it among the text.
 class OcrFigure {
-  const OcrFigure({required this.top, required this.image});
+  const OcrFigure({
+    required this.top,
+    required this.image,
+    required this.inkLeft,
+    required this.inkTop,
+    required this.inkRight,
+    required this.inkBottom,
+  });
 
+  /// Where the stretch starts on the page, as a fraction (0 to 1) of its height.
   final double top;
+
+  /// The box around what is drawn in the stretch, as fractions (0 to 1) of
+  /// the page's width and height.
+  final double inkLeft;
+  final double inkTop;
+  final double inkRight;
+  final double inkBottom;
   final RgbImage image;
 }
 
@@ -36,7 +51,18 @@ List<OcrFigure> findFigures(
     final y0 = (top * page.height).round().clamp(0, page.height);
     final y1 = (bottom * page.height).round().clamp(0, page.height);
     final box = _inkBox(page, y0, y1);
-    if (box != null) figures.add(OcrFigure(top: top, image: _crop(page, box)));
+    if (box != null) {
+      figures.add(
+        OcrFigure(
+          top: top,
+          inkLeft: box.x0 / page.width,
+          inkTop: box.y0 / page.height,
+          inkRight: box.x1 / page.width,
+          inkBottom: box.y1 / page.height,
+          image: _crop(page, box),
+        ),
+      );
+    }
   }
   return figures;
 }

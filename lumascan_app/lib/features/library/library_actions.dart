@@ -13,6 +13,7 @@ import '../../ui/upgrade_dialog.dart';
 import '../pdf_editor/open_pdf.dart';
 import '../share/send_pdf_sheet.dart';
 import 'library_controller.dart';
+import '../../app/preferences.dart';
 
 /// Ids hidden from the UI while their delete can still be undone. Nothing
 /// is removed from disk until the undo window closes, so if the app is
@@ -203,6 +204,7 @@ Future<void> createTextPdf(BuildContext context, WidgetRef ref, SavedDocument do
       doc.pdfPath,
       pageCount: doc.pageCount,
       fileName: await store.freeExportName(TextPdfService.textName(doc.name)),
+      keepLayout: ref.read(planIncludesProvider(PlanFeature.smartScan)),
       onProgress: (f) => progress.value = f,
     );
     navigator.pop();
