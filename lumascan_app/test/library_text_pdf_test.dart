@@ -37,6 +37,7 @@ class _FakeTextPdf implements TextPdfService {
     List<ScanPage> pages, {
     required String fileName,
     String languageCode = 'en',
+    bool keepLayout = false,
     void Function(double fraction)? onProgress,
   }) => throw UnimplementedError();
 }
