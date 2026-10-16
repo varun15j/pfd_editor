@@ -39,9 +39,10 @@ OcrPdfPage _pageFor(String path, List<OcrLine> lines) => OcrPdfPage(
 void main() {
   final fixtures = _fixtures();
 
-  test('the fixtures cover every sample photo, the book set included', () {
+  test('the fixtures cover every sample photo, the book sets included', () {
     expect(fixtures.keys.where((k) => k.contains('sample_photos/book/')), hasLength(20));
-    expect(fixtures.keys.where((k) => !k.contains('/book/')), hasLength(5));
+    expect(fixtures.keys.where((k) => k.contains('sample_photos/odds_book/')), hasLength(6));
+    expect(fixtures.keys.where((k) => !k.contains('book/')), hasLength(5));
   });
 
   group('keepLayout places every line on its detected box, over the page', () {

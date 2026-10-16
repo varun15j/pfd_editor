@@ -134,6 +134,7 @@ class SettingsScreen extends ConsumerWidget {
             // gesture on phones with gesture navigation, so this is here too.
             const SamplePagesTile(contentPadding: EdgeInsets.zero),
             const SamplePagesTile(set: bookSamples, contentPadding: EdgeInsets.zero),
+            const SamplePagesTile(set: oddsBookSamples, contentPadding: EdgeInsets.zero),
           ],
           const SizedBox(height: Space.xl),
           const AboutSection(),

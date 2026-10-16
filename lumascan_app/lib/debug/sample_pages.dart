@@ -60,8 +60,25 @@ const bookSamples = SampleSet(
   ],
 );
 
+/// Phone photos of the "ODDS BOOOK" document scanned on the CPH2661
+/// (OnePlus) debug build on 16 October 2026, in `sample_photos/odds_book/`:
+/// a colour craft book held open, with a laptop screen, cables and feet
+/// around it. Test pages for the text PDF (OCR) build.
+const oddsBookSamples = SampleSet(
+  title: 'Add odds book pages',
+  subtitle: '6 photos of an open colour book, auto-cropped, for testing text PDFs',
+  assets: [
+    'sample_photos/odds_book/01_post_box.jpg',
+    'sample_photos/odds_book/02_ink_pad_stamp.jpg',
+    'sample_photos/odds_book/03_camera_photos.jpg',
+    'sample_photos/odds_book/04_binoculars.jpg',
+    'sample_photos/odds_book/05_rocket_control_panel.jpg',
+    'sample_photos/odds_book/06_moon_rocket.jpg',
+  ],
+);
+
 /// Every bundled set, in the order they are offered.
-const sampleSets = [mathSamples, bookSamples];
+const sampleSets = [mathSamples, bookSamples, oddsBookSamples];
 
 /// The math revision photos (the first set).
 final samplePageAssets = mathSamples.assets;
