@@ -28,9 +28,3 @@ Twenty phone photos of a printed black-and-white children's science book, held o
 They are harder than the math pages: two-page spreads with a curved gutter, the facing page and the page stack in view, fingers on the page (08, 13, 14, 15), and a busy background (cables, a lamp, cloth). In a debug build, tap **Add book pages** under Settings > Developer or in the debug panel.
 
 Page detection on 6 October 2026 (`detectPageQuad`, 640 px): about 5 of 20 are outlined well (03, 08, 12, 18, 20). Most others cut across both pages. Thin strips of a page (05, 14, 16) were accepted as pages until the detector learned to reject shapes narrower than 0.28 of their length, so those photos now import uncropped; 13 is still a strip, just above the limit. Two-page spreads need their own handling: pick one page at the gutter, or keep the spread.
-
-## Odds book pages (`odds_book/`)
-
-Six phone photos of a colour craft book held open on a stand, from the "ODDS BOOOK" document scanned in the LumaScan debug build on the CPH2661 (OnePlus) on 16 October 2026. They are the original photos of that document's pages (before crop and filter), turned upright and resized from 2160 x 3840 to 1080 x 1920. Behind the book are a laptop screen with log text, cables and feet, so OCR also reads text that is not on the page.
-
-They are the test pages for text PDFs (OCR): `test/fixtures/ocr_lines_samples.json` has their line boxes (read with tesseract) and `test/ocr_placement_test.dart` checks that every line is placed on its box. In a debug build, tap **Add odds book pages** under Settings > Developer or in the debug panel.

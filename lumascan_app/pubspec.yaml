@@ -91,7 +91,7 @@ flutter:
     - sample_photos/04_revision4_lengths.jpg
     - sample_photos/05_revision_grocery_table.jpg
     - sample_photos/book/
-    - sample_photos/odds_book/
+    - sample_scan_img/odds_book/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

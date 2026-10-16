@@ -16,3 +16,11 @@ To copy them to an Android emulator or a USB-connected phone so they show up in 
 adb push sample_scan_img/. /sdcard/Pictures/LumaScanSamples/
 adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Pictures/LumaScanSamples
 ```
+
+## Odds book pages (`odds_book/`)
+
+Six phone photos of a colour craft book held open on a stand, from the "ODDS BOOOK" document scanned in the LumaScan debug build on the CPH2661 (OnePlus) on 16 October 2026. They are the original photos of that document's pages (before crop and filter), turned upright and resized from 2160 x 3840 to 1080 x 1920. Behind the book are a laptop screen with log text, cables and feet, so OCR also reads text that is not on the page.
+
+They are the test pages for text PDFs (OCR): `test/fixtures/ocr_lines_samples.json` has their line boxes (read with tesseract) and `test/ocr_placement_test.dart` checks that every line is placed on its box. In a debug build, tap **Add odds book pages** under Settings > Developer or in the debug panel.
+
+This folder holds them because they are the test images for documents run through OCR; unlike the files above, they are photos, not cleaned scans.

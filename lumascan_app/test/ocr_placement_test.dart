@@ -41,7 +41,7 @@ void main() {
 
   test('the fixtures cover every sample photo, the book sets included', () {
     expect(fixtures.keys.where((k) => k.contains('sample_photos/book/')), hasLength(20));
-    expect(fixtures.keys.where((k) => k.contains('sample_photos/odds_book/')), hasLength(6));
+    expect(fixtures.keys.where((k) => k.contains('sample_scan_img/odds_book/')), hasLength(6));
     expect(fixtures.keys.where((k) => !k.contains('book/')), hasLength(5));
   });
 
