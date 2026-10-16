@@ -109,7 +109,12 @@ void main() {
       expect(service.read.single.$1, lease.pdfPath);
       expect(service.read.single.$2, 3);
       expect(service.read.single.$3, 'Lease (text).pdf');
-      expect(find.text('Saved Lease (text).pdf'), findsOneWidget);
+      // The result is asked about, not filed straight away.
+      expect(find.text('Text PDF saved'), findsOneWidget);
+      expect(find.text('Lease (text)'), findsNothing);
+      await tester.tap(find.text('Save to library'));
+      await tester.pumpAndSettle();
+      expect(find.text('Saved to your Library'), findsOneWidget);
       // Filed in the Library next to the original.
       expect(find.text('Lease (text)'), findsWidgets);
     });

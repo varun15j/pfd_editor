@@ -12,6 +12,7 @@ import '../../export/text_pdf_service.dart';
 import '../../ui/upgrade_dialog.dart';
 import '../pdf_editor/open_pdf.dart';
 import '../share/send_pdf_sheet.dart';
+import '../share/text_pdf_next_sheet.dart';
 import 'library_controller.dart';
 import '../../app/preferences.dart';
 
@@ -208,21 +209,15 @@ Future<void> createTextPdf(BuildContext context, WidgetRef ref, SavedDocument do
       onProgress: (f) => progress.value = f,
     );
     navigator.pop();
-    final saved = await library.addPdf(made.file, pageCount: made.pageCount);
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('Saved ${saved.name}.pdf'),
-          action: context.mounted
-              ? SnackBarAction(
-                  label: 'Send',
-                  onPressed: () =>
-                      showSendPdfSheet(context, pdfPath: saved.pdfPath, name: saved.name, pageCount: saved.pageCount),
-                )
-              : null,
-        ),
-      );
+    if (!context.mounted) return;
+    await showTextPdfNextSheet(
+      context,
+      pdfPath: made.file.path,
+      pageCount: made.pageCount,
+      saveToLibrary: () async {
+        await library.addPdf(made.file, pageCount: made.pageCount);
+      },
+    );
   } on Object catch (e) {
     navigator.pop();
     messenger.showSnackBar(SnackBar(content: Text('Could not create the text PDF. $e')));
