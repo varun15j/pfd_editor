@@ -7,6 +7,7 @@ import '../../domain/scanner_service.dart';
 import '../merge/merge_screen.dart';
 import '../pdf_editor/open_pdf.dart';
 import '../pdf_editor/pdf_editor_screen.dart';
+import '../word/word_actions.dart';
 
 /// Tools tab: a grid of the tools that work today. A tool that is not built
 /// yet is left out, not shown greyed out; compress, split and the rest join
@@ -31,6 +32,8 @@ class ToolsScreen extends ConsumerWidget {
         () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const MergeScreen())),
       ),
       _Tool(Icons.edit_document, 'Edit a PDF', 'Text, drawings and signature', () => pickAndEditPdf(context, ref)),
+      _Tool(Icons.description_outlined, 'PDF to Word', 'Make an editable .docx', () => pickPdfToWord(context, ref)),
+      _Tool(Icons.picture_as_pdf_outlined, 'Word to PDF', 'Open a .docx as a PDF', () => importWordFile(context, ref)),
       _Tool(
         Icons.photo_library_outlined,
         'Photos to PDF',

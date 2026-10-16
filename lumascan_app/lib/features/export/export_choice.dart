@@ -6,16 +6,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/providers.dart';
 import '../pages/scan_controller.dart';
 import '../share/image_sharer.dart';
+import '../word/word_actions.dart';
 import 'export_sheet.dart';
 
 /// Export: the scan is already saved as page images, so this only makes a
-/// copy, as one PDF or as one JPG per page.
+/// copy, as one PDF, as one Word file, or as one JPG per page.
 Future<void> showExportChoice(BuildContext context, WidgetRef ref) async {
   final choice = await showModalBottomSheet<_ExportKind>(context: context, builder: (_) => const _ExportChoiceSheet());
   if (choice == null || !context.mounted) return;
   switch (choice) {
     case _ExportKind.pdf:
       await showExportSheet(context);
+    case _ExportKind.word:
+      final scan = ref.read(scanControllerProvider);
+      await exportScanAsWord(context, ref, scan.pages, name: scan.info?.name ?? 'Scan');
     case _ExportKind.jpg:
       await showModalBottomSheet<void>(
         context: context,
@@ -26,7 +30,7 @@ Future<void> showExportChoice(BuildContext context, WidgetRef ref) async {
   }
 }
 
-enum _ExportKind { pdf, jpg }
+enum _ExportKind { pdf, word, jpg }
 
 class _ExportChoiceSheet extends StatelessWidget {
   const _ExportChoiceSheet();
@@ -45,9 +49,15 @@ class _ExportChoiceSheet extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.picture_as_pdf_outlined),
-            title: const Text('PDF'),
+            title: const Text('Export as PDF'),
             subtitle: const Text('All pages in one file, saved to your Library'),
             onTap: () => Navigator.pop(context, _ExportKind.pdf),
+          ),
+          ListTile(
+            leading: const Icon(Icons.description_outlined),
+            title: const Text('Export as Word'),
+            subtitle: const Text('A .docx file. Pages read with OCR become text you can edit'),
+            onTap: () => Navigator.pop(context, _ExportKind.word),
           ),
           ListTile(
             leading: const Icon(Icons.image_outlined),

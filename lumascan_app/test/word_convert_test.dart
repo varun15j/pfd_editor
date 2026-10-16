@@ -148,7 +148,7 @@ void main() {
       final pdfPath = p.join(tmp.path, 'source.pdf');
       File(pdfPath).writeAsBytesSync([0x25, 0x50, 0x44, 0x46]);
 
-      final docx = await service.pdfToWord(pdfPath, pageCount: 2, name: 'Lease', onProgress: progress.add);
+      final docx = (await service.pdfToWord(pdfPath, pageCount: 2, name: 'Lease', onProgress: progress.add)).file;
       expect(p.basename(docx.path), 'Lease.docx');
       expect(p.basename(docx.parent.path), 'exports');
       expect(progress.last, 1);
@@ -164,8 +164,8 @@ void main() {
       final service = WordService(store, _FakeRasterizer(1));
       final pdfPath = p.join(tmp.path, 'source.pdf');
       File(pdfPath).writeAsBytesSync([0x25]);
-      final first = await service.pdfToWord(pdfPath, pageCount: 1, name: 'Bills');
-      final second = await service.pdfToWord(pdfPath, pageCount: 1, name: 'Bills');
+      final first = (await service.pdfToWord(pdfPath, pageCount: 1, name: 'Bills')).file;
+      final second = (await service.pdfToWord(pdfPath, pageCount: 1, name: 'Bills')).file;
       expect(first.path, isNot(second.path));
       expect(first.existsSync(), isTrue);
     });
