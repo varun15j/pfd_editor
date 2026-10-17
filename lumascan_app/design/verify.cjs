@@ -56,10 +56,19 @@ async function action(value) {
   await action('undo-page');
   check('deletion is reversible', 'state.pages.length === 2');
   await action('go:id');
+  check('ID journey starts at document type', 'state.idStep === "type"');
+  await action('id-start');
+  check('ID journey advances to guided capture', 'state.idStep === "capture"');
   await action('id-front');
   await action('id-back');
+  check('paired sides advance to review', 'state.front && state.back && state.idStep === "review"');
+  check('ID review uses exact watermark label', 'idReview().includes("Add<br>Watermark") && !idReview().includes("Propose Watermark")');
+  check('ID review uses dedicated toolbar icons', 'idReview().includes("id-watermark") && idReview().includes("id-filter") && Boolean(icons.watermark) && Boolean(icons.filter)');
+  check('ID Edit exposes crop and rotate affordance', 'Boolean(icons.cropRotate) && idReview().includes("crop, resize, or rotate image")');
   await action('id-swap');
-  check('swap changes sample side content', 'idMini("front").includes("EXAMPLE / BACK")');
+  check('swap changes sample side content', 'idMini("front").includes("LUMASCAN / BACK")');
+  await action('id-compose');
+  check('review advances to printable layout', 'state.idStep === "layout"');
   await action('id-save');
   check('ID produces one layout page', 'state.pages.length === 1 && state.screen === "pages"');
   await action('go:video');
@@ -83,5 +92,22 @@ async function action(value) {
     assert.ok(!/https?:\/\//.test(text), file + ' has no remote resources');
     checks++;
   }
+  const idWireframe = fs.readFileSync(path.join(__dirname, 'UI_UX_screen', 'ID-card-scan', 'id-card-wireframe.svg'), 'utf8');
+  for (const label of ['Shortcuts', 'ID Card selected', 'Single Side selected', 'Passport selected', 'Capture Front page', 'Review', 'Add Watermark', 'Page grid']) {
+    assert.ok(idWireframe.includes(label), `ID wireframe includes screenshot state: ${label}`);
+    checks++;
+  }
+  assert.ok(idWireframe.includes('Add Watermark · Edit') && idWireframe.includes('Filter · green check'), 'ID review toolbar order matches reference');
+  checks++;
+  for (const label of ['Docs', 'Tools', 'To Text', 'ID Card', 'QR Code', 'Import', 'Edit', 'Filter', 'Add', 'Collage', 'Share', 'Edit PDF', 'More']) {
+    assert.ok(idWireframe.includes(`>${label}<`), `ID wireframe shows icon label: ${label}`);
+    checks++;
+  }
+  assert.ok(idWireframe.includes('#reviewbar text{fill:#fff!important}') && idWireframe.includes('.inverse-light text{fill:#111!important}'), 'ID wireframe enforces inverse label contrast');
+  checks++;
+  assert.ok(idWireframe.includes('fill="#000" opacity=".9"') && idWireframe.includes('>Front page</text>'), 'capture toast is black with a white Front page label');
+  checks++;
+  assert.ok(idWireframe.includes('M76 17v-6h6') && idWireframe.includes('>Edit</text>'), 'review Edit uses crop/resize and rotate icon');
+  checks++;
   console.log(`${checks} source/logic checks passed. Browser layout and native processing are not tested.`);
 })().catch(error => { console.error(error); process.exitCode = 1; });

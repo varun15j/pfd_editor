@@ -15,6 +15,7 @@ import '../domain/scanner_service.dart';
 import '../export/jpg_exporter.dart';
 import '../export/pdf_exporter.dart';
 import '../export/text_pdf_service.dart';
+import '../export/word/pdf_text_reader.dart';
 import '../export/word/word_service.dart';
 import '../pdf_edit/pdf_edit_controller.dart';
 import '../features/batch_capture/batch_camera.dart';
@@ -44,8 +45,12 @@ final textPdfServiceProvider = Provider<TextPdfService>(
 
 /// Converts saved PDFs to Word files and Word files to PDFs.
 final wordServiceProvider = Provider<WordService>(
-  (ref) => WordService(ref.watch(pageStoreProvider), ref.watch(pdfRasterizerProvider)),
+  (ref) =>
+      WordService(ref.watch(pageStoreProvider), ref.watch(pdfRasterizerProvider), ref.watch(pdfTextReaderProvider)),
 );
+
+/// Reads the text layer of a PDF for Word conversion.
+final pdfTextReaderProvider = Provider<PdfTextReader>((ref) => PdfrxTextReader());
 
 final libraryStoreProvider = Provider<LibraryStore>((ref) => LibraryStore(ref.watch(pageStoreProvider)));
 

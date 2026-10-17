@@ -148,9 +148,16 @@ class _DocumentInteraction {
                 : const PremiumBadge(label: 'Pro'),
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: DocumentMenuAction.word,
-          child: ListTile(leading: Icon(Icons.description_outlined), title: Text('Convert to Word')),
+          child: ListTile(
+            leading: const Icon(Icons.description_outlined),
+            title: const Text('Convert to Word'),
+            // Shown to everyone; on Basic it opens the upgrade pop-up.
+            trailing: ProviderScope.containerOf(menuContext).read(planIncludesProvider(PlanFeature.word))
+                ? null
+                : const PremiumBadge(label: 'Pro'),
+          ),
         ),
         const PopupMenuItem(
           value: DocumentMenuAction.delete,
