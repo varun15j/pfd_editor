@@ -116,6 +116,8 @@ The all-app prototype keeps this as one route, `/id/:draftId`, with an internal 
 - Black header contains Back, the two-line editable title, and Help.
 - A white A4 page contains front and back samples and page number `01`.
 - Bottom toolbar order is **Add Watermark**, **Edit**, **Filter**, green confirmation.
+- **Edit** uses a combined crop/resize-and-rotate icon and opens controls that can crop, resize, or rotate the selected ID image.
+- Labels on black controls are white; labels on white surfaces are black throughout the ID flow.
 
 ### ID-07 — Add Watermark dialog
 
@@ -191,6 +193,7 @@ Acceptance criteria:
 
 - Each side is independently editable.
 - Crop has four touch targets and keyboard/screen-reader alternatives to dragging.
+- The Edit action exposes both crop/resize and rotate operations, and its accessible label describes both capabilities.
 - Swap changes logical side assignment and preview order, not source image bytes.
 - Undo is offered after an automatic correction.
 

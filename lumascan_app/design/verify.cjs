@@ -64,6 +64,7 @@ async function action(value) {
   check('paired sides advance to review', 'state.front && state.back && state.idStep === "review"');
   check('ID review uses exact watermark label', 'idReview().includes("Add<br>Watermark") && !idReview().includes("Propose Watermark")');
   check('ID review uses dedicated toolbar icons', 'idReview().includes("id-watermark") && idReview().includes("id-filter") && Boolean(icons.watermark) && Boolean(icons.filter)');
+  check('ID Edit exposes crop and rotate affordance', 'Boolean(icons.cropRotate) && idReview().includes("crop, resize, or rotate image")');
   await action('id-swap');
   check('swap changes sample side content', 'idMini("front").includes("LUMASCAN / BACK")');
   await action('id-compose');
@@ -103,6 +104,10 @@ async function action(value) {
     checks++;
   }
   assert.ok(idWireframe.includes('#reviewbar text{fill:#fff!important}') && idWireframe.includes('.inverse-light text{fill:#111!important}'), 'ID wireframe enforces inverse label contrast');
+  checks++;
+  assert.ok(idWireframe.includes('fill="#000" opacity=".9"') && idWireframe.includes('>Front page</text>'), 'capture toast is black with a white Front page label');
+  checks++;
+  assert.ok(idWireframe.includes('M76 17v-6h6') && idWireframe.includes('>Edit</text>'), 'review Edit uses crop/resize and rotate icon');
   checks++;
   console.log(`${checks} source/logic checks passed. Browser layout and native processing are not tested.`);
 })().catch(error => { console.error(error); process.exitCode = 1; });
