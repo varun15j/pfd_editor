@@ -10,6 +10,8 @@ import 'package:path_provider/path_provider.dart';
 import '../../app/providers.dart';
 import '../../domain/library.dart';
 import '../../domain/models.dart';
+import '../../domain/plan.dart';
+import '../../ui/upgrade_dialog.dart';
 import '../../export/word/word_service.dart';
 import '../library/library_controller.dart';
 import '../merge/pdf_inspector.dart';
@@ -22,6 +24,8 @@ import 'word_saved_sheet.dart';
 /// pictures. The saved PDF is not changed, and the Word file is not added to
 /// the Library, which holds PDFs.
 Future<void> convertToWord(BuildContext context, WidgetRef ref, SavedDocument doc) async {
+  if (!await _ensureWordPlan(context, ref)) return;
+  if (!context.mounted) return;
   if (!File(doc.pdfPath).existsSync()) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${doc.name} is no longer on this device.')));
     return;
@@ -83,6 +87,7 @@ Future<bool?> askWordKind(BuildContext context) => showModalBottomSheet<bool>(
 /// Tools > PDF to Word: lets the user pick any PDF on the device and
 /// converts it the same way as [convertToWord].
 Future<void> pickPdfToWord(BuildContext context, WidgetRef ref) async {
+  if (!await _ensureWordPlan(context, ref) || !context.mounted) return;
   final messenger = ScaffoldMessenger.of(context);
   final List<PickedPdf> picked;
   try {
@@ -129,7 +134,7 @@ Future<void> pickPdfToWord(BuildContext context, WidgetRef ref) async {
 /// file. A page already read with OCR becomes its text; the others are
 /// pictures. Nothing is read again here.
 Future<void> exportScanAsWord(BuildContext context, WidgetRef ref, List<ScanPage> pages, {required String name}) async {
-  if (pages.isEmpty) return;
+  if (!await _ensureWordPlan(context, ref) || !context.mounted || pages.isEmpty) return;
   final service = ref.read(wordServiceProvider);
   await _convert(
     context,
@@ -138,6 +143,11 @@ Future<void> exportScanAsWord(BuildContext context, WidgetRef ref, List<ScanPage
     run: (onProgress) => service.pagesToWord(pages, name: name, onProgress: onProgress),
   );
 }
+
+/// PDF to Word is part of Pro and Gold. On Basic this shows the upgrade
+/// pop-up and returns false.
+Future<bool> _ensureWordPlan(BuildContext context, WidgetRef ref) =>
+    ensurePlan(context, ref, PlanFeature.word, what: 'Convert to Word');
 
 /// Shows progress while [run] makes the Word file, then the saved sheet.
 Future<void> _convert(

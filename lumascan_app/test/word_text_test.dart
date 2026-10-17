@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/app/theme.dart';
 import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/domain/models.dart';
+import 'package:lumascan/domain/plan.dart';
 import 'package:lumascan/export/word/docx_reader.dart';
 import 'package:lumascan/export/word/docx_to_pdf.dart';
 import 'package:lumascan/export/word/docx_writer.dart';
@@ -20,6 +22,7 @@ import 'package:lumascan/features/merge/pdf_inspector.dart';
 import 'package:lumascan/features/tools/tools_screen.dart';
 import 'package:lumascan/features/word/word_saved_sheet.dart';
 import 'package:lumascan/pdf_edit/pdf_saver.dart';
+import 'package:lumascan/ui/state_views.dart';
 import 'package:path/path.dart' as p;
 import 'package:pdfrx/pdfrx.dart';
 
@@ -275,25 +278,27 @@ void main() {
   });
 
   group('Word in the app', () {
-    testWidgets('Tools has PDF to Word and Word to PDF', (tester) async {
+    Future<void> pumpTools(WidgetTester tester, AppPlan plan) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             libraryStoreProvider.overrideWithValue(MemoryLibraryStore()),
             pdfInspectorProvider.overrideWithValue(_NoInspector()),
+            planProvider.overrideWithValue(plan),
           ],
           child: MaterialApp(theme: buildLumaTheme(Brightness.light), home: const ToolsScreen()),
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('PDF to Word'), findsOneWidget);
-      expect(find.text('Word to PDF'), findsOneWidget);
-    });
+    }
 
-    testWidgets('Export offers Export as PDF and Export as Word', (tester) async {
+    Future<void> pumpExport(WidgetTester tester, AppPlan plan) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [libraryStoreProvider.overrideWithValue(MemoryLibraryStore())],
+          overrides: [
+            libraryStoreProvider.overrideWithValue(MemoryLibraryStore()),
+            planProvider.overrideWithValue(plan),
+          ],
           child: MaterialApp(
             theme: buildLumaTheme(Brightness.light),
             home: Consumer(
@@ -306,9 +311,46 @@ void main() {
       );
       await tester.tap(find.text('Export'));
       await tester.pumpAndSettle();
+    }
+
+    test('PDF to Word is part of Pro, and Gold has it too', () {
+      expect(AppPlan.basic.includes(PlanFeature.word), isFalse);
+      expect(AppPlan.pro.includes(PlanFeature.word), isTrue);
+      expect(AppPlan.gold.includes(PlanFeature.word), isTrue);
+    });
+
+    testWidgets('Tools has PDF to Word and Word to PDF; on Basic PDF to Word is marked Pro', (tester) async {
+      await pumpTools(tester, AppPlan.basic);
+      expect(find.text('PDF to Word'), findsOneWidget);
+      expect(find.text('Word to PDF'), findsOneWidget);
+      expect(find.widgetWithText(PremiumBadge, 'Pro'), findsOneWidget);
+
+      await tester.tap(find.text('PDF to Word'));
+      await tester.pumpAndSettle();
+      expect(find.text('Upgrade to Pro'), findsWidgets);
+    });
+
+    testWidgets('on Gold PDF to Word has no lock', (tester) async {
+      await pumpTools(tester, AppPlan.gold);
+      expect(find.byType(PremiumBadge), findsNothing);
+    });
+
+    testWidgets('Export offers Export as PDF and Export as Word, Word locked on Basic', (tester) async {
+      await pumpExport(tester, AppPlan.basic);
       expect(find.text('Export as PDF'), findsOneWidget);
       expect(find.text('Export as Word'), findsOneWidget);
       expect(find.text('JPG images'), findsOneWidget);
+      expect(find.widgetWithText(PremiumBadge, 'Pro'), findsOneWidget);
+
+      await tester.tap(find.text('Export as Word'));
+      await tester.pumpAndSettle();
+      expect(find.text('Upgrade to Pro'), findsWidgets);
+    });
+
+    testWidgets('on Pro Export as Word has no lock', (tester) async {
+      await pumpExport(tester, AppPlan.pro);
+      expect(find.text('Export as Word'), findsOneWidget);
+      expect(find.byType(PremiumBadge), findsNothing);
     });
   });
 }

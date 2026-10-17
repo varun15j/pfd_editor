@@ -3,7 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/preferences.dart';
 import '../../app/providers.dart';
+import '../../domain/plan.dart';
+import '../../ui/state_views.dart';
 import '../pages/scan_controller.dart';
 import '../share/image_sharer.dart';
 import '../word/word_actions.dart';
@@ -56,6 +59,10 @@ class _ExportChoiceSheet extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.description_outlined),
             title: const Text('Export as Word'),
+            // Shown to everyone; on Basic it opens the upgrade pop-up.
+            trailing: ProviderScope.containerOf(context).read(planIncludesProvider(PlanFeature.word))
+                ? null
+                : const PremiumBadge(label: 'Pro'),
             subtitle: const Text('A .docx file. Pages read with OCR become text you can edit'),
             onTap: () => Navigator.pop(context, _ExportKind.word),
           ),

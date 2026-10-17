@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/preferences.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
+import '../../domain/plan.dart';
 import '../../domain/scanner_service.dart';
+import '../../ui/state_views.dart';
 import '../merge/merge_screen.dart';
 import '../pdf_editor/open_pdf.dart';
 import '../pdf_editor/pdf_editor_screen.dart';
@@ -32,7 +35,14 @@ class ToolsScreen extends ConsumerWidget {
         () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const MergeScreen())),
       ),
       _Tool(Icons.edit_document, 'Edit a PDF', 'Text, drawings and signature', () => pickAndEditPdf(context, ref)),
-      _Tool(Icons.description_outlined, 'PDF to Word', 'Make an editable .docx', () => pickPdfToWord(context, ref)),
+      _Tool(
+        Icons.description_outlined,
+        'PDF to Word',
+        'Make an editable .docx',
+        () => pickPdfToWord(context, ref),
+        // Shown to everyone; on Basic it opens the upgrade pop-up.
+        badge: ref.watch(planIncludesProvider(PlanFeature.word)) ? null : 'Pro',
+      ),
       _Tool(Icons.picture_as_pdf_outlined, 'Word to PDF', 'Open a .docx as a PDF', () => importWordFile(context, ref)),
       _Tool(
         Icons.photo_library_outlined,
@@ -63,9 +73,12 @@ class ToolsScreen extends ConsumerWidget {
 }
 
 class _Tool {
-  const _Tool(this.icon, this.title, this.hint, this.onTap);
+  const _Tool(this.icon, this.title, this.hint, this.onTap, {this.badge});
 
   final IconData icon;
+
+  /// The plan a locked tool needs, shown next to its icon.
+  final String? badge;
   final String title;
   final String hint;
   final VoidCallback onTap;
@@ -91,14 +104,19 @@ class _ToolCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: c.accentSoft,
-                  borderRadius: BorderRadius.circular(ControlMetrics.radius),
-                ),
-                child: Icon(tool.icon, color: c.accent, size: ControlMetrics.icon),
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: c.accentSoft,
+                      borderRadius: BorderRadius.circular(ControlMetrics.radius),
+                    ),
+                    child: Icon(tool.icon, color: c.accent, size: ControlMetrics.icon),
+                  ),
+                  if (tool.badge != null) ...[const Spacer(), PremiumBadge(label: tool.badge!)],
+                ],
               ),
               const SizedBox(height: Space.sm),
               Text(tool.title, style: text.titleSmall, maxLines: 2, overflow: TextOverflow.ellipsis),
