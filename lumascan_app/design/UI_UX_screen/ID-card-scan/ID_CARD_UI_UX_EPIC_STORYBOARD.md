@@ -25,7 +25,7 @@ The wireframe and interactive screen intentionally preserve the visible interfac
 - `A4 paper example`, `Make it now`, `Single Side`, `ID Card`, `Passport`
 - `Front page`, `Back page`, `Import`
 - `Tap the title above to rename; tap the picture to crop or rotate`
-- `Add a watermark`, `Enter the content for the watermark`, `Cancel`, `OK`
+- `Add Watermark`, `Enter the content for the watermark`, `Cancel`, `OK`
 - `Add`, `Collage`, `Share`, `Edit PDF`, `More`
 
 The matching black camera chrome, white document surfaces, gray review background, alignment grid, green framing corners, green primary action, bottom toolbars, and two-column saved-page grid are also retained. Personal identity content from the references remains excluded.

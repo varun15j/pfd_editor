@@ -62,6 +62,8 @@ async function action(value) {
   await action('id-front');
   await action('id-back');
   check('paired sides advance to review', 'state.front && state.back && state.idStep === "review"');
+  check('ID review uses exact watermark label', 'idReview().includes("Add<br>Watermark") && !idReview().includes("Propose Watermark")');
+  check('ID review uses dedicated toolbar icons', 'idReview().includes("id-watermark") && idReview().includes("id-filter") && Boolean(icons.watermark) && Boolean(icons.filter)');
   await action('id-swap');
   check('swap changes sample side content', 'idMini("front").includes("LUMASCAN / BACK")');
   await action('id-compose');
