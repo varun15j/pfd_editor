@@ -56,10 +56,16 @@ async function action(value) {
   await action('undo-page');
   check('deletion is reversible', 'state.pages.length === 2');
   await action('go:id');
+  check('ID journey starts at document type', 'state.idStep === "type"');
+  await action('id-start');
+  check('ID journey advances to guided capture', 'state.idStep === "capture"');
   await action('id-front');
   await action('id-back');
+  check('paired sides advance to review', 'state.front && state.back && state.idStep === "review"');
   await action('id-swap');
-  check('swap changes sample side content', 'idMini("front").includes("EXAMPLE / BACK")');
+  check('swap changes sample side content', 'idMini("front").includes("LUMASCAN / BACK")');
+  await action('id-compose');
+  check('review advances to printable layout', 'state.idStep === "layout"');
   await action('id-save');
   check('ID produces one layout page', 'state.pages.length === 1 && state.screen === "pages"');
   await action('go:video');
