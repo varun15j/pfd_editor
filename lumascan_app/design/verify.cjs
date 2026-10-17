@@ -98,5 +98,9 @@ async function action(value) {
   }
   assert.ok(idWireframe.includes('Add Watermark · Edit') && idWireframe.includes('Filter · green check'), 'ID review toolbar order matches reference');
   checks++;
+  for (const label of ['Docs', 'Tools', 'To Text', 'ID Card', 'QR Code', 'Import', 'Edit', 'Filter', 'Add', 'Collage', 'Share', 'Edit PDF', 'More']) {
+    assert.ok(idWireframe.includes(`>${label}<`), `ID wireframe shows icon label: ${label}`);
+    checks++;
+  }
   console.log(`${checks} source/logic checks passed. Browser layout and native processing are not tested.`);
 })().catch(error => { console.error(error); process.exitCode = 1; });
