@@ -35,13 +35,13 @@ The matching black camera chrome, white document surfaces, gray review backgroun
 | Source | Useful behavior observed | LumaScan decision |
 |---|---|---|
 | `(1)` | ID Card appears as a direct scan shortcut. | Keep a first-class **ID copy** action in Library and Tools. |
-| `(2)` | Front-and-back cards can be composed on one printable page. | Default to **Two sides** and preview both sides on A4/Letter. |
-| `(3)` | A single-sided option is useful for badges and cards. | Offer **One side** without forcing an empty back slot. |
-| `(4)` | Passport capture needs different proportions and guidance. | Offer **Passport page** with one required capture and portrait-page framing. |
-| `(5)` | The active side must be explicit during camera capture. | Show **Capture front**, **Capture back**, and `1 of 2` / `2 of 2`; retain the confirmed side as a thumbnail. |
-| `(6)` | Crop, rotate, filter, watermark, and confirm belong after capture. | Use a focused review screen before page composition; do not crowd the camera. |
-| `(7)` | A purpose watermark is valuable but text entry needs context. | Use an optional toggle, safe copy suggestion, live page preview, and character limit. |
-| `(8)` | Users expect sources to remain editable after composition. | Save one composite page while retaining reversible front/back source sides. |
+| `(2)` | The ID Card template shows both sides on one A4 example. | Keep **Single Side**, **ID Card**, and **Passport** directly below **Make it now**, with ID Card selected in green. |
+| `(3)` | Selecting Single Side changes the preview but not the surrounding controls. | Keep all controls fixed and move the green selection border to **Single Side**. |
+| `(4)` | Selecting Passport shows a portrait document example. | Keep all controls fixed and move the green selection border to **Passport**. |
+| `(5)` | Capture is a full-screen camera with a 3×3 grid and four green corner marks. | Keep only **Close**, the centered shutter, and **Import** in the bottom black control area. |
+| `(6)` | Review uses a black header, white A4 page, and bottom toolbar. | Preserve the exact order **Add Watermark**, **Edit**, **Filter**, green confirmation. |
+| `(7)` | Watermark entry is a modal over the review screen with the keyboard visible. | Use **Add Watermark**, the exact placeholder, a green underline, then **Cancel** and **OK** at lower right. |
+| `(8)` | The saved view is a two-column page grid. | Preserve pages `01`, `02`, `03`, the add-page tile, and **Add**, **Collage**, **Share**, **Edit PDF**, **More**. |
 
 ## 2. Experience promise
 
@@ -88,54 +88,44 @@ The all-app prototype keeps this as one route, `/id/:draftId`, with an internal 
 - Entry does not open a generic document camera first.
 - Existing ID drafts open at Review or Layout, never silently reset.
 
-### ID-02 — Choose document type
+### ID-02 — ID Card selected
 
-- Choices: **Two sides**, **One side**, **Passport page**.
-- Two sides is the recommended default, visibly selected by border, fill, icon, and `aria-pressed`.
+- Choices: **Single Side**, **ID Card**, **Passport**.
+- ID Card is visibly selected with the green border and a two-sided A4 example.
 - Supporting copy explains the output, not a country or document brand.
 - Primary action: **Make it now**.
 
-### ID-03 — Capture front / page
+### ID-03 — Single Side selected
 
-- Camera guidance uses **Front page** and **Back page**, matching the references.
-- A document-shaped guide replaces a full-page A4 guide.
-- Live checks: all four edges, focus, glare, and usable scale.
-- Auto-capture waits for stable geometry; manual shutter always remains available.
-- Import uses a fictional sample in the prototype and a system picker in production.
+- The green selection border moves to **Single Side**.
+- The A4 example changes to one card while the top controls, description, **Make it now**, and mode row stay fixed.
 
-### ID-04 — Capture back
+### ID-04 — Passport selected
 
-- Appears only for Two sides.
-- The confirmed front remains visible as a small thumbnail.
-- **Retake front** does not discard the back if the back already exists.
-- Side labels are text, not color-only.
+- The green selection border moves to **Passport**.
+- The A4 example changes to a portrait passport page while every surrounding control stays fixed.
 
-### ID-05 — Review and correct
+### ID-05 — Capture Front page
 
-- Front and back cards show independent **Retake** actions.
-- Shared tools: Rotate, Adjust crop, and Swap.
-- A quality result is descriptive: `Sharp`, `Check glare`, `Too small`, or `Edge missing`.
-- Low-quality captures can continue after a warning; only unusable input blocks composition.
+- Full-screen camera preview uses a white 3×3 alignment grid and four green corner marks.
+- The centered overlay reads **Front page**.
+- Bottom controls are exactly **Close**, shutter, and **Import**.
 
-### ID-06 — Compose one page
+### ID-06 — Review
 
-- Default: A4, 100% card scale, centered, front above back.
-- Alternative: Letter; regional default follows app settings.
-- Show print-safe margin and preserve aspect ratio.
-- **Recheck captures** returns to Review without losing layout settings.
+- Black header contains Back, the two-line editable title, and Help.
+- A white A4 page contains front and back samples and page number `01`.
+- Bottom toolbar order is **Add Watermark**, **Edit**, **Filter**, green confirmation.
 
-### ID-07 — Purpose watermark
+### ID-07 — Add Watermark dialog
 
-- Off by default.
-- When enabled, suggest `For [purpose] only` and optionally include the current date.
-- Maximum 60 characters; preview updates while typing.
-- Keep at least 4.5:1 contrast against the page while using transparency on the card.
-- Placement avoids the portrait, identity number, QR/barcode, and machine-readable zone when those regions are known. If they are unknown, use a broad diagonal preview and make placement adjustable.
+- Dialog title is **Add Watermark**.
+- Placeholder is **Enter the content for the watermark** with a green underline.
+- **Cancel** and **OK** are aligned at the lower right, and the keyboard is visible below the dimmed review screen.
 
-### ID-08 — Saved document
+### ID-08 — Page grid
 
-- Save creates one composite document page plus reversible side assets and edit recipes.
-- Confirmation: **Saved on this device**.
+- Grid order is composite page `01`, front `02`, back `03`, then the dashed **Tap to add new pages** tile.
 - Actions: **Add**, **Collage**, **Share**, **Edit PDF**, and **More**.
 - Export never removes the original side captures.
 

@@ -91,5 +91,12 @@ async function action(value) {
     assert.ok(!/https?:\/\//.test(text), file + ' has no remote resources');
     checks++;
   }
+  const idWireframe = fs.readFileSync(path.join(__dirname, 'UI_UX_screen', 'ID-card-scan', 'id-card-wireframe.svg'), 'utf8');
+  for (const label of ['Shortcuts', 'ID Card selected', 'Single Side selected', 'Passport selected', 'Capture Front page', 'Review', 'Add Watermark', 'Page grid']) {
+    assert.ok(idWireframe.includes(label), `ID wireframe includes screenshot state: ${label}`);
+    checks++;
+  }
+  assert.ok(idWireframe.includes('Add Watermark · Edit') && idWireframe.includes('Filter · green check'), 'ID review toolbar order matches reference');
+  checks++;
   console.log(`${checks} source/logic checks passed. Browser layout and native processing are not tested.`);
 })().catch(error => { console.error(error); process.exitCode = 1; });
