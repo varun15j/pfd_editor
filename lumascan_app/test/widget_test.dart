@@ -54,40 +54,41 @@ MemoryUiPrefsStore tipsSeen() => MemoryUiPrefsStore(const UiPrefs(dismissedCards
 
 void main() {
   group('app shell', () {
-    testWidgets('home offers scan, import and PDF editing', (tester) async {
+    testWidgets('Docs has the avatar, title, Search, the docs row and the camera button', (tester) async {
       await pumpApp(tester);
       expect(find.text('LumaScan'), findsOneWidget);
-      for (final label in ['Scan', 'Import', 'Edit PDF']) {
-        expect(find.bySemanticsLabel(label), findsOneWidget, reason: label);
+      expect(find.text('All docs(0)'), findsOneWidget);
+      for (final tip in ['Settings', 'Search', 'Create', 'Sort', 'Select', 'Scan']) {
+        expect(find.byTooltip(tip), findsOneWidget, reason: tip);
       }
       expect(find.text('Your scans will show up here.'), findsOneWidget);
-      expect(find.byTooltip('Create'), findsOneWidget);
     });
 
-    testWidgets('bottom bar switches between the four tabs', (tester) async {
+    testWidgets('bottom bar switches between Docs and Tools; Search and the avatar open screens', (tester) async {
       await pumpApp(tester);
-      await tester.tap(find.bySemanticsLabel('Library'));
+      await tester.tap(find.byTooltip('Search'));
       await tester.pumpAndSettle();
       expect(find.text('No saved documents yet'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
 
       await tester.tap(find.bySemanticsLabel('Tools'));
       await tester.pumpAndSettle();
+      expect(find.text('Shortcuts'), findsOneWidget);
       expect(find.text('Merge PDFs'), findsOneWidget);
 
-      await tester.tap(find.bySemanticsLabel('Settings'));
+      await tester.tap(find.bySemanticsLabel('Docs'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
       expect(find.text('Appearance'), findsOneWidget);
-
-      await tester.tap(find.bySemanticsLabel('Home'));
-      await tester.pumpAndSettle();
-      expect(find.text('Scan something new'), findsOneWidget);
     });
 
     testWidgets('selected tab is announced as selected', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpApp(tester);
-      expect(tester.getSemantics(find.bySemanticsLabel('Home')), isSemantics(isSelected: true, isButton: true));
-      expect(tester.getSemantics(find.bySemanticsLabel('Library')), isSemantics(isSelected: false, isButton: true));
+      expect(tester.getSemantics(find.bySemanticsLabel('Docs')), isSemantics(isSelected: true, isButton: true));
+      expect(tester.getSemantics(find.bySemanticsLabel('Tools')), isSemantics(isSelected: false, isButton: true));
       handle.dispose();
     });
 
@@ -97,7 +98,7 @@ void main() {
         prefs: tipsSeen(),
         overrides: [batchCameraProvider.overrideWithValue(() => _blockedCamera())],
       );
-      await tester.tap(find.bySemanticsLabel('Scan'));
+      await tester.tap(find.byTooltip('Scan'));
       await tester.pumpAndSettle();
       expect(find.text('Camera access needed'), findsOneWidget);
       expect(find.text('Open Settings'), findsOneWidget);
@@ -121,7 +122,7 @@ void main() {
 
     testWidgets('appearance setting switches to the dark theme', (tester) async {
       await pumpApp(tester);
-      await tester.tap(find.bySemanticsLabel('Settings'));
+      await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Dark'));
       await tester.pumpAndSettle();
@@ -130,21 +131,20 @@ void main() {
       expect(LumaColors.of(context).background, LumaColors.dark.background);
     });
 
-    testWidgets('home and tabs fit at 200% text size', (tester) async {
+    testWidgets('Docs and Tools fit at 200% text size', (tester) async {
       await pumpApp(tester, textScale: 2);
       expect(tester.takeException(), isNull);
-      for (final tab in ['Library', 'Tools', 'Settings']) {
-        await tester.tap(find.bySemanticsLabel(tab));
-        await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull, reason: tab);
-      }
+      await tester.tap(find.bySemanticsLabel('Tools'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
     });
 
-    testWidgets('bottom bar items and quick actions are at least 48 dp tall', (tester) async {
+    testWidgets('bottom bar items and the camera button are at least 48 dp tall', (tester) async {
       await pumpApp(tester);
-      for (final label in ['Home', 'Library', 'Tools', 'Settings', 'Scan', 'Import', 'Edit PDF']) {
+      for (final label in ['Docs', 'Tools']) {
         expect(tester.getSize(find.bySemanticsLabel(label)).height, greaterThanOrEqualTo(minTapTarget), reason: label);
       }
+      expect(tester.getSize(find.byTooltip('Scan')).height, greaterThanOrEqualTo(minTapTarget));
     });
   });
 
@@ -162,7 +162,7 @@ void main() {
 
     testWidgets('library lists saved documents with name, date and page count', (tester) async {
       await pumpApp(tester, library: MemoryLibraryStore(library));
-      await tester.tap(find.bySemanticsLabel('Library'));
+      await tester.tap(find.byTooltip('Search'));
       await tester.pumpAndSettle();
       expect(find.text('No saved documents yet'), findsNothing);
       expect(find.text('Rental agreement'), findsWidgets);
@@ -182,7 +182,7 @@ void main() {
       ])..info = ScanDocInfo(name: '2026-10-11 Scan', createdAt: DateTime(2026, 10, 11, 9));
       await pumpApp(tester, draft: store, overrides: [_noImages]);
       expect(find.text('2026-10-11 Scan'), findsOneWidget);
-      expect(find.textContaining('2 pages · Images'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('2 pages · Images')), findsOneWidget);
     });
 
     testWidgets('earlier scans are listed on home and open again to add pages', (tester) async {
@@ -201,7 +201,7 @@ void main() {
       );
       await pumpApp(tester, draft: store, overrides: [_noImages]);
       expect(find.text('2026-10-11 Scan 2'), findsOneWidget);
-      expect(find.textContaining('3 pages · Images, PDF made'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('3 pages · Images, PDF made')), findsOneWidget);
 
       await tester.tap(find.text('2026-10-11 Scan'));
       // Page images that do not exist keep their spinners going, so no settle.
@@ -247,7 +247,7 @@ void main() {
 
     testWidgets('a library that fails to load offers a retry', (tester) async {
       await pumpApp(tester, library: _BrokenLibraryStore());
-      await tester.tap(find.bySemanticsLabel('Library'));
+      await tester.tap(find.byTooltip('Search'));
       await tester.pumpAndSettle();
       expect(find.text('Library could not be opened'), findsOneWidget);
       expect(find.text('Try again'), findsOneWidget);

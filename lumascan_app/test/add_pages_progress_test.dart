@@ -150,7 +150,9 @@ void main() {
           pageStoreProvider.overrideWithValue(NoCopyPageStore()),
         ],
       );
-      await tester.tap(find.bySemanticsLabel('Import'));
+      await tester.tap(find.byTooltip('Create'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Import photos'));
       await tester.pumpAndSettle();
     }
 

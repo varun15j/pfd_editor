@@ -29,15 +29,21 @@ void main() {
 
   group('app tabs', () {
     for (final mode in [ThemeMode.light, ThemeMode.dark]) {
-      for (final tab in ['Home', 'Library', 'Settings']) {
+      for (final tab in ['Home', 'Tools', 'Library', 'Settings']) {
         testWidgets('$tab in ${mode.name}', (tester) async {
           await pumpApp(
             tester,
             library: MemoryLibraryStore(threeDocs()),
             settings: MemoryAppSettingsStore(AppSettings(onboardingSeen: true, themeMode: mode)),
           );
+          // Home is the Docs tab; the Library opens from Search and
+          // Settings from the avatar.
           if (tab != 'Home') {
-            await tester.tap(find.bySemanticsLabel(tab).first);
+            await tester.tap(switch (tab) {
+              'Library' => find.byTooltip('Search'),
+              'Settings' => find.byTooltip('Settings'),
+              _ => find.bySemanticsLabel(tab).first,
+            });
             await tester.pumpAndSettle();
           }
           await expectLater(app(), matchesGoldenFile('goldens/${tab.toLowerCase()}_${mode.name}.png'));

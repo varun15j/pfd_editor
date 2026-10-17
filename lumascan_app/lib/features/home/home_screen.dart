@@ -6,17 +6,23 @@ import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../domain/scanner_service.dart';
 import '../../domain/ui_prefs.dart';
+import '../capture/create_sheet.dart';
 import '../library/library_actions.dart';
+import '../library/library_query_sheets.dart';
+import '../library/library_screen.dart';
+import '../settings/settings_screen.dart';
 import '../pages/scan_controller.dart';
-import '../pdf_editor/open_pdf.dart';
 import 'home_documents.dart';
 
-/// Home: start something new, or open a scan or PDF from the documents,
-/// shown as a gallery of page previews or as a list (LumaScan v2 screen 1).
+/// Docs tab, laid out as Screen 1 of the UI/UX screenshots: the avatar
+/// (Settings), the app name and Search at the top, then "All docs(N)" with
+/// Create, Sort, Grid and Select, then every scan and PDF. Search, the
+/// folder picker and Select open the Library, where those tools live.
 class HomeScreen extends ConsumerWidget {
-  const HomeScreen({super.key, required this.onOpenLibrary});
+  const HomeScreen({super.key});
 
-  final VoidCallback onOpenLibrary;
+  void _openLibrary(BuildContext context) =>
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const LibraryScreen()));
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,7 +31,7 @@ class HomeScreen extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     final busy = state.busy;
     // Every scan is kept as page images, so it is listed with the saved PDFs.
-    final docs = homeDocuments(state, ref.watch(visibleDocumentsProvider).take(10).toList());
+    final docs = homeDocuments(state, ref.watch(visibleDocumentsProvider));
     final grid = ref.watch(uiPrefsProvider.select((p) => p.homeView)) == LibraryView.grid;
     final dismissed = ref.watch(uiPrefsProvider.select((p) => p.dismissedCards));
     final discovery = [
@@ -33,141 +39,125 @@ class HomeScreen extends ConsumerWidget {
         if (!dismissed.contains(card.id)) card,
     ];
 
-    return SafeArea(
-      bottom: false,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(Space.page, Space.xl, Space.page, Space.xxl),
+    return Scaffold(
+      appBar: AppBar(
+        centerTitle: true,
+        leadingWidth: 64,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: Space.md),
+          child: IconButton(
+            tooltip: 'Settings',
+            padding: EdgeInsets.zero,
+            icon: CircleAvatar(
+              radius: 18,
+              backgroundColor: c.surfaceRaised,
+              child: Icon(Icons.person, color: c.ink),
+            ),
+            onPressed: () =>
+                Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen())),
+          ),
+        ),
+        title: Text(
+          'LumaScan',
+          style: text.titleLarge?.copyWith(color: c.success, fontWeight: FontWeight.w800),
+        ),
+        actions: [
+          IconButton(tooltip: 'Search', icon: const Icon(Icons.search), onPressed: () => _openLibrary(context)),
+          const SizedBox(width: Space.xs),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(Space.page, Space.sm, Space.page, Space.xxl * 2),
         children: [
-          Semantics(header: true, child: Text('LumaScan', style: text.headlineMedium)),
-          const SizedBox(height: Space.xs),
-          Text('Scan something new', style: text.bodyLarge?.copyWith(color: c.muted)),
-          const SizedBox(height: Space.xl),
           Row(
             children: [
               Expanded(
-                child: _QuickAction(
-                  icon: Icons.document_scanner_outlined,
-                  label: 'Scan',
-                  primary: true,
-                  onTap: busy ? null : () => scanThenReview(context, ref, ScanSource.camera),
+                child: Semantics(
+                  header: true,
+                  button: true,
+                  label: 'All docs, ${docs.length}. Open folders',
+                  excludeSemantics: true,
+                  child: InkWell(
+                    onTap: () => _openLibrary(context),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: Space.sm),
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'All docs(${docs.length})',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          Icon(Icons.arrow_drop_down, color: c.success),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: Space.md),
-              Expanded(
-                child: _QuickAction(
-                  icon: Icons.photo_library_outlined,
-                  label: 'Import',
-                  onTap: busy ? null : () => scanThenReview(context, ref, ScanSource.gallery),
-                ),
+              IconButton(
+                tooltip: 'Create',
+                icon: const Icon(Icons.note_add_outlined),
+                onPressed: busy ? null : () => showCreateSheet(context, ref),
               ),
-              const SizedBox(width: Space.md),
-              Expanded(
-                child: _QuickAction(
-                  icon: Icons.edit_document,
-                  label: 'Edit PDF',
-                  onTap: busy ? null : () => pickAndEditPdf(context, ref),
-                ),
+              IconButton(
+                tooltip: 'Sort',
+                icon: const Icon(Icons.sort),
+                onPressed: () async {
+                  await showSortSheet(context);
+                  if (context.mounted) _openLibrary(context);
+                },
+              ),
+              IconButton(
+                tooltip: grid ? 'Show as list' : 'Show as gallery',
+                icon: Icon(grid ? Icons.view_list_outlined : Icons.grid_view_outlined),
+                onPressed: docs.isEmpty
+                    ? null
+                    : () => ref.read(uiPrefsProvider.notifier).setHomeView(grid ? LibraryView.list : LibraryView.grid),
+              ),
+              IconButton(
+                tooltip: 'Select',
+                icon: const Icon(Icons.check_box_outlined),
+                onPressed: docs.isEmpty ? null : () => _openLibrary(context),
               ),
             ],
           ),
           if (busy) ...[
-            const SizedBox(height: Space.lg),
+            const SizedBox(height: Space.md),
             const LinearProgressIndicator(semanticsLabel: 'Adding pages'),
           ],
           for (final card in discovery) ...[
-            const SizedBox(height: Space.lg),
+            const SizedBox(height: Space.md),
             _DiscoveryCardView(
               card: card,
               onTap: busy ? null : () => card.run(context, ref),
               onDismiss: () => ref.read(uiPrefsProvider.notifier).dismissCard(card.id),
             ),
           ],
-          const SizedBox(height: Space.xxl),
-          Row(
-            children: [
-              Expanded(
-                child: Semantics(header: true, child: Text('Documents', style: text.titleMedium)),
-              ),
-              if (docs.isNotEmpty)
-                IconButton(
-                  tooltip: grid ? 'Show as list' : 'Show as gallery',
-                  icon: Icon(grid ? Icons.view_list_outlined : Icons.grid_view_outlined),
-                  onPressed: () =>
-                      ref.read(uiPrefsProvider.notifier).setHomeView(grid ? LibraryView.list : LibraryView.grid),
-                ),
-              TextButton(onPressed: onOpenLibrary, child: const Text('See all')),
-            ],
-          ),
-          const SizedBox(height: Space.sm),
+          const SizedBox(height: Space.lg),
           if (docs.isNotEmpty)
             HomeDocumentsView(docs: docs, grid: grid)
           else
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(Space.lg),
-                child: Row(
-                  children: [
-                    Icon(Icons.history, color: c.muted),
-                    const SizedBox(width: Space.md),
-                    Expanded(
-                      child: Text('Your scans will show up here.', style: text.bodyMedium?.copyWith(color: c.muted)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickAction extends StatelessWidget {
-  const _QuickAction({required this.icon, required this.label, required this.onTap, this.primary = false});
-
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-  final bool primary;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = LumaColors.of(context);
-    final fg = primary ? c.onAccent : c.ink;
-    return Semantics(
-      button: true,
-      enabled: onTap != null,
-      label: label,
-      excludeSemantics: true,
-      child: Material(
-        color: primary ? c.accent : c.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(ControlMetrics.radius),
-          side: primary ? BorderSide.none : BorderSide(color: c.line),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(ControlMetrics.radius),
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 68),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: Space.sm, horizontal: Space.xs),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: Space.xxl),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icon, size: 22, color: primary ? fg : c.accent),
+                  Icon(Icons.description_outlined, size: 48, color: c.muted),
+                  const SizedBox(height: Space.md),
+                  Text('Your scans will show up here.', style: text.bodyLarge?.copyWith(color: c.muted)),
                   const SizedBox(height: Space.xs),
                   Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(color: fg, fontWeight: FontWeight.w700),
+                    'Tap the camera button to scan a document.',
+                    textAlign: TextAlign.center,
+                    style: text.bodyMedium?.copyWith(color: c.muted),
                   ),
                 ],
               ),
             ),
-          ),
-        ),
+        ],
       ),
     );
   }

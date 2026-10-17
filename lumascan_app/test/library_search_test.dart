@@ -31,7 +31,7 @@ List<String> names(List<SavedDocument> list) => [for (final d in list) d.name];
 
 Future<void> openLibrary(WidgetTester tester) async {
   await pumpApp(tester, library: MemoryLibraryStore(const LibraryIndex().copyWith(documents: docs)));
-  await tester.tap(find.bySemanticsLabel('Library'));
+  await tester.tap(find.byTooltip('Search'));
   await tester.pumpAndSettle();
 }
 
@@ -165,7 +165,7 @@ void main() {
       expect(apply.onPressed, isNull);
     });
 
-    testWidgets('search and filters survive switching tabs', (tester) async {
+    testWidgets('search and filters survive leaving the Library', (tester) async {
       await openLibrary(tester);
       await tester.enterText(find.byType(TextField), 'bill');
       await tester.tap(find.byTooltip('Sort: Newest first'));
@@ -173,9 +173,9 @@ void main() {
       await tester.tap(find.text('Oldest first'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.bySemanticsLabel('Home'));
+      await tester.pageBack();
       await tester.pumpAndSettle();
-      await tester.tap(find.bySemanticsLabel('Library'));
+      await tester.tap(find.byTooltip('Search'));
       await tester.pumpAndSettle();
       expect(shownNames(tester), ['electricity bill']);
       expect(find.widgetWithText(InputChip, 'Oldest first'), findsOneWidget);
@@ -195,7 +195,7 @@ void main() {
 
     testWidgets('search, sort and filter fit at 200% text', (tester) async {
       await pumpApp(tester, textScale: 2, library: MemoryLibraryStore(const LibraryIndex().copyWith(documents: docs)));
-      await tester.tap(find.bySemanticsLabel('Library'));
+      await tester.tap(find.byTooltip('Search'));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Filter'));
       await tester.pumpAndSettle();
