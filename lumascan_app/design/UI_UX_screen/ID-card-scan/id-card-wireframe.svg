@@ -32,8 +32,8 @@
   <rect width="2200" height="1370" fill="url(#board)"/>
   <circle cx="2080" cy="70" r="190" fill="#dff0eb"/><circle cx="2130" cy="30" r="95" fill="#cce7df" opacity=".7"/>
   <text x="80" y="58" class="kicker">LUMASCAN · UI/UX HANDOFF · OCTOBER 2026</text>
-  <text x="80" y="112" class="board-title">ID card studio — complete wireframe</text>
-  <text x="80" y="146" class="board-sub">A private, guided path from shortcut to a purpose-marked, export-ready copy. All identity content below is fictional.</text>
+  <text x="80" y="112" class="board-title">ID Card scan — screenshot-matched wireframe</text>
+  <text x="80" y="146" class="board-sub">The source sequence, control text, black/white camera chrome and green actions are preserved; identity content remains fictional.</text>
   <g transform="translate(1890 96)"><rect width="224" height="42" rx="21" fill="#fff" stroke="#cad8d3"/><circle cx="24" cy="21" r="6" fill="#2fae86"/><text x="42" y="26" class="label">8 STATES · WCAG READY</text></g>
 
   <!-- 01 Entry -->
@@ -41,13 +41,12 @@
     <rect width="480" height="520" rx="26" fill="#fff" stroke="#dfe7e3"/>
     <circle cx="32" cy="31" r="16" fill="#0a6b60"/><text x="25" y="35" class="number">01</text><text x="59" y="36" class="panel-title">Shortcut entry</text><text x="59" y="57" class="panel-sub">Find the task without entering a generic camera first.</text>
     <g transform="translate(24 82)"><use href="#phone-shell"/>
-      <text x="18" y="66" class="phone-title">Good morning</text><text x="18" y="84" class="tiny">What would you like to capture?</text>
-      <rect x="18" y="102" width="208" height="72" rx="15" fill="url(#brand)"/><circle cx="51" cy="138" r="20" fill="#fff" opacity=".2"/><path d="M41 128h20v18H41zm5-5h10l3 5H43z" fill="none" stroke="#fff" stroke-width="2"/><text x="82" y="134" class="white" font-size="14" font-weight="700">New scan</text><text x="82" y="151" class="white" font-size="8" opacity=".75">Document, ID, book and more</text>
-      <text x="18" y="202" class="label">QUICK ACTIONS</text>
-      <rect x="18" y="216" width="62" height="84" rx="14" fill="#e7f3ef" stroke="#0a6b60"/><rect x="31" y="231" width="36" height="23" rx="4" fill="#dcebf4" stroke="#7194a7"/><circle cx="41" cy="242" r="5" fill="#efc6a4"/><text x="31" y="278" class="outline-label">ID copy</text>
-      <rect x="91" y="216" width="62" height="84" rx="14" fill="#fff" stroke="#dfe7e3"/><rect x="106" y="231" width="32" height="40" rx="2" fill="#eff2f0"/><text x="105" y="286" class="tiny">Import</text>
-      <rect x="164" y="216" width="62" height="84" rx="14" fill="#fff" stroke="#dfe7e3"/><path d="M179 250h32M195 234v32" stroke="#64746f" stroke-width="2"/><text x="178" y="286" class="tiny">More</text>
-      <rect x="18" y="322" width="208" height="46" rx="12" fill="#fff" stroke="#dfe7e3"/><text x="34" y="342" class="label">Recent: Project brief</text><text x="34" y="357" class="tiny">3 pages · on this device</text>
+      <text x="90" y="69" class="phone-title" font-size="18">Shortcuts</text><text x="18" y="101" font-size="16">Scan</text>
+      <rect x="18" y="118" width="62" height="84" fill="#f1f1f1"/><rect x="31" y="137" width="36" height="23" rx="4" fill="#dcebf4" stroke="#7194a7"/><circle cx="41" cy="148" r="5" fill="#efc6a4"/><text x="29" y="220" class="label">ID Card</text>
+      <rect x="91" y="118" width="62" height="84" fill="#f1f1f1"/><rect x="106" y="132" width="32" height="45" fill="#fff" stroke="#bfc9c5"/><text x="100" y="220" class="label">Scan Docs</text>
+      <rect x="164" y="118" width="62" height="84" fill="#f1f1f1"/><path d="M176 145q19-15 38 0v35q-19-15-38 0z" fill="#fff" stroke="#6a8179"/><text x="184" y="220" class="label">Book</text>
+      <rect x="18" y="244" width="62" height="74" fill="#f1f1f1"/><text x="29" y="337" class="label">QR Code</text><rect x="91" y="244" width="62" height="74" fill="#f1f1f1"/><text x="105" y="337" class="label">To Text</text>
+      <text x="18" y="369" font-size="14">Process Files</text>
     </g>
     <g transform="translate(294 108)"><text class="kicker" font-size="11">WHY THIS WORKS</text><text y="34" class="note"><tspan x="0" dy="0">• Direct ID shortcut</tspan><tspan x="0" dy="25">• No account gate</tspan><tspan x="0" dy="25">• Clear local-storage cue</tspan></text><path d="M0 124h142" stroke="#dfe7e3"/><text y="154" class="kicker" font-size="11">PRIMARY ACTION</text><text y="179" class="note"><tspan x="0">Tap “ID copy”</tspan><tspan x="0" dy="20">to enter a dedicated,</tspan><tspan x="0" dy="20">guided workflow.</tspan></text></g>
   </g>
@@ -64,7 +63,7 @@
       <rect x="91" y="178" width="62" height="104" rx="14" fill="#fff" stroke="#dfe7e3"/><use href="#sample-front" transform="translate(99 199) scale(.38)"/><text x="103" y="263" class="label">One side</text>
       <rect x="164" y="178" width="62" height="104" rx="14" fill="#fff" stroke="#dfe7e3"/><rect x="180" y="195" width="30" height="42" rx="3" fill="#eff2f0" stroke="#b9c7c2"/><circle cx="188" cy="213" r="5" fill="#efc6a4"/><text x="177" y="263" class="label">Passport</text>
       <rect x="18" y="302" width="208" height="44" rx="12" fill="#e9f4f1"/><path d="M36 315v-4a5 5 0 0110 0v4m-12 0h14v13H34z" fill="none" stroke="#0a6b60" stroke-width="1.5"/><text x="57" y="320" class="label" fill="#0a6b60">Fictional sample only</text><text x="57" y="333" class="micro">No recognition · no upload</text>
-      <rect x="18" y="358" width="208" height="40" rx="12" fill="url(#brand)"/><text x="72" y="382" class="btn-label">START GUIDED CAPTURE →</text>
+      <rect x="18" y="358" width="208" height="40" rx="4" fill="#00945e"/><text x="83" y="382" class="btn-label" font-size="13">Make it now</text>
     </g>
     <g transform="translate(294 108)"><text class="kicker" font-size="11">DESIGN RULE</text><text y="34" class="note"><tspan x="0">Use recognisable formats,</tspan><tspan x="0" dy="20">not country-specific IDs.</tspan><tspan x="0" dy="30">Selection is visible via</tspan><tspan x="0" dy="20">border, fill and state.</tspan></text><path d="M0 149h142" stroke="#dfe7e3"/><text y="179" class="kicker" font-size="11">ACCESSIBILITY</text><text y="204" class="note"><tspan x="0">48px targets, semantic</tspan><tspan x="0" dy="20">labels, 200% text.</tspan></text></g>
   </g>
@@ -104,7 +103,7 @@
     <rect width="480" height="520" rx="26" fill="#fff" stroke="#dfe7e3"/>
     <circle cx="32" cy="31" r="16" fill="#0a6b60"/><text x="25" y="35" class="number">05</text><text x="59" y="36" class="panel-title">Review and correct</text><text x="59" y="57" class="panel-sub">Check pairing, crop, rotation and sharpness.</text>
     <g transform="translate(24 82)"><use href="#phone-shell"/>
-      <text x="18" y="67" class="phone-title">Check every edge</text><rect x="162" y="54" width="64" height="22" rx="11" fill="#e6f2ef"/><text x="173" y="68" class="outline-label">SHARP · 92%</text>
+      <rect x="7" y="40" width="230" height="62" fill="#050505"/><text x="48" y="66" class="white" font-size="11">ID Card 10-17-2026</text><text x="48" y="83" class="white" font-size="11">08.16</text><text x="207" y="72" class="white" font-size="18">?</text>
       <rect x="18" y="96" width="100" height="142" rx="14" fill="#fff" stroke="#dfe7e3"/><use href="#sample-front" transform="translate(28 120) scale(.67)"/><text x="52" y="216" class="label">FRONT</text><text x="40" y="229" class="micro">Tap to retake</text>
       <rect x="126" y="96" width="100" height="142" rx="14" fill="#fff" stroke="#dfe7e3"/><use href="#sample-back" transform="translate(136 120) scale(.67)"/><text x="163" y="216" class="label">BACK</text><text x="148" y="229" class="micro">Tap to retake</text>
       <rect x="18" y="250" width="64" height="54" rx="12" fill="#fff" stroke="#dfe7e3"/><text x="34" y="274" font-size="18">↻</text><text x="34" y="292" class="tiny">Rotate</text><rect x="90" y="250" width="64" height="54" rx="12" fill="#fff" stroke="#dfe7e3"/><text x="111" y="275" font-size="15">⌗</text><text x="103" y="292" class="tiny">Crop</text><rect x="162" y="250" width="64" height="54" rx="12" fill="#fff" stroke="#dfe7e3"/><text x="184" y="275" font-size="15">⇅</text><text x="178" y="292" class="tiny">Swap</text>
@@ -132,8 +131,7 @@
     <rect width="480" height="520" rx="26" fill="#fff" stroke="#dfe7e3"/>
     <circle cx="32" cy="31" r="16" fill="#0a6b60"/><text x="25" y="35" class="number">07</text><text x="59" y="36" class="panel-title">Add purpose watermark</text><text x="59" y="57" class="panel-sub">Optional, specific and visible before export.</text>
     <g transform="translate(24 82)"><use href="#phone-shell"/>
-      <text x="18" y="65" class="phone-title">Review the page</text><rect x="43" y="82" width="158" height="219" rx="4" fill="#fff" stroke="#cdd8d4"/><use href="#sample-front" transform="translate(62 118)"/><use href="#sample-back" transform="translate(62 202)"/><text x="52" y="198" font-size="12" font-weight="800" fill="#0a6b60" opacity=".38" transform="rotate(-23 122 198)">FOR ACCOUNT OPENING ONLY</text>
-      <rect x="18" y="316" width="208" height="66" rx="14" fill="#fff" stroke="#0a6b60" stroke-width="2"/><text x="32" y="337" class="outline-label">WATERMARK TEXT</text><text x="32" y="358" class="label">For account opening only</text><text x="32" y="373" class="micro">Preview updates while typing</text>
+      <rect x="7" y="40" width="230" height="334" fill="#000" opacity=".52"/><rect x="18" y="112" width="208" height="152" rx="5" fill="#fff"/><text x="36" y="151" font-size="21" fill="#506474">Add a watermark</text><text x="36" y="190" font-size="12" fill="#777">Enter the content for the watermark</text><path d="M36 208h172" stroke="#00945e" stroke-width="3"/><text x="139" y="242" font-size="13" fill="#00945e">Cancel</text><text x="192" y="242" font-size="13" fill="#00945e">OK</text>
       <rect x="18" y="389" width="208" height="9" rx="4" fill="url(#brand)"/>
     </g>
     <g transform="translate(294 108)"><text class="kicker" font-size="11">SAFE DEFAULT</text><text y="34" class="note"><tspan x="0">Watermark is off until</tspan><tspan x="0" dy="20">the user opts in.</tspan><tspan x="0" dy="30">Never obscure portrait,</tspan><tspan x="0" dy="20">number or machine zone.</tspan></text><path d="M0 149h142" stroke="#dfe7e3"/><text y="179" class="kicker" font-size="11">SUGGESTED COPY</text><text y="204" class="note"><tspan x="0">“For [purpose] only”</tspan><tspan x="0" dy="20">+ optional date.</tspan></text></g>
@@ -144,11 +142,10 @@
     <rect width="480" height="520" rx="26" fill="#fff" stroke="#dfe7e3"/>
     <circle cx="32" cy="31" r="16" fill="#0a6b60"/><text x="25" y="35" class="number">08</text><text x="59" y="36" class="panel-title">Saved and export-ready</text><text x="59" y="57" class="panel-sub">One document, one page, reversible source sides.</text>
     <g transform="translate(24 82)"><use href="#phone-shell"/>
-      <path d="M26 58l-8 8 8 8M18 66h16" fill="none" stroke="#10221f" stroke-width="2"/><text x="48" y="67" class="phone-title">ID copy · sample</text><rect x="18" y="86" width="208" height="38" rx="11" fill="#e9f4f1"/><text x="34" y="103" class="outline-label">✓ SAVED ON THIS DEVICE</text><text x="34" y="116" class="micro">Original sides retained</text>
+      <path d="M26 58l-8 8 8 8M18 66h16" fill="none" stroke="#10221f" stroke-width="2"/><text x="48" y="67" class="phone-title">ID Card 10-17-2026 08.16</text><path d="M205 56v16h14M208 68l4 4 9-11" fill="none" stroke="#10221f" stroke-width="2"/>
       <rect x="18" y="138" width="100" height="148" rx="14" fill="#fff" stroke="#0a6b60" stroke-width="2"/><rect x="32" y="152" width="72" height="105" fill="#fff" stroke="#cdd8d4"/><use href="#sample-front" transform="translate(39 168) scale(.54)"/><use href="#sample-back" transform="translate(39 217) scale(.54)"/><text x="53" y="276" class="outline-label">PAGE 1</text>
       <rect x="126" y="138" width="100" height="148" rx="14" fill="#fbfcfb" stroke="#dfe7e3" stroke-dasharray="6 4"/><path d="M165 197h24M177 185v24" stroke="#94a29d" stroke-width="2"/><text x="153" y="229" class="tiny">ADD PAGE</text>
-      <rect x="18" y="306" width="208" height="44" rx="12" fill="url(#brand)"/><text x="80" y="332" class="btn-label">EXPORT PDF</text>
-      <rect x="18" y="362" width="62" height="36" rx="11" fill="#fff" stroke="#dfe7e3"/><text x="35" y="384" class="label">EDIT</text><rect x="91" y="362" width="62" height="36" rx="11" fill="#fff" stroke="#dfe7e3"/><text x="104" y="384" class="label">SHARE</text><rect x="164" y="362" width="62" height="36" rx="11" fill="#fff" stroke="#dfe7e3"/><text x="180" y="384" class="label">MORE</text>
+      <text x="25" y="371" class="label">Add</text><text x="65" y="371" class="label">Collage</text><text x="118" y="371" class="label">Share</text><text x="158" y="371" class="label">Edit PDF</text><text x="209" y="371" class="label">More</text>
     </g>
     <g transform="translate(294 108)"><text class="kicker" font-size="11">RESULT</text><text y="34" class="note"><tspan x="0">Composite PDF page plus</tspan><tspan x="0" dy="20">editable source sides.</tspan><tspan x="0" dy="30">Export, share or return</tspan><tspan x="0" dy="20">to crop and watermark.</tspan></text><path d="M0 149h142" stroke="#dfe7e3"/><text y="179" class="kicker" font-size="11">PRIVACY</text><text y="204" class="note"><tspan x="0">No identity verification.</tspan><tspan x="0" dy="20">No automatic OCR.</tspan></text></g>
   </g>

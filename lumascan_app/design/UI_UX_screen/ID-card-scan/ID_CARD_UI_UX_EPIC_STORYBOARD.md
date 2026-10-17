@@ -16,6 +16,20 @@ Last updated: 17 October 2026
 
 The eight JPG files in this folder are behavioral references only. They contain real identity information. The LumaScan design does not reuse their names, numbers, faces, QR codes, document artwork, or visual styling. Every prototype identity is fictional and visibly marked `SAMPLE`.
 
+### Reference-matched UI copy
+
+The wireframe and interactive screen intentionally preserve the visible interface wording from the numbered references:
+
+- `Shortcuts`, `Scan`, `ID Card`, `Scan Docs`, `Book`, `QR Code`, `To Text`
+- `Process Files`, `Import Files`, `Collage Images`, `PDF Watermark`
+- `A4 paper example`, `Make it now`, `Single Side`, `ID Card`, `Passport`
+- `Front page`, `Back page`, `Import`
+- `Tap the title above to rename; tap the picture to crop or rotate`
+- `Add a watermark`, `Enter the content for the watermark`, `Cancel`, `OK`
+- `Add`, `Collage`, `Share`, `Edit PDF`, `More`
+
+The matching black camera chrome, white document surfaces, gray review background, alignment grid, green framing corners, green primary action, bottom toolbars, and two-column saved-page grid are also retained. Personal identity content from the references remains excluded.
+
 ## 1. Research synthesis
 
 | Source | Useful behavior observed | LumaScan decision |
@@ -79,11 +93,11 @@ The all-app prototype keeps this as one route, `/id/:draftId`, with an internal 
 - Choices: **Two sides**, **One side**, **Passport page**.
 - Two sides is the recommended default, visibly selected by border, fill, icon, and `aria-pressed`.
 - Supporting copy explains the output, not a country or document brand.
-- Primary action: **Start guided capture**.
+- Primary action: **Make it now**.
 
 ### ID-03 — Capture front / page
 
-- Camera header names the active side and progress.
+- Camera guidance uses **Front page** and **Back page**, matching the references.
 - A document-shaped guide replaces a full-page A4 guide.
 - Live checks: all four edges, focus, glare, and usable scale.
 - Auto-capture waits for stable geometry; manual shutter always remains available.
@@ -122,7 +136,7 @@ The all-app prototype keeps this as one route, `/id/:draftId`, with an internal 
 
 - Save creates one composite document page plus reversible side assets and edit recipes.
 - Confirmation: **Saved on this device**.
-- Actions: Export PDF, Share, Edit, Add page, More.
+- Actions: **Add**, **Collage**, **Share**, **Edit PDF**, and **More**.
 - Export never removes the original side captures.
 
 ## 5. Epic ID-01 — Create a safe, printable ID copy
