@@ -7,6 +7,18 @@ import 'library_browse_test.dart' show threeDocs;
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
 
+/// Opens a screen from Docs: Tools is a tab, the Library opens from Search
+/// and Settings from the avatar.
+Future<void> openScreen(WidgetTester tester, String screen) async {
+  if (screen == 'Docs') return;
+  await tester.tap(switch (screen) {
+    'Library' => find.byTooltip('Search'),
+    'Settings' => find.byTooltip('Settings'),
+    _ => find.bySemanticsLabel(screen).first,
+  });
+  await tester.pumpAndSettle();
+}
+
 void main() {
   Future<void> expectAccessible(WidgetTester tester) async {
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
@@ -16,7 +28,7 @@ void main() {
   }
 
   for (final mode in [ThemeMode.light, ThemeMode.dark]) {
-    for (final tab in ['Home', 'Library', 'Tools', 'Settings']) {
+    for (final tab in ['Docs', 'Library', 'Tools', 'Settings']) {
       testWidgets('$tab in ${mode.name}: guidelines', (tester) async {
         final handle = tester.ensureSemantics();
         await pumpApp(
@@ -24,10 +36,7 @@ void main() {
           library: MemoryLibraryStore(threeDocs()),
           settings: MemoryAppSettingsStore(AppSettings(onboardingSeen: true, themeMode: mode)),
         );
-        if (tab != 'Home') {
-          await tester.tap(find.bySemanticsLabel(tab).first);
-          await tester.pumpAndSettle();
-        }
+        await openScreen(tester, tab);
         await expectAccessible(tester);
         handle.dispose();
       });
@@ -41,8 +50,7 @@ void main() {
         prefs: MemoryUiPrefsStore(const UiPrefs(libraryView: LibraryView.grid)),
         settings: MemoryAppSettingsStore(AppSettings(onboardingSeen: true, themeMode: mode)),
       );
-      await tester.tap(find.bySemanticsLabel('Library').first);
-      await tester.pumpAndSettle();
+      await openScreen(tester, 'Library');
       await expectAccessible(tester);
       handle.dispose();
     });
@@ -54,8 +62,7 @@ void main() {
         library: MemoryLibraryStore(threeDocs()),
         settings: MemoryAppSettingsStore(AppSettings(onboardingSeen: true, themeMode: mode)),
       );
-      await tester.tap(find.bySemanticsLabel('Library').first);
-      await tester.pumpAndSettle();
+      await openScreen(tester, 'Library');
       await tester.longPress(find.text('Lease').last);
       await tester.pumpAndSettle();
       await expectAccessible(tester);
@@ -73,13 +80,10 @@ void main() {
     });
   }
 
-  for (final tab in ['Home', 'Library', 'Tools', 'Settings']) {
+  for (final tab in ['Docs', 'Library', 'Tools', 'Settings']) {
     testWidgets('$tab fits at 200% text size', (tester) async {
       await pumpApp(tester, library: MemoryLibraryStore(threeDocs()), textScale: 2);
-      if (tab != 'Home') {
-        await tester.tap(find.bySemanticsLabel(tab).first);
-        await tester.pumpAndSettle();
-      }
+      await openScreen(tester, tab);
       expect(tester.takeException(), isNull);
     });
   }
@@ -91,8 +95,7 @@ void main() {
       prefs: MemoryUiPrefsStore(const UiPrefs(libraryView: LibraryView.grid)),
       textScale: 2,
     );
-    await tester.tap(find.bySemanticsLabel('Library').first);
-    await tester.pumpAndSettle();
+    await openScreen(tester, 'Library');
     expect(tester.takeException(), isNull);
     await tester.longPress(find.text('Lease').last);
     await tester.pumpAndSettle();

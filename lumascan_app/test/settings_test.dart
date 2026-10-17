@@ -352,7 +352,7 @@ void main() {
     Future<void> openSettings(WidgetTester tester, {double textScale = 1, List overrides = const []}) async {
       store = MemoryAppSettingsStore();
       await pumpApp(tester, settings: store, textScale: textScale, overrides: overrides);
-      await tester.tap(find.text('Settings').last);
+      await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
       // A tall screen so the whole list is built, not only what is visible.
       if (textScale == 1) {
