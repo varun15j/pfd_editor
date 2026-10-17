@@ -102,5 +102,7 @@ async function action(value) {
     assert.ok(idWireframe.includes(`>${label}<`), `ID wireframe shows icon label: ${label}`);
     checks++;
   }
+  assert.ok(idWireframe.includes('#reviewbar text{fill:#fff!important}') && idWireframe.includes('.inverse-light text{fill:#111!important}'), 'ID wireframe enforces inverse label contrast');
+  checks++;
   console.log(`${checks} source/logic checks passed. Browser layout and native processing are not tested.`);
 })().catch(error => { console.error(error); process.exitCode = 1; });
