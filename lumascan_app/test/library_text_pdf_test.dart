@@ -74,7 +74,7 @@ void main() {
         planProvider.overrideWith((ref) => plan),
       ],
     );
-    await tester.tap(find.bySemanticsLabel('Library'));
+    await tester.tap(find.byTooltip('Search'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('More for Lease'));
     await tester.pumpAndSettle();

@@ -41,7 +41,7 @@ List<String> shownNames(WidgetTester tester) => [
 Future<MemoryLibraryStore> openLibrary(WidgetTester tester, [LibraryIndex? index]) async {
   final store = MemoryLibraryStore(index ?? sample());
   await pumpApp(tester, library: store);
-  await tester.tap(find.bySemanticsLabel('Library'));
+  await tester.tap(find.byTooltip('Search'));
   await tester.pumpAndSettle();
   return store;
 }
@@ -241,7 +241,7 @@ void main() {
 
     testWidgets('folders and tags screens fit at 200% text', (tester) async {
       await pumpApp(tester, textScale: 2, library: MemoryLibraryStore(sample()));
-      await tester.tap(find.bySemanticsLabel('Library'));
+      await tester.tap(find.byTooltip('Search'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.tap(find.byTooltip('Folders and tags'));

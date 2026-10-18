@@ -108,12 +108,7 @@ class HomeDocumentsView extends ConsumerWidget {
     VoidCallback? open(HomeDoc d) => busy && d is ScanHomeDoc ? null : () => _open(context, ref, d);
     if (!grid) {
       return Column(
-        children: [
-          for (final d in docs) ...[
-            _HomeDocRow(key: ValueKey(d.key), doc: d, onTap: open(d)),
-            const SizedBox(height: Space.sm),
-          ],
-        ],
+        children: [for (final d in docs) _HomeDocRow(key: ValueKey(d.key), doc: d, onTap: open(d))],
       );
     }
     return LayoutBuilder(
@@ -226,6 +221,8 @@ class _HomeDocCard extends StatelessWidget {
   }
 }
 
+/// A list row as in Screen 1: a large first-page preview, the name, the
+/// date and time, and the page count, with no card around it.
 class _HomeDocRow extends StatelessWidget {
   const _HomeDocRow({super.key, required this.doc, required this.onTap});
 
@@ -234,48 +231,63 @@ class _HomeDocRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = LumaColors.of(context);
     final text = Theme.of(context).textTheme;
     final d = doc;
     return Semantics(
       button: true,
       label: '${d.name}, ${_details(d)}',
       onTap: onTap,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          excludeFromSemantics: true,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(Space.md, Space.md, Space.xs, Space.md),
-            child: Row(
-              children: [
-                ExcludeSemantics(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(Radii.sm / 2),
-                    child: SizedBox(width: 48, height: 64, child: _Preview(doc: d)),
+      child: InkWell(
+        onTap: onTap,
+        excludeFromSemantics: true,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: Space.sm),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ExcludeSemantics(
+                child: Container(
+                  width: 104,
+                  height: 104,
+                  decoration: BoxDecoration(border: Border.all(color: c.line)),
+                  child: _Preview(doc: d),
+                ),
+              ),
+              const SizedBox(width: Space.md),
+              Expanded(
+                child: ExcludeSemantics(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(d.name, style: text.titleLarge, maxLines: 2, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: Space.sm),
+                      Text(_dateTime(d.time), style: text.bodyMedium?.copyWith(color: c.muted)),
+                      const SizedBox(height: Space.xs),
+                      Row(
+                        children: [
+                          Icon(Icons.file_copy_outlined, size: 16, color: c.muted),
+                          const SizedBox(width: Space.xs),
+                          Text('${d.pageCount}', style: text.bodyMedium?.copyWith(color: c.muted)),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: Space.md),
-                Expanded(
-                  child: ExcludeSemantics(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(d.name, style: text.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 2),
-                        Text(_details(d), style: text.bodySmall),
-                      ],
-                    ),
-                  ),
-                ),
-                if (d is ScanHomeDoc) _ScanMenu(doc: d) else const SizedBox(width: Space.md),
-              ],
-            ),
+              ),
+              if (d is ScanHomeDoc) _ScanMenu(doc: d) else const SizedBox(width: Space.md),
+            ],
           ),
         ),
       ),
     );
   }
+}
+
+/// Day/month/year and 24-hour time, as Screen 1 shows them.
+String _dateTime(DateTime t) {
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${two(t.day)}/${two(t.month)}/${t.year} ${two(t.hour)}:${two(t.minute)}';
 }
 
 enum _ScanAction { rename, delete }

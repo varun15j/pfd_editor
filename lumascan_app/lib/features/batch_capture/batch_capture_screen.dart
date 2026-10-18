@@ -35,11 +35,20 @@ import 'page_identity.dart';
 /// the camera closes with pages taken, the draft opens; [openDraftAfter] is
 /// false when the caller is already inside the draft. Save and go home in
 /// Batch Review goes back to Home instead. When camera access is
-/// blocked and photo import is picked instead, that runs here.
-Future<void> openBatchCapture(BuildContext context, WidgetRef ref, {bool openDraftAfter = true}) async {
+/// blocked and photo import is picked instead, that runs here. [mode] is
+/// the capture mode the camera opens in, such as Book from the Shortcuts.
+Future<void> openBatchCapture(
+  BuildContext context,
+  WidgetRef ref, {
+  bool openDraftAfter = true,
+  CameraMode mode = CameraMode.docs,
+}) async {
   final before = ref.read(scanControllerProvider).pages;
   final exit = await Navigator.of(context).push<Object>(
-    MaterialPageRoute(fullscreenDialog: true, builder: (_) => BatchCaptureScreen(returnToReview: !openDraftAfter)),
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => BatchCaptureScreen(returnToReview: !openDraftAfter, initialMode: mode),
+    ),
   );
   if (!context.mounted) return;
   if (exit == _importPhotosInstead) {
@@ -69,7 +78,10 @@ const _importPhotosInstead = #importPhotos;
 /// photos, where a page can be retaken and the batch reviewed), the shutter,
 /// and the cross that discards the photos taken in this visit.
 class BatchCaptureScreen extends ConsumerStatefulWidget {
-  const BatchCaptureScreen({super.key, this.returnToReview = false});
+  const BatchCaptureScreen({super.key, this.returnToReview = false, this.initialMode = CameraMode.docs});
+
+  /// The capture mode selected when the camera opens.
+  final CameraMode initialMode;
 
   /// Opened from Batch Review: Review goes back to it instead of opening
   /// another one.
@@ -128,7 +140,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
   /// The page the next shot replaces, while a retake is on.
   String? _retakeId;
 
-  CameraMode _mode = CameraMode.docs;
+  late CameraMode _mode = widget.initialMode;
 
   /// Batch mode: keep capturing without review. Off, Batch Review opens
   /// after every photo.
@@ -202,6 +214,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     _tracker.stableFrames = _settings.autoCaptureSteadiness.frames;
     _filter = _settings.defaultFilter;
     WidgetsBinding.instance.addObserver(this);
+    if (_mode == CameraMode.text || _mode == CameraMode.ocrDoc) unawaited(_checkOcr());
     _open();
   }
 

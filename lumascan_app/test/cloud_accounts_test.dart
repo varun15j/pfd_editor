@@ -417,7 +417,7 @@ void main() {
           cloudDownloadDirProvider.overrideWithValue(() async => Directory.systemTemp),
         ],
       );
-      await tester.tap(find.text('Settings').last);
+      await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Accounts'));
       await tester.pumpAndSettle();

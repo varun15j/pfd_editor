@@ -59,7 +59,7 @@ void main() {
     final camera = tempCamera();
     final prefs = MemoryUiPrefsStore();
     await pumpApp(tester, prefs: prefs, overrides: [batchCameraProvider.overrideWithValue(() => camera)]);
-    await tester.tap(find.bySemanticsLabel('Scan'));
+    await tester.tap(find.byTooltip('Scan'));
     await tester.pumpAndSettle();
     expect(find.text('Tips for a clean scan'), findsOneWidget);
     expect(find.text('Use a dark background'), findsOneWidget);
@@ -71,7 +71,7 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('Discard all captured photos and changes'));
     await tester.pumpAndSettle();
-    await tester.tap(find.bySemanticsLabel('Scan'));
+    await tester.tap(find.byTooltip('Scan'));
     await tester.pumpAndSettle();
     expect(find.text('Tips for a clean scan'), findsNothing);
     expect(camera.opens, 2);
@@ -80,12 +80,12 @@ void main() {
   testWidgets('closing the tips skips the scan and does not show them again', (tester) async {
     final camera = tempCamera();
     await pumpApp(tester, overrides: [batchCameraProvider.overrideWithValue(() => camera)]);
-    await tester.tap(find.bySemanticsLabel('Scan'));
+    await tester.tap(find.byTooltip('Scan'));
     await tester.pumpAndSettle();
     await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
     expect(camera.opens, 0);
-    await tester.tap(find.bySemanticsLabel('Scan'));
+    await tester.tap(find.byTooltip('Scan'));
     await tester.pumpAndSettle();
     expect(find.text('Tips for a clean scan'), findsNothing);
     expect(camera.opens, 1);
@@ -101,7 +101,7 @@ void main() {
         photoPickerProvider.overrideWithValue(picker),
       ],
     );
-    await tester.tap(find.bySemanticsLabel('Scan'));
+    await tester.tap(find.byTooltip('Scan'));
     await tester.pumpAndSettle();
     expect(find.text('Camera access needed'), findsOneWidget);
     expect(find.textContaining('stay on this device'), findsOneWidget);
@@ -145,7 +145,7 @@ void main() {
         photoAnalyzerProvider.overrideWithValue(FakePhotoAnalyzer()),
       ],
     );
-    await tester.tap(find.bySemanticsLabel('Scan'));
+    await tester.tap(find.byTooltip('Scan'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     await tester.tap(find.bySemanticsLabel('Take photo'));
