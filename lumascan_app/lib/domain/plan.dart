@@ -24,7 +24,12 @@ enum PlanFeature {
   /// Text PDF: OCR turns a draft, or a saved PDF, into a PDF of real text
   /// with the pictures kept as images. Offered in the export sheet and the
   /// Library menu.
-  textPdf(AppPlan.pro);
+  textPdf(AppPlan.pro),
+
+  /// PDF to Word: a saved PDF, a PDF from the device or the pages of a scan
+  /// become a Word (.docx) file. Offered in Export, Tools and the Library
+  /// menu. Word to PDF stays on every plan.
+  word(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 

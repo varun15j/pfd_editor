@@ -208,8 +208,14 @@ As a high-volume user, I want continuous capture and pause controls.
 As a field user, I want a mode tuned for small structured documents.
 
 - ID mode guides front/back acquisition and preserves correct pairing.
+- Users choose Two sides, One side, or Passport page before capture; the guide, required sides, and page composition follow that choice.
+- The accepted front remains visible while the back is captured, and either side can be independently retaken, cropped, rotated, or swapped without restarting.
+- A4/Letter layout previews safe margins, order, and scale before save; a purpose watermark is optional and previews immediately.
+- The saved composite retains reversible source sides and explicitly states that copying does not verify identity.
 - Business-card mode frames the card and can hand recognized contact data to the review flow.
 - Sensitive document handling follows the application privacy policy.
+
+Detailed design and acceptance pack: [ID card studio — UI/UX, epic, and storyboard](../design/UI_UX_screen/ID-card-scan/ID_CARD_UI_UX_EPIC_STORYBOARD.md).
 
 **US-03.5 — Control the camera preview**
 As a user preparing a scan, I want the important capture options on the camera preview so that I can change capture behavior without entering an editing workflow.

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
@@ -83,7 +84,12 @@ void main() {
   testWidgets('on Basic Create text PDF is listed with Pro and opens the upgrade pop-up', (tester) async {
     await openMenu(tester, AppPlan.basic);
     expect(find.text('Create text PDF'), findsOneWidget);
-    expect(find.text('Pro'), findsOneWidget);
+    // Create text PDF and Convert to Word are both Pro.
+    expect(find.text('Pro'), findsNWidgets(2));
+    expect(
+      find.descendant(of: find.widgetWithText(ListTile, 'Create text PDF'), matching: find.text('Pro')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('Create text PDF'));
     await tester.pumpAndSettle();

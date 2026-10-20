@@ -32,7 +32,7 @@ Flutter implementation must respect safe areas, landscape, screen-reader order a
 | S02 | Capture `/capture` | Dark camera, flash/auto controls, edge frame and guidance, horizontally scrollable Docs/Book/Text/OCR Doc/QR/Photo modes, shutter, thumbnail count, discard cross and confirmation | Permission denied, acquiring, stable, blur, low light, busy, paused, model unavailable, no spine, QR undecodable, discard confirmation; CAP-01..08, OCR-05/06, QR-01 |
 | S03 | Crop `/draft/:id/crop/:pageId` | Full page with four corner handles, rotate/reset, corner nudge controls, Apply crop | Manual fallback, invalid quad, rendering; EDIT-01 |
 | S04 | Enhance `/draft/:id/filters/:pageId` | Large page, before/after, horizontal filter thumbnails, strength, apply-to-all and Save | Preview loading, original, dirty recipe, unavailable advanced filter; EDIT-02/04/05 |
-| S05 | ID copy `/id/:draftId` | Template selector, labeled front/back slots, retake/swap, paper/layout, optional copy-purpose text, composite preview | Front required, back required, ready; ID-01..03 |
+| S05 | ID card studio `/id/:draftId` | Four-step progress, Two sides/One side/Passport choice, guided front/back capture, quality review, retake/crop/rotate/swap, paper layout, optional purpose watermark, composite preview | Type, capture front, capture back, review, layout, watermark, saved, permission/quality/storage recovery; ID-01..08 |
 | S06 | Video scan `/video/:sessionId/review` | Interval/timeline, candidate grid with timestamp/quality, selected count, Analyze/review progress, Create pages | Input, analyzing, no pages, uncertain duplicates, paused, review; VID-01..04 |
 | S07 | OCR `/document/:id/ocr` | Language/model state, page selector, editable transcript, copy/save, image reference | Recognizing, unavailable language/model, empty text, review/edit saved; OCR-01..04 |
 | S08 | Pages `/document/:id/pages` | Document title/count, thumbnail list/grid, page menu, move up/down, rotate/delete/duplicate, add, OCR, export | Empty draft, selection, processing; PDF-02/03 |
@@ -71,9 +71,11 @@ Every filter tile includes a current-page effect thumbnail above its label so th
 
 S08 is also the persistent re-entry editor for a resumed draft or saved document. Its bottom toolbar always exposes **Crop** and **Filter**, followed by Rotate, Pages and More. A status strip identifies `Draft · autosaved` or `Saved · changes autosave` and links to edit history. Crop opens S03 from the latest recipe and offers Detected edges, Full image, manual handles, rotation and Reset. Filter opens S04 with Original, Auto Color, Enhanced Color, Bright, Grayscale and B&W. Save returns to S08, confirms that the original was retained, and updates the document revision; export does not remove these controls.
 
-### S05 — ID copy
+### S05 — ID card studio
 
-Choose Card front & back, Single-sided card or Passport page. Card mode starts with “Capture front.” The second slot becomes active afterward; each supports Retake. Swap changes slot assignment. Continue is enabled only when required sides are present. One-page A4/Letter preview shows the slots centered with margins. Copy watermark is optional and previews immediately. Only fictional identity samples are used in the prototype.
+Choose Two sides, One side or Passport page, then move through Capture, Review and Layout with visible progress. Two sides starts with “Capture front,” retains the accepted front while capturing the back, and permits independent retake, crop, rotate and swap before composition. One-page A4/Letter preview shows safe margins, order and scale. A purpose watermark is opt-in and previews immediately. The saved document retains reversible source sides and never implies identity verification. Only visibly fictional samples are used in the prototype.
+
+The eight-state wireframe, product epic, acceptance criteria, storyboard, errors, accessibility and privacy requirements are in [ID card studio — UI/UX, epic, and storyboard](../design/UI_UX_screen/ID-card-scan/ID_CARD_UI_UX_EPIC_STORYBOARD.md).
 
 ### S06 — Video scan
 

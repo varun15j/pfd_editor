@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/preferences.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
+import '../../domain/plan.dart';
 import '../../domain/scanner_service.dart';
+import '../../ui/state_views.dart';
 import '../batch_capture/camera_mode.dart';
 import '../merge/merge_screen.dart';
 import '../pdf_editor/open_pdf.dart';
@@ -35,7 +38,13 @@ class ToolsScreen extends ConsumerWidget {
         'Process Files',
         [
           _Tool(Icons.photo_library_outlined, 'Photos to PDF', () => scanThenReview(context, ref, ScanSource.gallery)),
-          _Tool(Icons.description_outlined, 'Word to PDF', () => importWordFile(context, ref)),
+          _Tool(
+            Icons.description_outlined,
+            'PDF to Word',
+            () => pickPdfToWord(context, ref),
+            badge: ref.watch(planIncludesProvider(PlanFeature.word)) ? null : 'Pro',
+          ),
+          _Tool(Icons.picture_as_pdf_outlined, 'Word to PDF', () => importWordFile(context, ref)),
           _Tool(
             Icons.library_add_outlined,
             'Merge PDFs',
@@ -88,11 +97,14 @@ class ToolsScreen extends ConsumerWidget {
 }
 
 class _Tool {
-  const _Tool(this.icon, this.title, this.onTap);
+  const _Tool(this.icon, this.title, this.onTap, {this.badge});
 
   final IconData icon;
   final String title;
   final VoidCallback onTap;
+
+  /// Shown on the tile when the tool needs a plan the user does not have.
+  final String? badge;
 }
 
 /// A square picture of the tool with its name under it (Screen 3). The
@@ -122,17 +134,26 @@ class _ToolTile extends StatelessWidget {
                   color: c.surfaceRaised,
                   border: Border.all(color: c.line),
                 ),
-                child: Center(
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: LumaColors.scan,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: LumaColors.onScan, width: 2),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (tool.badge != null)
+                      Positioned(
+                        top: Space.sm,
+                        right: Space.sm,
+                        child: PremiumBadge(label: tool.badge!),
+                      ),
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: LumaColors.scan,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: LumaColors.onScan, width: 2),
+                      ),
+                      child: Icon(tool.icon, color: LumaColors.onScan, size: 28),
                     ),
-                    child: Icon(tool.icon, color: LumaColors.onScan, size: 28),
-                  ),
+                  ],
                 ),
               ),
             ),
