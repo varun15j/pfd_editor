@@ -11,6 +11,7 @@ import '../../domain/library_query.dart';
 import '../../domain/scanner_service.dart';
 import '../../domain/ui_prefs.dart';
 import '../../ui/state_views.dart';
+import '../word/word_actions.dart';
 import 'document_tile.dart';
 import 'library_actions.dart';
 import 'library_controller.dart';
@@ -68,6 +69,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         editTagsSheet(context, ref, [doc]);
       case DocumentMenuAction.share:
         shareDocuments(context, [doc]);
+      case DocumentMenuAction.textPdf:
+        createTextPdf(context, ref, doc);
+      case DocumentMenuAction.word:
+        convertToWord(context, ref, doc);
       case DocumentMenuAction.delete:
         deleteWithUndo(context, ref, [doc]);
     }
@@ -280,11 +285,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       padding: const EdgeInsets.symmetric(horizontal: Space.page),
       child: Row(
         children: [
-          ChoiceChip(
-            label: const Text('All'),
-            selected: current == null,
-            onSelected: (_) => q.openFolder(null),
-          ),
+          ChoiceChip(label: const Text('All'), selected: current == null, onSelected: (_) => q.openFolder(null)),
           for (final f in index.folders) ...[
             const SizedBox(width: Space.sm),
             ChoiceChip(

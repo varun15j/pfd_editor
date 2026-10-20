@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/models.dart';
 import '../../pdf_edit/annotations.dart';
+import '../markup/markup_style.dart';
 
 enum EditorTool {
   view(Icons.pan_tool_outlined, 'View'),
@@ -50,17 +51,16 @@ class AnnotationLayer extends StatefulWidget {
     super.key,
     required this.page,
     required this.tool,
-    required this.color,
+    required this.style,
     required this.callbacks,
   });
 
   final EditorPage page;
   final EditorTool tool;
-  final Color color;
-  final AnnotationCallbacks callbacks;
 
-  static const penWidth = 0.004;
-  static const highlighterWidth = 0.022;
+  /// Colour and thickness for new pen, highlighter and text marks.
+  final MarkupStyle style;
+  final AnnotationCallbacks callbacks;
 
   @override
   State<AnnotationLayer> createState() => _AnnotationLayerState();
@@ -77,8 +77,8 @@ class _AnnotationLayerState extends State<AnnotationLayer> {
       _current = InkAnnotation(
         id: widget.callbacks.newId(),
         points: [_norm(local, size)],
-        color: widget.color.toARGB32(),
-        width: highlighter ? AnnotationLayer.highlighterWidth : AnnotationLayer.penWidth,
+        color: widget.style.color.toARGB32(),
+        width: widget.style.inkWidth(highlighter: highlighter),
         highlighter: highlighter,
       );
     });
@@ -158,10 +158,7 @@ class _AnnotationLayerState extends State<AnnotationLayer> {
                   onMoved: (dx, dy) => widget.callbacks.onReplace(
                     a.copyWith(origin: NormPoint(a.origin.x + dx, a.origin.y + dy).clamp()),
                   ),
-                  child: Text(
-                    a.text,
-                    style: TextStyle(fontSize: a.fontSize * size.width, color: Color(a.color), height: 1.15),
-                  ),
+                  child: annotationText(a, size.width),
                 )
               else if (a is SignatureAnnotation)
                 _MovableItem(
@@ -175,15 +172,62 @@ class _AnnotationLayerState extends State<AnnotationLayer> {
                   onMoved: (dx, dy) => widget.callbacks.onReplace(
                     a.copyWith(left: (a.left + dx).clamp(0.0, 1.0), top: (a.top + dy).clamp(0.0, 1.0)),
                   ),
-                  child: SizedBox(
-                    width: a.width * size.width,
-                    height: a.width * size.width / a.aspectRatio,
-                    child: CustomPaint(painter: SignaturePainter(a)),
-                  ),
+                  child: annotationSignature(a, size.width),
                 ),
           ],
         );
       },
+    );
+  }
+}
+
+/// A text mark as drawn on a page [pageWidth] logical pixels wide.
+Widget annotationText(TextAnnotation a, double pageWidth) => Text(
+  a.text,
+  style: TextStyle(fontSize: a.fontSize * pageWidth, color: Color(a.color), height: 1.15),
+);
+
+/// A signature as drawn on a page [pageWidth] logical pixels wide.
+Widget annotationSignature(SignatureAnnotation a, double pageWidth) => SizedBox(
+  width: a.width * pageWidth,
+  height: a.width * pageWidth / a.aspectRatio,
+  child: CustomPaint(painter: SignaturePainter(a)),
+);
+
+/// Draws a page's marks without taking touches, for page thumbnails and
+/// previews. Sized by its parent to exactly the page.
+class StaticMarks extends StatelessWidget {
+  const StaticMarks(this.annotations, {super.key});
+
+  final List<Annotation> annotations;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final size = constraints.biggest;
+          return Stack(
+            clipBehavior: Clip.hardEdge,
+            children: [
+              Positioned.fill(child: CustomPaint(painter: InkPainter(annotations))),
+              for (final a in annotations)
+                if (a is TextAnnotation)
+                  Positioned(
+                    left: a.origin.x * size.width,
+                    top: a.origin.y * size.height,
+                    child: annotationText(a, size.width),
+                  )
+                else if (a is SignatureAnnotation)
+                  Positioned(
+                    left: a.left * size.width,
+                    top: a.top * size.height,
+                    child: annotationSignature(a, size.width),
+                  ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

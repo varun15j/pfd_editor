@@ -5,6 +5,7 @@ import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../domain/scanner_service.dart';
 import '../pdf_editor/open_pdf.dart';
+import '../word/word_actions.dart';
 
 /// The centre Create button's sheet: every way to start a document in one
 /// place (US-03.1). Each option closes the sheet before it starts.
@@ -31,7 +32,7 @@ class CreateSheet extends StatelessWidget {
     (
       Icons.document_scanner_outlined,
       'Scan document',
-      'Use the camera; edges are found for you',
+      'Take page after page; edges are found for you',
       (context, ref) => scanThenReview(context, ref, ScanSource.camera),
     ),
     (
@@ -41,6 +42,12 @@ class CreateSheet extends StatelessWidget {
       (context, ref) => scanThenReview(context, ref, ScanSource.gallery),
     ),
     (Icons.edit_document, 'Edit a PDF', 'Add text, drawings or a signature', pickAndEditPdf),
+    (
+      Icons.description_outlined,
+      'Open a Word file',
+      'Turn a .docx from your files into a PDF in your Library',
+      importWordFile,
+    ),
   ];
 
   @override
@@ -55,18 +62,20 @@ class CreateSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(Space.xl, 0, Space.xl, Space.sm),
+              padding: const EdgeInsets.fromLTRB(Space.lg, 0, Space.lg, Space.xs),
               child: Semantics(header: true, child: Text('Create', style: text.titleLarge)),
             ),
             for (final (icon, title, subtitle, run) in options)
               ListTile(
-                minVerticalPadding: Space.md,
-                contentPadding: const EdgeInsets.symmetric(horizontal: Space.xl),
+                contentPadding: const EdgeInsets.symmetric(horizontal: Space.lg),
                 leading: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(color: c.accentSoft, borderRadius: BorderRadius.circular(Radii.md)),
-                  child: Icon(icon, color: c.accent),
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: c.accentSoft,
+                    borderRadius: BorderRadius.circular(ControlMetrics.radius),
+                  ),
+                  child: Icon(icon, color: c.accent, size: ControlMetrics.icon),
                 ),
                 title: Text(title),
                 subtitle: Text(subtitle),

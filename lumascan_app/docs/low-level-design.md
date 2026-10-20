@@ -87,6 +87,8 @@ Each feature has presentation/controller/state. Shared domain operations live ou
 
 Kotlin baseline: CameraX + native worker executor/coroutines; ML Kit OCR; Media3 for later video export. Swift baseline: AVFoundation + Vision + Core Image, with a PDF adapter evaluating PDFKit and selected libraries. Native quick scanners can supply imported source pages but do not implement all custom screens. See [official references](requirements.md#10-official-technical-references).
 
+The custom camera presents six capability-driven modes: Docs, Book, Text, OCR Doc, QR and Photo. Preview analysis keeps one frame in flight and selects only the detector required by the active mode. Book output stores the original spread plus paired left/right page IDs and spine geometry; Text uses latency-oriented live recognition; OCR Doc runs accuracy-oriented recognition on the full-resolution corrected image; QR configures only QR symbology and requires user confirmation before payload actions. Algorithms, coordinate transforms, scoring formulas, quality metrics and failure states are defined in [Capture modes algorithms](capture-modes-algorithms.md).
+
 ## 4. Persistence model
 
 IDs are random UUID strings. Times use UTC epoch milliseconds. Sizes are bytes; durations and frame timestamps are integer microseconds. Foreign keys are enforced. Tombstones protect against late job completion restoring deleted documents.
@@ -194,6 +196,10 @@ Pipeline: decode/downsample as appropriate → orientation normalize → perspec
 Preview and final render use the same recipe schema and filter version. Use generation IDs to drop outdated slider results. Debounce sliders (~60 ms initial target); cancel obsolete previews. Avoid reconstructing a full image on every pointer movement. Keep at most one final page render in flight on low-memory devices.
 
 Batch apply clones only enhancement fields; each page retains its own crop and geometry. Undo/redo stores immutable recipe references with a proposed in-session cap of 30 actions. “Reset filter” and “Reset all edits” are separate operations.
+
+Reopening either a draft or a saved document resolves `Page.currentRevisionId`, loads the retained source asset and hydrates the same `EditController`. Crop/resize and filter writes use compare-and-swap on the document revision inside one transaction: insert `PageRevision` → update the page pointer → increment `Document.revision` → enqueue disposable previews. Export references the revision it rendered, but does not flatten or replace the editable source. If a source has been removed by an explicit retention choice, the editor capability state must disable source-dependent re-crop/re-filter and explain why.
+
+Filter thumbnails use a two-stage scheduler. Stage 1 resolves and displays the current-page preview. Stage 2 observes visible preset tiles, deduplicates requests by `pageRevisionId/geometryHash/filterId/filterVersion/strengthBucket/size`, and renders a downsampled source with bounded concurrency. Off-screen work runs only during idle capacity. Page/revision changes advance a generation ID so stale results are discarded; memory cache is size-bounded and disk thumbnails are disposable. Slider movement renders the large preview only, while preset tiles retain representative-strength images.
 
 ## 8. OCR and searchable output
 

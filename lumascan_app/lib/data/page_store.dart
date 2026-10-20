@@ -3,6 +3,22 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+/// How much space the app's files take, by what they are for.
+class StorageUsage {
+  const StorageUsage({this.savedPdfs = 0, this.pageOriginals = 0, this.cache = 0});
+
+  /// Saved PDFs and the previews shown for them in the Library.
+  final int savedPdfs;
+
+  /// Page images of the document being worked on (the draft).
+  final int pageOriginals;
+
+  /// Rebuildable files: page previews and smaller copies made for sending.
+  final int cache;
+
+  int get total => savedPdfs + pageOriginals + cache;
+}
+
 /// Owns the app's private files: page originals, rendered derivatives and
 /// exported PDFs. Scanner output lives in a plugin cache that can be cleared
 /// at any time, so every page is copied here before it is shown.
@@ -25,10 +41,50 @@ class PageStore {
   Future<Directory> get exportsDir => _dir('exports');
   Future<Directory> get thumbnailsDir => _dir('thumbnails');
 
+  /// Smaller copies made for sending. Throwaway: the saved PDF stays in
+  /// [exportsDir], and these can be deleted at any time.
+  Future<Directory> get shareDir => _dir('share');
+
   /// The private root every stored path is relative to.
   Future<String> get rootPath async => (await _rootDir()).path;
 
   String newId() => '${DateTime.now().microsecondsSinceEpoch}_${_counter++}';
+
+  Future<int> _sizeOf(List<String> folders) async {
+    final root = await rootPath;
+    var total = 0;
+    for (final name in folders) {
+      final dir = Directory(p.join(root, name));
+      if (!dir.existsSync()) continue;
+      await for (final e in dir.list(recursive: true, followLinks: false)) {
+        if (e is File) total += await e.length();
+      }
+    }
+    return total;
+  }
+
+  Future<StorageUsage> usage() async => StorageUsage(
+    savedPdfs: await _sizeOf(['exports', 'thumbnails']),
+    pageOriginals: await _sizeOf(['pages']),
+    cache: await _sizeOf(['renders', 'share']),
+  );
+
+  /// Deletes the rebuildable files (page previews and smaller copies made for
+  /// sending) and returns the bytes freed. Saved PDFs, their Library previews
+  /// and the page images of the current draft are not touched.
+  Future<int> clearCache() async {
+    final root = await rootPath;
+    var freed = 0;
+    for (final name in ['renders', 'share']) {
+      final dir = Directory(p.join(root, name));
+      if (!dir.existsSync()) continue;
+      await for (final e in dir.list(recursive: true, followLinks: false)) {
+        if (e is File) freed += await e.length();
+      }
+      await dir.delete(recursive: true);
+    }
+    return freed;
+  }
 
   /// Copies a scanner file into private storage and returns the new path.
   Future<String> importOriginal(String sourcePath, String id) async {
@@ -39,9 +95,41 @@ class PageStore {
     return dest;
   }
 
+  /// Moves a photo the app itself just took into private storage and returns
+  /// the new path. A rename is instant, so the camera never waits on a copy;
+  /// a copy is made only when the two folders are on different volumes.
+  Future<String> adoptOriginal(String sourcePath, String id) async {
+    final dir = await originalsDir;
+    final ext = p.extension(sourcePath).toLowerCase();
+    final dest = p.join(dir.path, '$id${ext.isEmpty ? '.jpg' : ext}');
+    try {
+      await File(sourcePath).rename(dest);
+    } on FileSystemException {
+      await File(sourcePath).copy(dest);
+      try {
+        await File(sourcePath).delete();
+      } on FileSystemException {
+        // The camera's own cache folder is cleared by the OS.
+      }
+    }
+    return dest;
+  }
+
+  /// The upright, uncropped copy of [originalPath] the editor works from,
+  /// kept next to the original so it lives and dies with it.
+  static String workingPreviewPath(String originalPath) => _beside(originalPath, 'preview');
+
+  /// The smaller working copy of [originalPath], for thumbnails.
+  static String workingSmallPath(String originalPath) => _beside(originalPath, 'small');
+
+  static String _beside(String originalPath, String kind) =>
+      p.join(p.dirname(originalPath), '${p.basenameWithoutExtension(originalPath)}.$kind.jpg');
+
+  /// Deletes an original and the working copies made from it.
   Future<void> deleteOriginal(String path) async {
-    final f = File(path);
-    if (f.existsSync()) await f.delete();
+    for (final f in [File(path), File(workingPreviewPath(path)), File(workingSmallPath(path))]) {
+      if (f.existsSync()) await f.delete();
+    }
   }
 
   /// Writes bytes to a temp file and renames it, so a crash never leaves a

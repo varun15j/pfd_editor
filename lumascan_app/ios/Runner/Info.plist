@@ -4,6 +4,8 @@
 <dict>
 	<key>NSCameraUsageDescription</key>
 	<string>LumaScan uses the camera to scan documents. Pages stay on this device.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>LumaScan never records sound. iOS asks every camera app to include this note.</string>
 	<key>CFBundleAllowMixedLocalizations</key>
 	<true/>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
@@ -69,6 +71,20 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<!-- Google Drive sign-in returns to the app through the reversed iOS
+	     client ID. It differs between debug and release builds, so it is set
+	     in ios/Flutter/Debug.xcconfig and Release.xcconfig. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(GOOGLE_REVERSED_CLIENT_ID)</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

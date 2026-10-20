@@ -3,14 +3,21 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
-import 'package:share_plus/share_plus.dart';
 
+import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../domain/models.dart';
+import '../../domain/plan.dart';
 import '../../export/pdf_exporter.dart';
 import '../../pdf_edit/pdf_saver.dart';
+import '../../export/text_pdf_service.dart';
+import '../../ui/file_size.dart';
+import '../../ui/upgrade_dialog.dart';
 import '../library/library_controller.dart';
 import '../pages/scan_controller.dart';
+import '../share/send_pdf_sheet.dart';
+
+export '../../ui/file_size.dart';
 
 Future<void> showExportSheet(BuildContext context) => showModalBottomSheet<void>(
   context: context,
@@ -20,10 +27,6 @@ Future<void> showExportSheet(BuildContext context) => showModalBottomSheet<void>
   enableDrag: false,
   builder: (_) => const ExportSheet(),
 );
-
-/// "850 KB" or "1.4 MB".
-String formatFileSize(int bytes) =>
-    bytes < 1024 * 1024 ? '${(bytes / 1024).round()} KB' : '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
 
 /// Save (S09): name, page size and quality with estimated sizes, progress,
 /// then share. Success is shown only once the file is on disk.
@@ -38,17 +41,30 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
   late final TextEditingController _name;
   PdfPageSize _size = PdfPageSize.a4;
   ExportQuality _quality = ExportQuality.medium;
+
+  /// Export a text PDF (Pro and Gold): OCR reads the pages and the PDF holds
+  /// their text, with pictures kept as images.
+  bool _textPdf = false;
   double? _progress;
   File? _result;
   String? _error;
   bool _inLibrary = false;
+  bool _originalsRemoved = false;
+
+  /// Page count of the saved PDF; the draft may be emptied right after saving.
+  int _savedPages = 0;
 
   bool get _saving => _progress != null && _result == null;
 
   @override
   void initState() {
     super.initState();
-    _name = TextEditingController(text: PdfExporter.defaultScanName(DateTime.now()))..addListener(_onNameChanged);
+    // The scan's own name, such as "2026-10-11 Scan"; the pattern from
+    // Settings only for pages that have none.
+    final scanName = ref.read(scanControllerProvider).info?.name;
+    _name = TextEditingController(
+      text: scanName ?? ref.read(appSettingsProvider).fileNamePattern.format(DateTime.now()),
+    )..addListener(_onNameChanged);
   }
 
   @override
@@ -70,27 +86,54 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
     final library = ref.read(libraryProvider.notifier);
     final store = ref.read(pageStoreProvider);
     final exporter = ref.read(pdfExporterProvider);
-    final fileName = PdfEditSaver.safeFileName(_name.text);
+    final textPdf = _textPdf && ref.read(planIncludesProvider(PlanFeature.textPdf));
+    final textService = ref.read(textPdfServiceProvider);
+    final fileName = textPdf ? TextPdfService.textName(_name.text) : PdfEditSaver.safeFileName(_name.text);
     final draft = ref.read(scanControllerProvider.notifier);
+    final keepOriginals = ref.read(appSettingsProvider).keepOriginals;
+    _savedPages = pages.length;
     setState(() {
       _progress = 0;
       _error = null;
     });
     try {
-      final file = await exporter.export(
-        pages,
-        // A name that is already taken gets a number, never replaces a file.
-        ExportOptions(pageSize: _size, quality: _quality, fileName: await store.freeExportName(fileName)),
-        onProgress: (done, total) {
-          if (mounted) setState(() => _progress = done / total);
-        },
-      );
+      final File file;
+      var savedPages = pages.length;
+      if (textPdf) {
+        final keepLayout = ref.read(planIncludesProvider(PlanFeature.smartScan));
+        final made = await textService.fromPages(
+          pages,
+          fileName: await store.freeExportName(fileName),
+          keepLayout: keepLayout,
+          onProgress: (f) {
+            if (mounted) setState(() => _progress = f);
+          },
+        );
+        file = made.file;
+        savedPages = made.pageCount;
+      } else {
+        file = await exporter.export(
+          pages,
+          // A name that is already taken gets a number, never replaces a file.
+          ExportOptions(pageSize: _size, quality: _quality, fileName: await store.freeExportName(fileName)),
+          onProgress: (done, total) {
+            if (mounted) setState(() => _progress = done / total);
+          },
+        );
+      }
+      _savedPages = savedPages;
       if (mounted) setState(() => _result = file);
-      draft.markSaved();
+      draft.markExported();
       // The PDF is already safe on disk; a failed index write only means it
       // is missing from the Library list, so it is reported, not thrown.
-      await library.addScan(file, pages);
+      await library.addScan(file, pages, pageCount: savedPages);
       if (mounted) setState(() => _inLibrary = true);
+      if (!keepOriginals) {
+        // Settings: do not keep page images once the PDF is saved. Only after
+        // the PDF is safely in the Library, so a failed save loses nothing.
+        await draft.clear();
+        if (mounted) setState(() => _originalsRemoved = true);
+      }
     } on Object catch (e) {
       if (!mounted) return;
       if (_result != null) {
@@ -104,25 +147,25 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
     }
   }
 
-  Future<void> _share(BuildContext context) async {
+  Future<void> _pickKind(bool textPdf) async {
+    if (textPdf && !await ensurePlan(context, ref, PlanFeature.textPdf, what: 'Text PDF')) return;
+    if (mounted) setState(() => _textPdf = textPdf);
+  }
+
+  Future<void> _send() {
     final file = _result!;
-    final box = context.findRenderObject() as RenderBox?;
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [XFile(file.path, mimeType: 'application/pdf')],
-        // Required on iPad, where the share sheet is a popover.
-        sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
-      ),
-    );
+    return showSendPdfSheet(context, pdfPath: file.path, name: p.basename(file.path), pageCount: _savedPages);
   }
 
   @override
   Widget build(BuildContext context) {
-    final pageCount = ref.watch(scanControllerProvider.select((s) => s.pages.length));
+    final draftPages = ref.watch(scanControllerProvider.select((s) => s.pages.length));
+    final pageCount = _result != null ? _savedPages : draftPages;
     final textTheme = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final result = _result;
     final saving = _saving;
+    final hasTextPdf = ref.watch(planIncludesProvider(PlanFeature.textPdf));
 
     return PopScope(
       canPop: !saving,
@@ -134,7 +177,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (result != null) ...[
-                Text('PDF saved', style: textTheme.headlineSmall),
+                Text(_textPdf ? 'Text PDF saved' : 'PDF saved', style: textTheme.headlineSmall),
                 const SizedBox(height: 8),
                 Text(
                   '${p.basename(result.path)} · $pageCount page${pageCount == 1 ? '' : 's'} · '
@@ -144,22 +187,23 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
                   const SizedBox(height: 4),
                   Text('Saved to your Library', style: textTheme.bodySmall),
                 ],
+                if (_originalsRemoved) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'The page images were removed from this device, as set in Settings.',
+                    style: textTheme.bodySmall,
+                  ),
+                ],
                 if (_error != null) ...[
                   const SizedBox(height: 8),
                   Text(_error!, style: TextStyle(color: scheme.error)),
                 ],
                 const SizedBox(height: 16),
-                Builder(
-                  builder: (buttonContext) => FilledButton.icon(
-                    onPressed: () => _share(buttonContext),
-                    icon: const Icon(Icons.ios_share),
-                    label: const Text('Share or save'),
-                  ),
-                ),
+                FilledButton.icon(onPressed: _send, icon: const Icon(Icons.ios_share), label: const Text('Send')),
                 const SizedBox(height: 8),
                 TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
               ] else ...[
-                Text('Save as PDF', style: textTheme.headlineSmall),
+                Text(_textPdf ? 'Save as text PDF' : 'Save as PDF', style: textTheme.headlineSmall),
                 const SizedBox(height: 4),
                 Text('$pageCount page${pageCount == 1 ? '' : 's'}', style: textTheme.bodySmall),
                 const SizedBox(height: 16),
@@ -170,30 +214,52 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
                   textInputAction: TextInputAction.done,
                   decoration: InputDecoration(
                     labelText: 'File name',
-                    suffixText: '.pdf',
+                    suffixText: _textPdf ? ' (text).pdf' : '.pdf',
                     border: const OutlineInputBorder(),
                     counterText: '',
                     errorText: _nameValid ? null : 'Enter a name for the PDF',
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text('Page size', style: textTheme.titleSmall),
-                const SizedBox(height: 8),
-                SegmentedButton<PdfPageSize>(
-                  segments: [for (final s in PdfPageSize.values) ButtonSegment(value: s, label: Text(s.label))],
-                  selected: {_size},
-                  onSelectionChanged: saving ? null : (v) => setState(() => _size = v.first),
+                SegmentedButton<bool>(
+                  segments: [
+                    const ButtonSegment(value: false, icon: Icon(Icons.picture_as_pdf_outlined), label: Text('PDF')),
+                    ButtonSegment(
+                      value: true,
+                      icon: Icon(hasTextPdf ? Icons.text_snippet_outlined : Icons.lock_outline),
+                      label: Text(hasTextPdf ? 'Text PDF' : 'Text PDF · Pro'),
+                    ),
+                  ],
+                  selected: {_textPdf},
+                  onSelectionChanged: saving ? null : (v) => _pickKind(v.first),
                 ),
                 const SizedBox(height: 16),
-                Text('Quality', style: textTheme.titleSmall),
-                const SizedBox(height: 4),
-                for (final q in ExportQuality.values)
-                  _QualityTile(
-                    quality: q,
-                    pageCount: pageCount,
-                    selected: q == _quality,
-                    onTap: saving ? null : () => setState(() => _quality = q),
+                if (_textPdf)
+                  Text(
+                    'Each page is read on this device and its text goes into the PDF. '
+                    'Pictures and anything that could not be read stay as images. '
+                    'This takes longer than a plain PDF.',
+                    style: textTheme.bodySmall,
+                  )
+                else ...[
+                  Text('Page size', style: textTheme.titleSmall),
+                  const SizedBox(height: 8),
+                  SegmentedButton<PdfPageSize>(
+                    segments: [for (final s in PdfPageSize.values) ButtonSegment(value: s, label: Text(s.label))],
+                    selected: {_size},
+                    onSelectionChanged: saving ? null : (v) => setState(() => _size = v.first),
                   ),
+                  const SizedBox(height: 16),
+                  Text('Quality', style: textTheme.titleSmall),
+                  const SizedBox(height: 4),
+                  for (final q in ExportQuality.values)
+                    _QualityTile(
+                      quality: q,
+                      pageCount: pageCount,
+                      selected: q == _quality,
+                      onTap: saving ? null : () => setState(() => _quality = q),
+                    ),
+                ],
                 const SizedBox(height: 16),
                 if (saving) ...[
                   LinearProgressIndicator(value: _progress),
@@ -208,7 +274,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
                 FilledButton.icon(
                   onPressed: pageCount == 0 || saving || !_nameValid ? null : _export,
                   icon: const Icon(Icons.picture_as_pdf_outlined),
-                  label: Text(saving ? 'Saving…' : 'Save PDF'),
+                  label: Text(saving ? 'Saving…' : (_textPdf ? 'Save text PDF' : 'Save PDF')),
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),

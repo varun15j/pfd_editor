@@ -5,6 +5,8 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../domain/models.dart';
 import '../crop/crop_screen.dart';
 import '../filters/filter_screen.dart';
+import '../markup/markup_screen.dart';
+import 'marks_notice.dart';
 import 'scan_controller.dart';
 
 /// Per-page actions shared by the list, gallery and single-page views.
@@ -13,6 +15,7 @@ enum PageAction {
   crop('Crop', Icons.crop),
   rotate('Rotate', Icons.rotate_right),
   filters('Filters', Icons.tune),
+  markup('Markup', Icons.draw_outlined),
   duplicate('Duplicate', Icons.copy_outlined),
   delete('Delete page', Icons.delete_outline);
 
@@ -37,6 +40,8 @@ Future<void> runPageAction(BuildContext context, WidgetRef ref, PageAction actio
           messenger.showSnackBar(
             SnackBar(
               content: Text('Page ${index + 1} retaken'),
+              // An action would otherwise keep it up until dismissed.
+              persist: false,
               action: SnackBarAction(label: 'Undo', onPressed: controller.undo),
             ),
           );
@@ -54,10 +59,12 @@ Future<void> runPageAction(BuildContext context, WidgetRef ref, PageAction actio
       }
     case PageAction.filters:
       await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => FilterScreen(pageId: page.id)));
+    case PageAction.markup:
+      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => MarkupScreen(pageId: page.id)));
     case PageAction.crop:
       await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => CropScreen(pageId: page.id)));
     case PageAction.rotate:
-      controller.rotate(page.id);
+      rotatePage(context, ref, page);
     case PageAction.duplicate:
       controller.duplicate(page.id);
       messenger.showSnackBar(SnackBar(content: Text('Page ${index + 1} duplicated as page ${index + 2}')));
@@ -70,10 +77,22 @@ Future<void> runPageAction(BuildContext context, WidgetRef ref, PageAction actio
       messenger.showSnackBar(
         SnackBar(
           content: Text('Page ${index + 1} deleted'),
+          // An action would otherwise keep it up until dismissed.
+          persist: false,
           action: SnackBarAction(label: 'Undo', onPressed: controller.undo),
         ),
       );
   }
+}
+
+/// Rotates [page] a quarter turn clockwise. Marks do not rotate with the page,
+/// so they are removed, and the snackbar says so and offers Undo.
+void rotatePage(BuildContext context, WidgetRef ref, ScanPage page) {
+  final controller = ref.read(scanControllerProvider.notifier);
+  final turned = page.recipe.copyWith(quarterTurns: page.recipe.quarterTurns + 1);
+  final dropsMarks = controller.dropsMarks(page.id, turned);
+  controller.rotate(page.id);
+  if (dropsMarks) showMarksRemovedNotice(context, controller);
 }
 
 /// Removing the only page would leave an empty document, so this asks

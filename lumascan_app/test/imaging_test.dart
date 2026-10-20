@@ -169,9 +169,189 @@ void main() {
       expect(px(out, 20, 25).$1, lessThan(30));
     });
 
+    test('Whiteboard evens out lighting and keeps marker strokes', () {
+      // A board lit from the left (dark grey) to the right (near white), with a
+      // blue marker line and a black one.
+      final im = RgbImage(120, 60);
+      for (var y = 0; y < 60; y++) {
+        for (var x = 0; x < 120; x++) {
+          final v = 110 + (x * 130 / 119).round();
+          final i = (y * 120 + x) * 3;
+          im.data[i] = v;
+          im.data[i + 1] = v;
+          im.data[i + 2] = v;
+        }
+      }
+      for (var x = 30; x < 50; x++) {
+        final i = (30 * 120 + x) * 3;
+        im.data[i] = 20;
+        im.data[i + 1] = 40;
+        im.data[i + 2] = 160;
+      }
+      for (var x = 80; x < 100; x++) {
+        setPx(im, x, 30, 25);
+      }
+
+      final out = whiteboard(im);
+      // The board is white on both the dim and the bright side.
+      expect(px(out, 10, 10).$1, greaterThan(235));
+      expect(px(out, 110, 10).$1, greaterThan(235));
+      // The black stroke stays dark; the blue one stays dark and blue.
+      expect(px(out, 90, 30).$1, lessThan(90));
+      final (r, g, b) = px(out, 40, 30);
+      expect(b, greaterThan(r + 40));
+      expect(r, lessThan(120));
+    });
+
+    test('Whiteboard keeps the input untouched', () {
+      final im = solid(20, 20, 120, 120, 120);
+      whiteboard(im);
+      expect(px(im, 5, 5), (120, 120, 120));
+    });
+
+    // Paper lit from the left (dim, 120) to the right (bright, 230), with a
+    // dark text line and a mid-grey shaded box on each side.
+    RgbImage shadowedPage() {
+      final im = RgbImage(160, 80);
+      for (var y = 0; y < 80; y++) {
+        for (var x = 0; x < 160; x++) {
+          final paper = 120 + (x * 110 / 159);
+          final ink = (y >= 38 && y <= 40 && (x % 80) >= 10 && (x % 80) < 30);
+          final box = (y >= 50 && y < 56 && (x % 80) >= 40 && (x % 80) < 46);
+          final v = ink ? paper * 0.15 : (box ? paper * 0.55 : paper);
+          final i = (y * 160 + x) * 3;
+          im.data[i] = im.data[i + 1] = im.data[i + 2] = v.round();
+        }
+      }
+      return im;
+    }
+
+    test('No shadow evens out the paper and keeps text dark and colour intact', () {
+      final out = removeShadows(shadowedPage());
+      expect(px(out, 5, 5).$1, greaterThan(240), reason: 'shadowed paper turns white');
+      expect(px(out, 155, 5).$1, greaterThan(240));
+      expect(px(out, 20, 39).$1, lessThan(70));
+      expect(px(out, 100, 39).$1, lessThan(70));
+
+      final red = solid(64, 64, 200, 190, 180);
+      for (var x = 20; x < 30; x++) {
+        final i = (30 * 64 + x) * 3;
+        red.data[i] = 180;
+        red.data[i + 1] = 30;
+        red.data[i + 2] = 30;
+      }
+      final (r, g, b) = px(removeShadows(red), 25, 30);
+      expect(r, greaterThan(g + 100), reason: 'a red stamp stays red');
+      expect(b, lessThan(80));
+    });
+
+    test('Lighten brightens a dim page but keeps black text dark', () {
+      final im = solid(40, 40, 140, 140, 140);
+      for (var x = 5; x < 35; x++) {
+        setPx(im, x, 20, 10);
+      }
+      setPx(im, 2, 2, 90);
+      final out = lighten(im);
+      expect(px(out, 10, 10).$1, 255);
+      expect(px(out, 10, 20).$1, lessThan(60));
+      expect(px(out, 2, 2).$1, greaterThan(150), reason: 'mid tones are lifted');
+      expect(px(out, 2, 2).$1, lessThan(255));
+    });
+
+    test('Eco ink prints white paper and grey, not black, text', () {
+      final out = ecoInk(shadowedPage());
+      expect(px(out, 5, 5).$1, 255);
+      expect(px(out, 155, 75).$1, 255);
+      final (r, g, b) = px(out, 20, 39);
+      expect(r, inInclusiveRange(90, 140), reason: 'text is dark grey to save ink');
+      expect((g, b), (r, r));
+      final tinted = solid(30, 30, 230, 215, 170); // yellowish paper
+      setPx(tinted, 15, 15, 30);
+      expect(px(ecoInk(tinted), 3, 3), (255, 255, 255));
+    });
+
+    test('Shading evens the light but keeps grey tones', () {
+      final out = shading(shadowedPage());
+      expect(px(out, 5, 5).$1, greaterThan(240));
+      expect(px(out, 155, 5).$1, greaterThan(240));
+      for (final x in [42, 122]) {
+        final grey = px(out, x, 52).$1;
+        expect(grey, inInclusiveRange(100, 180), reason: 'the shaded box stays mid grey');
+      }
+      expect(px(out, 20, 39).$1, lessThan(60));
+    });
+
+    test('New filters leave the input untouched and follow the preset ids', () {
+      final im = shadowedPage();
+      final before = Uint8List.fromList(im.data);
+      for (final f in [
+        DocumentFilter.noShadow,
+        DocumentFilter.lighten,
+        DocumentFilter.ecoInk,
+        DocumentFilter.shading,
+      ]) {
+        final out = applyFilter(im, f);
+        expect((out.width, out.height), (im.width, im.height));
+        expect(DocumentFilter.fromId(f.id), f);
+      }
+      expect(im.data, before);
+    });
+
     test('Original returns the input untouched', () {
       final im = solid(4, 4, 1, 2, 3);
       expect(identical(applyFilter(im, DocumentFilter.original), im), isTrue);
+    });
+  });
+
+  group('brightness and contrast', () {
+    test('zero adjustments return the same image', () {
+      final im = solid(4, 4, 90, 120, 150);
+      expect(identical(adjustBrightnessContrast(im), im), isTrue);
+    });
+
+    test('brightness lightens and darkens', () {
+      final im = solid(4, 4, 100, 100, 100);
+      expect(px(adjustBrightnessContrast(im, brightness: 0.5), 1, 1).$1, 164);
+      expect(px(adjustBrightnessContrast(im, brightness: -0.5), 1, 1).$1, 36);
+      expect(px(adjustBrightnessContrast(im, brightness: 1), 1, 1).$1, 228);
+    });
+
+    test('contrast pushes values away from mid grey, or towards it', () {
+      final im = solid(2, 1, 100, 100, 100);
+      setPx(im, 1, 0, 160);
+      final more = adjustBrightnessContrast(im, contrast: 0.5);
+      expect(px(more, 0, 0).$1, lessThan(100));
+      expect(px(more, 1, 0).$1, greaterThan(160));
+      final flat = adjustBrightnessContrast(im, contrast: -1);
+      expect(px(flat, 0, 0).$1, 128);
+      expect(px(flat, 1, 0).$1, 128);
+    });
+
+    test('values are clamped to 0..255', () {
+      final im = solid(2, 2, 250, 5, 128);
+      final out = adjustBrightnessContrast(im, contrast: 1);
+      expect(px(out, 0, 0), (255, 0, 128));
+    });
+
+    test('the render pipeline applies them after the filter', () {
+      final src = img.Image(width: 60, height: 40);
+      img.fill(src, color: img.ColorRgb8(100, 100, 100));
+      final jpeg = Uint8List.fromList(img.encodeJpg(src, quality: 100));
+      final plain = renderRecipe(jpeg, const EditRecipe());
+      final lighter = renderRecipe(jpeg, const EditRecipe(brightness: 0.5));
+      expect(px(lighter, 20, 20).$1, greaterThan(px(plain, 20, 20).$1 + 40));
+    });
+
+    test('they are saved in the recipe, omitted when zero, and change its cache key', () {
+      const recipe = EditRecipe(brightness: 0.25, contrast: -0.5, filter: DocumentFilter.whiteboard);
+      expect(EditRecipe.fromJson(recipe.toJson()), recipe);
+      expect(const EditRecipe().toJson().keys, isNot(contains('brightness')));
+      expect(const EditRecipe().toJson().keys, isNot(contains('contrast')));
+      expect(recipe.cacheKey, isNot(const EditRecipe(filter: DocumentFilter.whiteboard).cacheKey));
+      expect(recipe.hasAdjustments, isTrue);
+      expect(const EditRecipe().hasAdjustments, isFalse);
+      // Recipes saved before these existed still load.
+      expect(EditRecipe.fromJson({'quarterTurns': 1, 'filter': 'grayscale'}).brightness, 0);
     });
   });
 

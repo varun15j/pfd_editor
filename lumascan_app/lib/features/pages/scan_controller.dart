@@ -1,32 +1,71 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../data/library_store.dart';
 import '../../domain/models.dart';
 import '../../domain/photo_import.dart';
+import '../../domain/scan_document.dart';
 import '../../domain/scanner_service.dart';
+import '../../pdf_edit/annotations.dart';
+
+/// Pages being added to the draft: [done] of [total] are ready. The screen
+/// shows a placeholder for each page still to come.
+@immutable
+class AddProgress {
+  const AddProgress({required this.total, this.done = 0});
+
+  final int total;
+  final int done;
+
+  AddProgress advanced() => AddProgress(total: total, done: done + 1);
+
+  @override
+  bool operator ==(Object other) => other is AddProgress && other.total == total && other.done == done;
+
+  @override
+  int get hashCode => Object.hash(total, done);
+}
 
 @immutable
 class ScanState {
   const ScanState({
     this.pages = const [],
     this.busy = false,
+    this.adding,
     this.undoStack = const [],
     this.redoStack = const [],
     this.unsaved = false,
+    this.exported = false,
+    this.parked = const [],
+    this.info,
   });
 
   final List<ScanPage> pages;
 
+  /// Name and start time of the document on screen. Given when its first
+  /// page arrives; null while there are no pages.
+  final ScanDocInfo? info;
+
   /// True while the scanner is open or pages are being imported. Repeat
   /// taps on the scan button are ignored while busy (LLD section 6).
   final bool busy;
+
+  /// Set while the pages of one scan or import are being saved, so the screen
+  /// can show what is coming. Null the rest of the time.
+  final AddProgress? adding;
   final List<List<ScanPage>> undoStack;
   final List<List<ScanPage>> redoStack;
 
   /// True when the pages changed since they were last exported as a PDF.
   final bool unsaved;
+
+  /// True when the pages were saved as a PDF and not changed since.
+  final bool exported;
+
+  /// Earlier documents, set aside when a new scan started, newest first.
+  final List<ParkedDraft> parked;
 
   bool get canUndo => undoStack.isNotEmpty;
   bool get canRedo => redoStack.isNotEmpty;
@@ -41,17 +80,28 @@ class ScanState {
   ScanState copyWith({
     List<ScanPage>? pages,
     bool? busy,
+    Object? adding = _keep,
     List<List<ScanPage>>? undoStack,
     List<List<ScanPage>>? redoStack,
     bool? unsaved,
+    bool? exported,
+    List<ParkedDraft>? parked,
+    Object? info = _keep,
   }) => ScanState(
     pages: pages ?? this.pages,
     busy: busy ?? this.busy,
+    adding: identical(adding, _keep) ? this.adding : adding as AddProgress?,
     undoStack: undoStack ?? this.undoStack,
     redoStack: redoStack ?? this.redoStack,
     unsaved: unsaved ?? this.unsaved,
+    // Any change after the export makes the PDF out of date.
+    exported: exported ?? (unsaved == true ? false : this.exported),
+    parked: parked ?? this.parked,
+    info: identical(info, _keep) ? this.info : info as ScanDocInfo?,
   );
 }
+
+const Object _keep = Object();
 
 sealed class ScanOutcome {
   const ScanOutcome();
@@ -78,6 +128,20 @@ class ScanFailed extends ScanOutcome {
 
 final scanControllerProvider = NotifierProvider<ScanController, ScanState>(ScanController.new);
 
+/// Whether the draft on disk matches the pages on screen. [saved] is only
+/// reported once the draft file was written, so the screen never claims a
+/// save that did not happen.
+enum DraftSaveStatus { saved, saving, failed }
+
+final draftSaveStatusProvider = NotifierProvider<DraftSaveStatusNotifier, DraftSaveStatus>(DraftSaveStatusNotifier.new);
+
+class DraftSaveStatusNotifier extends Notifier<DraftSaveStatus> {
+  @override
+  DraftSaveStatus build() => DraftSaveStatus.saved;
+
+  void set(DraftSaveStatus status) => state = status;
+}
+
 class ScanController extends Notifier<ScanState> {
   static const _undoLimit = 30;
 
@@ -85,8 +149,7 @@ class ScanController extends Notifier<ScanState> {
   Future<void> _draftIo = Future.value();
 
   /// Completes once the restored draft is loaded and every change made so
-  /// far is on disk.
-  @visibleForTesting
+  /// far is on disk. Save and go home waits for it.
   Future<void> get draftSaved => _draftIo;
 
   @override
@@ -100,32 +163,71 @@ class ScanController extends Notifier<ScanState> {
   Future<void> _restoreDraft() async {
     final store = ref.read(draftStoreProvider);
     final saved = await store.load();
-    if (!ref.mounted || saved.isEmpty) return;
+    final parked = await store.parked();
+    if (!ref.mounted) return;
+    if (parked.isNotEmpty) state = state.copyWith(parked: parked);
+    if (saved.pages.isEmpty) return;
     // Pages scanned while the draft was loading go after the restored ones;
     // their own save is queued behind this restore and writes the merge.
-    state = state.copyWith(pages: List.unmodifiable([...saved, ...state.pages]), unsaved: true);
+    state = state.copyWith(
+      pages: List.unmodifiable([...saved.pages, ...state.pages]),
+      unsaved: true,
+      info: saved.info ?? state.info,
+    );
   }
+
+  /// Saves queued and not yet written, for [draftSaveStatusProvider].
+  int _pendingSaves = 0;
 
   /// Queues a save of the draft. The pages are read when the save runs, so
   /// it always writes the latest draft, even if it waited behind the restore.
   void _persistDraft() {
     final store = ref.read(draftStoreProvider);
-    _draftIo = _draftIo.then((_) {
-      if (ref.mounted) return _saveQuietly(store, state.pages);
+    final status = ref.read(draftSaveStatusProvider.notifier);
+    _pendingSaves++;
+    status.set(DraftSaveStatus.saving);
+    _draftIo = _draftIo.then((_) async {
+      if (!ref.mounted) return;
+      final ok = await _saveQuietly(store, state.pages, state.info);
+      _pendingSaves--;
+      if (!ref.mounted) return;
+      if (!ok) {
+        status.set(DraftSaveStatus.failed);
+      } else if (_pendingSaves == 0) {
+        status.set(DraftSaveStatus.saved);
+      }
     });
   }
 
-  static Future<void> _saveQuietly(DraftStore store, List<ScanPage> pages) async {
+  static Future<bool> _saveQuietly(DraftStore store, List<ScanPage> pages, ScanDocInfo? info) async {
     try {
-      await store.save(pages);
+      await store.save(pages, info: info);
+      return true;
     } catch (e) {
       // The draft stays in memory; the next change tries again.
       debugPrint('Draft autosave failed: $e');
+      return false;
     }
   }
 
-  /// Opens the scanner and appends the captured pages to the draft.
-  Future<ScanOutcome> scan(ScanSource source) async {
+  /// What a newly captured page starts with: the filter chosen in Settings.
+  EditRecipe get _newPageRecipe => EditRecipe(filter: ref.read(appSettingsProvider).defaultFilter);
+
+  /// Shows [total] pages as on their way, then calls [onAdding] so the screen
+  /// can open the draft while they are saved.
+  void _beginAdding(int total, VoidCallback? onAdding) {
+    state = state.copyWith(adding: AddProgress(total: total));
+    onAdding?.call();
+  }
+
+  void _pageAdded() {
+    final progress = state.adding;
+    if (progress != null && ref.mounted) state = state.copyWith(adding: progress.advanced());
+  }
+
+  /// Opens the scanner and appends the captured pages to the draft. [onAdding]
+  /// is called once the captured pages are known and are being saved.
+  Future<ScanOutcome> scan(ScanSource source, {VoidCallback? onAdding}) async {
     if (state.busy) return const ScanCancelled();
     state = state.copyWith(busy: true);
     final scanner = ref.read(scannerServiceProvider);
@@ -133,13 +235,17 @@ class ScanController extends Notifier<ScanState> {
     try {
       final paths = await scanner.scan(source: source);
       if (paths.isEmpty) return const ScanCancelled();
+      if (!ref.mounted) return const ScanCancelled();
+      _beginAdding(paths.length, onAdding);
       final added = <ScanPage>[];
       for (final path in paths) {
         final id = store.newId();
-        added.add(ScanPage(id: id, originalPath: await store.importOriginal(path, id)));
+        added.add(ScanPage(id: id, originalPath: await store.importOriginal(path, id), recipe: _newPageRecipe));
+        _pageAdded();
       }
       await scanner.cleanUp();
       _commit([...state.pages, ...added]);
+      ref.read(renderServiceProvider).prepare(added);
       return ScanAdded(added.length);
     } on ScannerPermissionDenied catch (e) {
       return ScanPermissionBlocked(permanently: e.permanently);
@@ -148,7 +254,7 @@ class ScanController extends Notifier<ScanState> {
     } catch (e) {
       return ScanFailed('Could not save the scanned pages ($e)');
     } finally {
-      if (ref.mounted) state = state.copyWith(busy: false);
+      if (ref.mounted) state = state.copyWith(busy: false, adding: null);
     }
   }
 
@@ -156,9 +262,14 @@ class ScanController extends Notifier<ScanState> {
   /// that can't be read are skipped and named in the result; the rest are
   /// still added. With [autoCrop], each page starts cropped to the page found
   /// in it, which the user can still adjust.
-  Future<PhotoImportResult> importPhotos(List<PickedPhoto> photos, {required bool autoCrop}) async {
+  Future<PhotoImportResult> importPhotos(
+    List<PickedPhoto> photos, {
+    required bool autoCrop,
+    VoidCallback? onAdding,
+  }) async {
     if (state.busy || photos.isEmpty) return const PhotoImportResult(added: 0);
     state = state.copyWith(busy: true);
+    _beginAdding(photos.length, onAdding);
     final analyzer = ref.read(photoAnalyzerProvider);
     final store = ref.read(pageStoreProvider);
     final added = <ScanPage>[];
@@ -173,17 +284,21 @@ class ScanController extends Notifier<ScanState> {
             ScanPage(
               id: id,
               originalPath: original,
-              recipe: autoCrop && quad != null ? EditRecipe(crop: quad) : const EditRecipe(),
+              recipe: autoCrop && quad != null ? _newPageRecipe.copyWith(crop: quad) : _newPageRecipe,
             ),
           );
         } catch (_) {
           unreadable.add(photo.name);
         }
+        _pageAdded();
       }
-      if (added.isNotEmpty && ref.mounted) _commit([...state.pages, ...added]);
+      if (added.isNotEmpty && ref.mounted) {
+        _commit([...state.pages, ...added]);
+        ref.read(renderServiceProvider).prepare(added);
+      }
       return PhotoImportResult(added: added.length, unreadable: unreadable);
     } finally {
-      if (ref.mounted) state = state.copyWith(busy: false);
+      if (ref.mounted) state = state.copyWith(busy: false, adding: null);
     }
   }
 
@@ -198,10 +313,11 @@ class ScanController extends Notifier<ScanState> {
       final paths = await scanner.scan(source: ScanSource.camera, maxPages: 1);
       if (paths.isEmpty) return const ScanCancelled();
       final id = store.newId();
-      final page = ScanPage(id: id, originalPath: await store.importOriginal(paths.first, id));
+      final page = ScanPage(id: id, originalPath: await store.importOriginal(paths.first, id), recipe: _newPageRecipe);
       await scanner.cleanUp();
       if (!ref.mounted) return const ScanCancelled();
       _commit([for (final p in state.pages) p.id == pageId ? page : p]);
+      ref.read(renderServiceProvider).prepare([page]);
       return const ScanAdded(1);
     } on ScannerPermissionDenied catch (e) {
       return ScanPermissionBlocked(permanently: e.permanently);
@@ -214,6 +330,133 @@ class ScanController extends Notifier<ScanState> {
     }
   }
 
+  /// Batch camera captures, chained so pages join the draft in shutter order
+  /// even when one file takes longer to move than the next.
+  Future<void> _captureIo = Future.value();
+
+  /// Adds one photo from the batch camera to the end of the draft, or, with
+  /// [replacing], puts it in that page's place (retake). The photo is moved,
+  /// not copied, so this is quick enough to run after every shutter press.
+  /// Each capture is committed on its own so a crash keeps every page taken
+  /// so far. Returns the new page, or null when it could not be saved.
+  ///
+  /// [plain] keeps the photo as it is, with no filter (Photo mode).
+  ///
+  /// [filter] overrides the Settings default for this capture (the camera's
+  /// filter choice).
+  Future<ScanPage?> addCapture(
+    String photoPath, {
+    String? replacing,
+    bool plain = false,
+    DocumentFilter? filter,
+  }) async {
+    final pages = await addCaptureSplit(
+      photoPath,
+      const [CropQuad.full],
+      replacing: replacing,
+      plain: plain,
+      filter: filter,
+    );
+    return pages?.first;
+  }
+
+  /// Like [addCapture], but makes one page per crop in [crops], all sharing
+  /// the one photo (Book mode: the left and the right page of a spread).
+  /// With [replacing], the new pages take that page's place.
+  Future<List<ScanPage>?> addCaptureSplit(
+    String photoPath,
+    List<CropQuad> crops, {
+    String? replacing,
+    bool plain = false,
+    DocumentFilter? filter,
+  }) {
+    final result = _captureIo.then((_) async {
+      if (!ref.mounted) return null;
+      final store = ref.read(pageStoreProvider);
+      try {
+        final id = store.newId();
+        final original = await store.adoptOriginal(photoPath, id);
+        final recipe = plain
+            ? const EditRecipe()
+            : filter == null
+            ? _newPageRecipe
+            : EditRecipe(filter: filter);
+        final added = [
+          for (var i = 0; i < crops.length; i++)
+            ScanPage(
+              id: i == 0 ? id : store.newId(),
+              originalPath: original,
+              recipe: crops[i].isFull ? recipe : recipe.copyWith(crop: crops[i]),
+            ),
+        ];
+        if (!ref.mounted) return null;
+        final replaced = replacing != null && state.pageById(replacing) != null;
+        _commit(
+          replaced
+              ? [
+                  for (final p in state.pages)
+                    if (p.id == replacing) ...added else p,
+                ]
+              : [...state.pages, ...added],
+        );
+        // Working copies and the grid thumbnail are made in the background.
+        ref.read(renderServiceProvider).prepare(added);
+        return added;
+      } catch (e) {
+        debugPrint('Could not save a captured page: $e');
+        return null;
+      }
+    });
+    _captureIo = result.then((_) {});
+    return result;
+  }
+
+  /// Keeps the text read from a page (OCR Doc mode). Like a detected crop it
+  /// finishes the capture, so it adds no undo step.
+  void setPageText(String pageId, String text) {
+    if (state.pageById(pageId) == null) return;
+    List<ScanPage> patch(List<ScanPage> pages) => [for (final p in pages) p.id == pageId ? p.copyWith(text: text) : p];
+    state = state.copyWith(
+      pages: List.unmodifiable(patch(state.pages)),
+      undoStack: [for (final s in state.undoStack) patch(s)],
+      redoStack: [for (final s in state.redoStack) patch(s)],
+    );
+    _persistDraft();
+  }
+
+  /// Sets the crop found on a freshly captured page. This finishes the
+  /// capture rather than being an edit of its own, so it adds no undo step,
+  /// and it applies to every undo snapshot of the page too. Ignored once the
+  /// user has cropped the page themselves.
+  ///
+  /// [expected] is the crop the page was given when it was taken (a half of
+  /// a book spread); the found crop applies only while the page still has it.
+  void applyDetectedCrop(String pageId, CropQuad crop, {CropQuad expected = CropQuad.full}) {
+    final current = state.pageById(pageId);
+    if (current == null || current.recipe.crop != expected) return;
+    List<ScanPage> patch(List<ScanPage> pages) => [
+      for (final p in pages)
+        p.id == pageId && p.recipe.crop == expected ? p.copyWith(recipe: p.recipe.copyWith(crop: crop)) : p,
+    ];
+    state = state.copyWith(
+      pages: List.unmodifiable(patch(state.pages)),
+      undoStack: [for (final s in state.undoStack) patch(s)],
+      redoStack: [for (final s in state.redoStack) patch(s)],
+    );
+    _persistDraft();
+  }
+
+  /// Sets the crop of each page in [crops], as one undo step: auto crop or
+  /// full photo on many pages at once. Marks on a page whose crop changes
+  /// are removed, as with any crop.
+  void setCrops(Map<String, CropQuad> crops) {
+    final changes = state.pages.any((p) => crops.containsKey(p.id) && p.recipe.crop != crops[p.id]);
+    if (!changes) return;
+    _commit([
+      for (final p in state.pages) crops.containsKey(p.id) ? _withRecipe(p, p.recipe.copyWith(crop: crops[p.id])) : p,
+    ]);
+  }
+
   /// Inserts a copy of [pageId], with the same edits, right after it. Both
   /// pages share the original image, which is never modified.
   void duplicate(String pageId) {
@@ -223,6 +466,7 @@ class ScanController extends Notifier<ScanState> {
       id: ref.read(pageStoreProvider).newId(),
       originalPath: state.pages[i].originalPath,
       recipe: state.pages[i].recipe,
+      annotations: state.pages[i].annotations,
     );
     _commit([...state.pages]..insert(i + 1, copy));
   }
@@ -230,8 +474,31 @@ class ScanController extends Notifier<ScanState> {
   /// Called once the pages are written to a PDF.
   void markSaved() => state = state.copyWith(unsaved: false);
 
+  /// Saves [recipe] for [pageId]. Marks are placed on the rendered page, so a
+  /// new crop or rotation removes them (see [dropsMarks]).
   void updateRecipe(String pageId, EditRecipe recipe) {
-    _commit([for (final p in state.pages) p.id == pageId ? p.copyWith(recipe: recipe) : p]);
+    _commit([for (final p in state.pages) p.id == pageId ? _withRecipe(p, recipe) : p]);
+  }
+
+  static ScanPage _withRecipe(ScanPage page, EditRecipe recipe) =>
+      page.copyWith(recipe: recipe, annotations: _changesGeometry(page.recipe, recipe) ? const [] : page.annotations);
+
+  static bool _changesGeometry(EditRecipe a, EditRecipe b) => a.crop != b.crop || a.quarterTurns != b.quarterTurns;
+
+  /// True when saving [recipe] on [pageId] would remove marks, so the screen
+  /// can say so.
+  bool dropsMarks(String pageId, EditRecipe recipe) {
+    final page = state.pageById(pageId);
+    return page != null && page.annotations.isNotEmpty && _changesGeometry(page.recipe, recipe);
+  }
+
+  /// Replaces the marks on [pageId]. One undo step.
+  void setAnnotations(String pageId, List<Annotation> annotations) {
+    final page = state.pageById(pageId);
+    if (page == null) return;
+    _commit([
+      for (final p in state.pages) p.id == pageId ? p.copyWith(annotations: List.unmodifiable(annotations)) : p,
+    ]);
   }
 
   void rotate(String pageId, {bool clockwise = true}) {
@@ -245,6 +512,80 @@ class ScanController extends Notifier<ScanState> {
   void applyFilterToAll(DocumentFilter filter) {
     _commit([for (final p in state.pages) p.copyWith(recipe: p.recipe.copyWith(filter: filter))]);
   }
+
+  /// Saves [draft] as [pageId]'s recipe and copies its filter, brightness and
+  /// contrast to every page in [alsoPageIds]. Those pages keep their own crop
+  /// and rotation. One undo step covers all of it.
+  void applyEnhancement(String pageId, EditRecipe draft, {Iterable<String> alsoPageIds = const []}) {
+    final others = alsoPageIds.toSet()..remove(pageId);
+    _commit([
+      for (final p in state.pages)
+        if (p.id == pageId)
+          _withRecipe(p, draft)
+        else if (others.contains(p.id))
+          p.copyWith(
+            recipe: p.recipe.copyWith(filter: draft.filter, brightness: draft.brightness, contrast: draft.contrast),
+          )
+        else
+          p,
+    ]);
+  }
+
+  /// Rotates every page in [ids] a quarter turn. Pages keep their order and
+  /// unknown IDs are ignored. One undo step covers all of them. Like a single
+  /// rotation, it removes the marks on the rotated pages.
+  void rotatePages(Set<String> ids, {bool clockwise = true}) {
+    if (!_hasAny(ids)) return;
+    _commit([
+      for (final p in state.pages)
+        if (ids.contains(p.id))
+          _withRecipe(p, p.recipe.copyWith(quarterTurns: p.recipe.quarterTurns + (clockwise ? 1 : 3)))
+        else
+          p,
+    ]);
+  }
+
+  /// True when rotating the pages in [ids] would remove marks from any of
+  /// them, so the screen can warn once.
+  bool rotationDropsMarks(Set<String> ids) => state.pages.any((p) => ids.contains(p.id) && p.annotations.isNotEmpty);
+
+  /// Copies the filter, brightness and contrast of [recipe] to every page in
+  /// [ids]. Each page keeps its own crop, rotation and marks. One undo step.
+  void applyEnhancementToPages(Set<String> ids, EditRecipe recipe) {
+    if (!_hasAny(ids)) return;
+    _commit([
+      for (final p in state.pages)
+        if (ids.contains(p.id))
+          p.copyWith(
+            recipe: p.recipe.copyWith(filter: recipe.filter, brightness: recipe.brightness, contrast: recipe.contrast),
+          )
+        else
+          p,
+    ]);
+  }
+
+  /// Removes every page in [ids]. One undo step brings them all back in
+  /// their places; the original files are kept until the draft is cleared.
+  void removePages(Set<String> ids) {
+    if (!_hasAny(ids)) return;
+    _commit([
+      for (final p in state.pages)
+        if (!ids.contains(p.id)) p,
+    ]);
+  }
+
+  /// Puts the pages in the order of [ids], as one undo step. Ignored unless
+  /// [ids] names every page exactly once, so no page can be lost or doubled.
+  void reorderPages(List<String> ids) {
+    final pages = state.pages;
+    if (ids.length != pages.length || ids.toSet().length != ids.length) return;
+    final byId = {for (final p in pages) p.id: p};
+    if (!ids.every(byId.containsKey)) return;
+    if ([for (final p in pages) p.id].join('/') == ids.join('/')) return;
+    _commit([for (final id in ids) byId[id]!]);
+  }
+
+  bool _hasAny(Set<String> ids) => state.pages.any((p) => ids.contains(p.id));
 
   /// Moves a page; [newIndex] is its position after removal from [oldIndex].
   void move(int oldIndex, int newIndex) {
@@ -284,6 +625,92 @@ class ScanController extends Notifier<ScanState> {
     _persistDraft();
   }
 
+  /// Starts a new, empty document for a new scan. The pages on screen are
+  /// set aside as an earlier document, listed on Home, where they can be
+  /// opened again to read them or add pages.
+  Future<void> startNewDocument() async {
+    await _draftIo;
+    if (!ref.mounted || state.pages.isEmpty || state.busy) return;
+    final parked = await ref.read(draftStoreProvider).park(state.pages, exported: state.exported, info: state.info);
+    if (!ref.mounted) return;
+    state = ScanState(parked: [parked, ...state.parked]);
+    _persistDraft();
+  }
+
+  /// Makes earlier document [id] the draft again. The pages on screen, if
+  /// any, are set aside in its place.
+  Future<void> openParked(String id) async {
+    await _draftIo;
+    if (!ref.mounted || state.busy) return;
+    final store = ref.read(draftStoreProvider);
+    final entry = state.parked.where((d) => d.id == id).firstOrNull;
+    if (entry == null) return;
+    final pages = await store.loadParked(id);
+    final parked = [
+      if (state.pages.isNotEmpty) await store.park(state.pages, exported: state.exported, info: state.info),
+      for (final d in state.parked)
+        if (d.id != id) d,
+    ];
+    if (!ref.mounted) return;
+    state = ScanState(
+      pages: List.unmodifiable(pages),
+      exported: entry.exported,
+      unsaved: !entry.exported,
+      parked: parked,
+      info: entry.info,
+    );
+    _persistDraft();
+    // Only once the pages are the draft on disk, so a crash loses nothing.
+    _draftIo = _draftIo.then((_) => store.deleteParked(id));
+  }
+
+  /// Renames the document on screen. Blank names are ignored.
+  void rename(String name) {
+    final info = state.info;
+    final n = name.trim();
+    if (info == null || n.isEmpty || n == info.name) return;
+    state = state.copyWith(info: info.copyWith(name: n));
+    _persistDraft();
+  }
+
+  /// Renames earlier document [id]. Blank names are ignored.
+  Future<void> renameParked(String id, String name) async {
+    final n = name.trim();
+    if (n.isEmpty || !state.parked.any((d) => d.id == id)) return;
+    state = state.copyWith(parked: [for (final d in state.parked) d.id == id ? d.renamed(n) : d]);
+    _draftIo = _draftIo.then((_) => ref.read(draftStoreProvider).renameParked(id, n)).catchError((Object e) {
+      debugPrint('Could not rename scan: $e');
+    });
+    await _draftIo;
+  }
+
+  /// Deletes earlier document [id] and its page images. Exported PDFs and
+  /// JPGs are kept.
+  Future<void> deleteParked(String id) async {
+    if (!state.parked.any((d) => d.id == id)) return;
+    state = state.copyWith(
+      parked: [
+        for (final d in state.parked)
+          if (d.id != id) d,
+      ],
+    );
+    final drafts = ref.read(draftStoreProvider);
+    final files = ref.read(pageStoreProvider);
+    _draftIo = _draftIo
+        .then((_) async {
+          final pages = await drafts.loadParked(id);
+          await drafts.deleteParked(id);
+          for (final path in {for (final p in pages) p.originalPath}) {
+            await files.deleteOriginal(path);
+          }
+        })
+        .catchError((Object e) => debugPrint('Could not delete scan: $e'));
+    await _draftIo;
+  }
+
+  /// The pages were saved as a PDF.
+  void markExported() => state = state.copyWith(unsaved: false, exported: true);
+
   /// Discards the draft and deletes its original files.
   Future<void> clear() async {
     final store = ref.read(pageStoreProvider);
@@ -292,7 +719,7 @@ class ScanController extends Notifier<ScanState> {
       for (final snapshot in [...state.undoStack, ...state.redoStack])
         for (final p in snapshot) p.originalPath,
     };
-    state = const ScanState();
+    state = ScanState(parked: state.parked);
     _persistDraft();
     for (final path in paths) {
       await store.deleteOriginal(path);
@@ -302,7 +729,18 @@ class ScanController extends Notifier<ScanState> {
   void _commit(List<ScanPage> pages) {
     var stack = [...state.undoStack, state.pages];
     if (stack.length > _undoLimit) stack = stack.sublist(stack.length - _undoLimit);
-    state = state.copyWith(pages: List.unmodifiable(pages), undoStack: stack, redoStack: const [], unsaved: true);
+    // A document is named when its first page arrives, by the File name
+    // setting: "11-Oct-2026_16-47_SCAN" unless the user picked another.
+    final now = DateTime.now();
+    final name = ref.read(appSettingsProvider).fileNamePattern.format(now);
+    final info = state.info ?? (pages.isEmpty ? null : ScanDocInfo(name: name, createdAt: now));
+    state = state.copyWith(
+      pages: List.unmodifiable(pages),
+      undoStack: stack,
+      redoStack: const [],
+      unsaved: true,
+      info: info,
+    );
     _persistDraft();
   }
 }

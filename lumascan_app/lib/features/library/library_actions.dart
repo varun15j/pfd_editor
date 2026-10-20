@@ -1,12 +1,20 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../app/providers.dart';
 import '../../domain/library.dart';
+import '../../domain/plan.dart';
+import '../../export/text_pdf_service.dart';
+import '../../ui/upgrade_dialog.dart';
 import '../pdf_editor/open_pdf.dart';
+import '../share/send_pdf_sheet.dart';
+import '../share/text_pdf_next_sheet.dart';
 import 'library_controller.dart';
+import '../../app/preferences.dart';
 
 /// Ids hidden from the UI while their delete can still be undone. Nothing
 /// is removed from disk until the undo window closes, so if the app is
@@ -55,7 +63,14 @@ Future<void> openDocument(BuildContext context, WidgetRef ref, SavedDocument doc
   await openPdfInEditor(context, ref, path: doc.pdfPath, name: '${doc.name}.pdf');
 }
 
+/// One document opens the send sheet (as is, or a smaller copy). Several are
+/// handed to the system share sheet together.
 Future<void> shareDocuments(BuildContext context, List<SavedDocument> docs) async {
+  if (docs.length == 1) {
+    final doc = docs.single;
+    await showSendPdfSheet(context, pdfPath: doc.pdfPath, name: doc.name, pageCount: doc.pageCount);
+    return;
+  }
   final box = context.findRenderObject() as RenderBox?;
   await SharePlus.instance.share(
     ShareParams(
@@ -157,4 +172,82 @@ class _RenameDialogState extends State<_RenameDialog> {
       ],
     );
   }
+}
+
+/// Reads a saved document with OCR and saves a text PDF beside it (Pro and
+/// Gold). Works for any PDF of photos; the original is not changed.
+Future<void> createTextPdf(BuildContext context, WidgetRef ref, SavedDocument doc) async {
+  if (!await ensurePlan(context, ref, PlanFeature.textPdf, what: 'Text PDF')) return;
+  if (!context.mounted) return;
+  final messenger = ScaffoldMessenger.of(context);
+  if (!File(doc.pdfPath).existsSync()) {
+    messenger.showSnackBar(SnackBar(content: Text('${doc.name} is no longer on this device.')));
+    return;
+  }
+  final service = ref.read(textPdfServiceProvider);
+  final library = ref.read(libraryProvider.notifier);
+  final store = ref.read(pageStoreProvider);
+  final progress = ValueNotifier<double>(0);
+  final navigator = Navigator.of(context, rootNavigator: true);
+  // Blocks the screen while the pages are read; the dialog closes itself below.
+  unawaited(
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: _TextPdfProgress(name: doc.name, progress: progress),
+      ),
+    ),
+  );
+  try {
+    final made = await service.fromPdf(
+      doc.pdfPath,
+      pageCount: doc.pageCount,
+      fileName: await store.freeExportName(TextPdfService.textName(doc.name)),
+      keepLayout: ref.read(planIncludesProvider(PlanFeature.smartScan)),
+      onProgress: (f) => progress.value = f,
+    );
+    navigator.pop();
+    if (!context.mounted) return;
+    await showTextPdfNextSheet(
+      context,
+      pdfPath: made.file.path,
+      pageCount: made.pageCount,
+      saveToLibrary: () async {
+        await library.addPdf(made.file, pageCount: made.pageCount);
+      },
+    );
+  } on Object catch (e) {
+    navigator.pop();
+    messenger.showSnackBar(SnackBar(content: Text('Could not create the text PDF. $e')));
+  } finally {
+    progress.dispose();
+  }
+}
+
+class _TextPdfProgress extends StatelessWidget {
+  const _TextPdfProgress({required this.name, required this.progress});
+
+  final String name;
+  final ValueNotifier<double> progress;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Creating text PDF'),
+    content: ValueListenableBuilder<double>(
+      valueListenable: progress,
+      builder: (_, value, _) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Reading $name on this device', maxLines: 2, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 16),
+          LinearProgressIndicator(value: value),
+          const SizedBox(height: 8),
+          Text('${(value * 100).round()}%', style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ),
+    ),
+  );
 }

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="500" viewBox="0 0 390 500" role="img" aria-label="Camera detecting a document">
+  <defs><linearGradient id="wood" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#675345"/><stop offset=".45" stop-color="#493c34"/><stop offset="1" stop-color="#2f2925"/></linearGradient><filter id="shadow"><feDropShadow dy="12" stdDeviation="12" flood-opacity=".35"/></filter></defs>
+  <rect width="390" height="500" fill="url(#wood)"/><g opacity=".16" stroke="#dbc1a8"><path d="M0 82h390M0 170h390M0 270h390M0 370h390M95 0v500M270 0v500"/></g>
+  <path d="M58 73L324 52l19 371L39 442z" fill="#fffdf6" filter="url(#shadow)"/><rect x="87" y="112" width="180" height="12" rx="6" fill="#8a9892"/><rect x="87" y="143" width="206" height="7" rx="3" fill="#c6ceca"/><rect x="87" y="162" width="178" height="7" rx="3" fill="#d2d8d5"/><rect x="87" y="205" width="210" height="118" rx="8" fill="#e2e7e4"/><rect x="87" y="352" width="196" height="7" rx="3" fill="#c6ceca"/>
+  <path d="M58 73L324 52l19 371L39 442z" fill="none" stroke="#67eed0" stroke-width="5"/><g fill="#67eed0" stroke="white" stroke-width="3"><circle cx="58" cy="73" r="10"/><circle cx="324" cy="52" r="10"/><circle cx="343" cy="423" r="10"/><circle cx="39" cy="442" r="10"/></g>
+</svg>

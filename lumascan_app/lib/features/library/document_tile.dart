@@ -1,11 +1,15 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/preferences.dart';
 import '../../app/theme.dart';
 import '../../domain/library.dart';
+import '../../domain/plan.dart';
+import '../../ui/state_views.dart';
 
-enum DocumentMenuAction { rename, move, tags, share, delete }
+enum DocumentMenuAction { rename, move, tags, share, textPdf, word, delete }
 
 /// First-page thumbnail on a white page, or a PDF icon when there is none.
 class DocumentThumbnail extends StatelessWidget {
@@ -116,7 +120,7 @@ class _DocumentInteraction {
     return PopupMenuButton<DocumentMenuAction>(
       tooltip: 'More for ${document.name}',
       onSelected: onMenu,
-      itemBuilder: (_) => const [
+      itemBuilder: (menuContext) => [
         PopupMenuItem(
           value: DocumentMenuAction.rename,
           child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Rename')),
@@ -134,6 +138,28 @@ class _DocumentInteraction {
           child: ListTile(leading: Icon(Icons.ios_share), title: Text('Share')),
         ),
         PopupMenuItem(
+          value: DocumentMenuAction.textPdf,
+          child: ListTile(
+            leading: const Icon(Icons.text_snippet_outlined),
+            title: const Text('Create text PDF'),
+            // Shown to everyone; on Basic it opens the upgrade pop-up.
+            trailing: ProviderScope.containerOf(menuContext).read(planIncludesProvider(PlanFeature.textPdf))
+                ? null
+                : const PremiumBadge(label: 'Pro'),
+          ),
+        ),
+        PopupMenuItem(
+          value: DocumentMenuAction.word,
+          child: ListTile(
+            leading: const Icon(Icons.description_outlined),
+            title: const Text('Convert to Word'),
+            // Shown to everyone; on Basic it opens the upgrade pop-up.
+            trailing: ProviderScope.containerOf(menuContext).read(planIncludesProvider(PlanFeature.word))
+                ? null
+                : const PremiumBadge(label: 'Pro'),
+          ),
+        ),
+        const PopupMenuItem(
           value: DocumentMenuAction.delete,
           child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Delete')),
         ),
@@ -147,6 +173,8 @@ class _DocumentInteraction {
       selected: selecting ? selected : null,
       button: true,
       label: semanticsLabel,
+      onTap: onTap,
+      onLongPress: onLongPress,
       onLongPressHint: selecting ? null : 'Select',
       child: Card(
         clipBehavior: Clip.antiAlias,
@@ -157,7 +185,9 @@ class _DocumentInteraction {
                 side: BorderSide(color: c.accent, width: 2),
               )
             : null,
-        child: InkWell(onTap: onTap, onLongPress: onLongPress, child: child),
+        // The Semantics above carries the label and actions, so the ink does not
+        // add a second, unlabelled tap target for a screen reader.
+        child: InkWell(onTap: onTap, onLongPress: onLongPress, excludeFromSemantics: true, child: child),
       ),
     );
   }
@@ -306,56 +336,6 @@ class DocumentGridCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Compact card for Home's Recent row.
-class RecentDocumentCard extends StatelessWidget {
-  const RecentDocumentCard({super.key, required this.document, required this.onTap});
-
-  final SavedDocument document;
-  final VoidCallback onTap;
-
-  static const width = 132.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Semantics(
-      button: true,
-      label: '${document.name}, ${formatModified(document.modifiedAt, DateTime.now())}',
-      excludeSemantics: true,
-      child: SizedBox(
-        width: width,
-        child: Card(
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: DocumentThumbnail(document: document, iconSize: 36)),
-                Padding(
-                  padding: const EdgeInsets.all(Space.sm),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(document.name, style: text.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      Text(
-                        formatModified(document.modifiedAt, DateTime.now()),
-                        style: text.bodySmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

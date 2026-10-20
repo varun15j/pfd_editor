@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../../domain/models.dart';
+import 'adding_progress.dart';
 import 'page_actions.dart';
 import 'page_image.dart';
 import 'scan_controller.dart';
@@ -17,6 +18,8 @@ class PageGallery extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final adding = ref.watch(addProgressProvider);
+    final pending = adding?.total ?? 0;
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
       // About three columns on a phone, more on wider screens.
@@ -26,8 +29,28 @@ class PageGallery extends ConsumerWidget {
         crossAxisSpacing: 12,
         childAspectRatio: 0.62,
       ),
-      itemCount: pages.length,
-      itemBuilder: (context, i) => _GalleryTile(key: ValueKey(pages[i].id), index: i, page: pages[i]),
+      itemCount: pages.length + pending,
+      itemBuilder: (context, i) {
+        if (i < pages.length) return _GalleryTile(key: ValueKey(pages[i].id), index: i, page: pages[i]);
+        final number = i + 1;
+        return Column(
+          key: ValueKey('adding-$i'),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: PagePlaceholder(number: number, state: adding!.stateOf(i - pages.length)),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Page $number',
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ],
+        );
+      },
     );
   }
 }

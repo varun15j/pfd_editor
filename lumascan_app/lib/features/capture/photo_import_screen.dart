@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../domain/photo_import.dart';
@@ -10,7 +11,7 @@ import '../pages/scan_controller.dart';
 
 /// Picks photos, lets the user set their order, and adds them to the end of
 /// the draft. Returns true when pages were added.
-Future<bool> importPhotosFlow(BuildContext context, WidgetRef ref) async {
+Future<bool> importPhotosFlow(BuildContext context, WidgetRef ref, {VoidCallback? onAdding}) async {
   final messenger = ScaffoldMessenger.of(context);
   final List<PickedPhoto> picked;
   try {
@@ -21,11 +22,16 @@ Future<bool> importPhotosFlow(BuildContext context, WidgetRef ref) async {
   }
   if (picked.isEmpty || !context.mounted) return false;
 
-  final choice = await Navigator.of(context)
-      .push<_ImportChoice>(MaterialPageRoute(builder: (_) => ImportPhotosScreen(photos: picked)));
+  final choice = await Navigator.of(context).push<_ImportChoice>(
+    MaterialPageRoute(
+      builder: (_) => ImportPhotosScreen(photos: picked, autoCrop: ref.read(appSettingsProvider).autoCropOnImport),
+    ),
+  );
   if (choice == null || !context.mounted) return false;
 
-  final result = await ref.read(scanControllerProvider.notifier).importPhotos(choice.photos, autoCrop: choice.autoCrop);
+  final result = await ref
+      .read(scanControllerProvider.notifier)
+      .importPhotos(choice.photos, autoCrop: choice.autoCrop, onAdding: onAdding);
   if (!context.mounted) return result.added > 0;
   final added = result.added == 0 ? null : 'Added ${result.added} page${result.added == 1 ? '' : 's'}';
   final skipped = result.unreadable.isEmpty
@@ -52,9 +58,12 @@ class _ImportChoice {
 /// out; tapping it again puts it back as the last page, so the order is the
 /// order of taps.
 class ImportPhotosScreen extends StatefulWidget {
-  const ImportPhotosScreen({super.key, required this.photos});
+  const ImportPhotosScreen({super.key, required this.photos, this.autoCrop = true});
 
   final List<PickedPhoto> photos;
+
+  /// Whether the crop switch starts on, from Settings.
+  final bool autoCrop;
 
   @override
   State<ImportPhotosScreen> createState() => _ImportPhotosScreenState();
@@ -62,7 +71,7 @@ class ImportPhotosScreen extends StatefulWidget {
 
 class _ImportPhotosScreenState extends State<ImportPhotosScreen> {
   late final List<int> _order = [for (var i = 0; i < widget.photos.length; i++) i];
-  bool _autoCrop = true;
+  late bool _autoCrop = widget.autoCrop;
 
   void _toggle(int i) => setState(() => _order.contains(i) ? _order.remove(i) : _order.add(i));
 

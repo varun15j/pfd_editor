@@ -2,22 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/scanner_service.dart';
-import '../features/capture/create_sheet.dart';
+import '../features/batch_capture/batch_capture_screen.dart';
+import '../features/batch_capture/camera_mode.dart';
 import '../features/capture/scan_tips.dart';
 import '../features/home/home_screen.dart';
-import '../features/library/library_screen.dart';
 import '../features/pages/pages_screen.dart';
 import '../features/pages/scan_actions.dart';
 import '../features/pages/scan_controller.dart';
-import '../features/settings/settings_screen.dart';
 import '../features/tools/tools_screen.dart';
 import 'theme.dart';
 
 enum AppTab {
-  home('Home', Icons.home_outlined, Icons.home),
-  library('Library', Icons.folder_outlined, Icons.folder),
-  tools('Tools', Icons.handyman_outlined, Icons.handyman),
-  settings('Settings', Icons.settings_outlined, Icons.settings);
+  docs('Docs', Icons.description_outlined, Icons.description),
+  tools('Tools', Icons.widgets_outlined, Icons.widgets);
 
   const AppTab(this.label, this.icon, this.selectedIcon);
 
@@ -26,9 +23,10 @@ enum AppTab {
   final IconData selectedIcon;
 }
 
-/// Main navigation: Home, Library, Tools and Settings, with Create as a raised
-/// centre button rather than a tab (LumaScan_features.md, "V2 information
-/// architecture": capture is a task, not a destination).
+/// Main navigation, as in the UI/UX screenshots (Screens 1, 3 and 4): Docs
+/// and Tools tabs with a green camera button between them. The camera
+/// button starts a scan straight away; Settings opens from the avatar on
+/// Docs, and every other way to start a document is in Create on Docs.
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
 
@@ -37,30 +35,25 @@ class AppShell extends ConsumerStatefulWidget {
 }
 
 class _AppShellState extends ConsumerState<AppShell> {
-  AppTab _tab = AppTab.home;
+  AppTab _tab = AppTab.docs;
 
   void _select(AppTab tab) => setState(() => _tab = tab);
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(showHomeProvider, (_, _) => _select(AppTab.docs));
     final busy = ref.watch(scanControllerProvider.select((s) => s.busy));
     return Scaffold(
-      body: IndexedStack(
-        index: _tab.index,
-        children: [
-          HomeScreen(onOpenLibrary: () => _select(AppTab.library)),
-          const LibraryScreen(),
-          const ToolsScreen(),
-          const SettingsScreen(),
-        ],
-      ),
+      body: IndexedStack(index: _tab.index, children: const [HomeScreen(), ToolsScreen()]),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: SizedBox.square(
         dimension: 64,
         child: FloatingActionButton(
-          tooltip: 'Create',
-          onPressed: busy ? null : () => showCreateSheet(context, ref),
-          child: const Icon(Icons.add, size: 32),
+          tooltip: 'Scan',
+          backgroundColor: LumaColors.scan,
+          foregroundColor: LumaColors.onScan,
+          onPressed: busy ? null : () => scanThenReview(context, ref, ScanSource.camera),
+          child: const Icon(Icons.photo_camera, size: 30),
         ),
       ),
       bottomNavigationBar: _BottomBar(selected: _tab, onSelect: _select),
@@ -68,17 +61,60 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 }
 
-/// Scans or imports into the draft, then opens the draft so the new pages can
-/// be checked straight away. The first camera scan shows the scan tips.
-Future<void> scanThenReview(BuildContext context, WidgetRef ref, ScanSource source) async {
-  if (source == ScanSource.camera && !await showScanTipsOnce(context, ref)) return;
+/// Starts a new document, scans or imports into it, then opens it so the new
+/// pages can be checked straight away. The document on screen before, if
+/// any, is kept on Home to open again. The first camera scan shows the scan
+/// tips. The camera stays open between shots and opens the document when it
+/// closes.
+/// [mode] is the capture mode the camera opens in.
+Future<void> scanThenReview(
+  BuildContext context,
+  WidgetRef ref,
+  ScanSource source, {
+  CameraMode mode = CameraMode.docs,
+}) async {
+  if (source == ScanSource.camera && (!await showScanTipsOnce(context, ref) || !context.mounted)) return;
+  await ref.read(scanControllerProvider.notifier).startNewDocument();
   if (!context.mounted) return;
-  final added = await runScan(context, ref, source);
-  if (added && context.mounted) openDraft(context);
+  if (source == ScanSource.camera) return openBatchCapture(context, ref, mode: mode);
+  // Open the draft as soon as the pages are known, so the wait for a long
+  // import is spent looking at the pages arriving.
+  final navigator = Navigator.of(context);
+  Route<void>? draft;
+  final added = await runScan(context, ref, source, onAdding: () => draft = openDraft(context));
+  if (draft == null) {
+    if (added && context.mounted) openDraft(context);
+  } else if (!added && draft!.isActive) {
+    // Nothing could be added (every photo unreadable): do not leave an empty draft open.
+    navigator.removeRoute(draft!);
+  }
 }
 
-void openDraft(BuildContext context) =>
-    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PagesScreen()));
+/// Asks the shell to show the Home tab; each request bumps the count.
+final showHomeProvider = NotifierProvider<ShowHomeRequests, int>(ShowHomeRequests.new);
+
+class ShowHomeRequests extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void request() => state++;
+}
+
+/// Save and go home: waits for the document to be written, then closes every
+/// screen over the shell and shows Home, where the next scan starts a new
+/// document. The scan stays on Home to open again.
+Future<void> saveAndGoHome(BuildContext context, WidgetRef ref) async {
+  await ref.read(scanControllerProvider.notifier).draftSaved;
+  if (!context.mounted) return;
+  ref.read(showHomeProvider.notifier).request();
+  Navigator.of(context).popUntil((route) => route.isFirst);
+}
+
+Route<void> openDraft(BuildContext context) {
+  final route = MaterialPageRoute<void>(builder: (_) => const PagesScreen());
+  Navigator.of(context).push(route);
+  return route;
+}
 
 class _BottomBar extends StatelessWidget {
   const _BottomBar({required this.selected, required this.onSelect});
@@ -98,25 +134,17 @@ class _BottomBar extends StatelessWidget {
       ),
       child: BottomAppBar(
         shape: const CircularNotchedRectangle(),
-        notchMargin: 6,
-        height: 68,
+        notchMargin: 5,
+        height: 64,
         padding: EdgeInsets.zero,
-        child: Row(
-          children: [
-            item(AppTab.home),
-            item(AppTab.library),
-            const SizedBox(width: 80),
-            item(AppTab.tools),
-            item(AppTab.settings),
-          ],
-        ),
+        child: Row(children: [item(AppTab.docs), const SizedBox(width: 96), item(AppTab.tools)]),
       ),
     );
   }
 }
 
-/// One destination. Selection shows as a filled icon, bold label and accent
-/// colour together, so it never depends on colour alone.
+/// One destination. Selection shows as a filled icon, bold label and the
+/// screenshots' green together, so it never depends on colour alone.
 class _NavItem extends StatelessWidget {
   const _NavItem({required this.tab, required this.selected, required this.onTap});
 
@@ -127,7 +155,7 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = LumaColors.of(context);
-    final color = selected ? c.accent : c.muted;
+    final color = selected ? c.success : c.muted;
     return Semantics(
       button: true,
       selected: selected,
@@ -142,7 +170,7 @@ class _NavItem extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(selected ? tab.selectedIcon : tab.icon, color: color),
+              Icon(selected ? tab.selectedIcon : tab.icon, color: color, size: ControlMetrics.icon),
               const SizedBox(height: 2),
               Text(
                 tab.label,

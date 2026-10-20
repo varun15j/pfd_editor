@@ -39,6 +39,8 @@ Keep these operations separate in the edit recipe even when the UI presents one 
 
 “Magic Color” should be the prominent one-tap color enhancement. “Clean Color” remains the conservative choice. “Light” should be a dedicated brightness/background preset rather than a duplicate of Auto. “Ink Saving” is an export/printing-oriented effect and should not be the default archival appearance.
 
+**Shipped in 1.8.0** (in the filter list next to the core presets, including the camera's "Filter for new pages" picker): `shadow_remove` as **No shadow** (4.6, no Strength control yet), `lighten` as **Lighten** (4.2), `ink_saving` as **Eco ink** (4.4, *Text only* variant: white background, dark grey text), and a new `shading` preset, **Shading**: shadow-free grayscale that keeps pencil shading and grey fills instead of thresholding them. No shadow, Eco ink and Shading share one illumination estimate (`paperLevel` in `lib/imaging/filters.dart`): the brightest value per block, widened and smoothed. Large dark areas such as photos bigger than about three blocks are read as paper and get lightened.
+
 ### Advanced presets and cleanup — later releases
 
 | ID | Display name | Best for | Processing intent | Release gate |

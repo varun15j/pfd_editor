@@ -4,11 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../domain/models.dart';
 import '../../domain/scanner_service.dart';
+import '../batch_edit/batch_review_screen.dart';
 import '../capture/add_pages_sheet.dart';
 import '../crop/crop_screen.dart';
-import '../export/export_sheet.dart';
+import '../export/export_choice.dart';
 import '../filters/filter_screen.dart';
+import '../home/home_documents.dart';
 import '../pdf_editor/open_pdf.dart';
+import 'adding_progress.dart';
 import 'page_actions.dart';
 import 'page_gallery.dart';
 import 'page_image.dart';
@@ -35,137 +38,159 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
     final state = ref.watch(scanControllerProvider);
     final controller = ref.read(scanControllerProvider.notifier);
     final pages = state.pages;
+    final adding = state.adding;
+    // Pages on their way count as content, so a new document shows them
+    // arriving instead of the empty state.
+    final empty = pages.isEmpty && adding == null;
 
-    return PopScope(
-      canPop: !state.unsaved || pages.isEmpty,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _confirmLeave(context, ref);
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(pages.isEmpty ? 'LumaScan' : '${pages.length} page${pages.length == 1 ? '' : 's'}'),
-          actions: [
-            if (pages.isNotEmpty)
-              PopupMenuButton<PagesLayout>(
-                tooltip: 'Change view',
-                icon: Icon(_layout.icon),
-                initialValue: _layout,
-                onSelected: (layout) => setState(() => _layout = layout),
-                itemBuilder: (context) => [
-                  for (final l in PagesLayout.values)
-                    CheckedPopupMenuItem(value: l, checked: l == _layout, child: Text(l.label)),
-                ],
-              ),
-            if (pages.isNotEmpty) ...[
-              IconButton(
-                tooltip: 'Undo',
-                icon: const Icon(Icons.undo),
-                onPressed: state.canUndo ? controller.undo : null,
-              ),
-              IconButton(
-                tooltip: 'Redo',
-                icon: const Icon(Icons.redo),
-                onPressed: state.canRedo ? controller.redo : null,
-              ),
-            ],
-            if (pages.isNotEmpty)
-              IconButton(
-                tooltip: 'Discard draft',
-                icon: const Icon(Icons.delete_sweep_outlined),
-                onPressed: () => _confirmDiscard(context, ref),
-              ),
-          ],
-        ),
-        body: pages.isEmpty
-            ? _EmptyState(busy: state.busy, onScan: (s) => _scan(context, ref, s))
-            : switch (_layout) {
-                PagesLayout.gallery => PageGallery(pages: pages),
-                PagesLayout.page => PageSingleView(pages: pages),
-                PagesLayout.list => ReorderableListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                  itemCount: pages.length,
-                  buildDefaultDragHandles: false,
-                  onReorderItem: controller.move,
-                  itemBuilder: (context, i) => _PageCard(key: ValueKey(pages[i].id), index: i, page: pages[i]),
-                ),
-              },
-        bottomNavigationBar: pages.isEmpty
-            ? null
-            : SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
-                          onPressed: state.busy ? null : () => showAddPagesSheet(context, ref),
-                          icon: const Icon(Icons.add_a_photo_outlined),
-                          label: const Text('Add pages'),
+    final name = state.info?.name;
+    // Every change is saved as it happens, so leaving never needs asking.
+    return Scaffold(
+      appBar: AppBar(
+        title: pages.isEmpty || name == null
+            ? Text(adding == null ? 'LumaScan' : 'Adding pages')
+            : Semantics(
+                button: true,
+                hint: 'Rename',
+                child: InkWell(
+                  onTap: () => _rename(context, ref, name),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: minTapTarget),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Text(
+                          '${pages.length} page${pages.length == 1 ? '' : 's'}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: state.busy ? null : () => showExportSheet(context),
-                          icon: const Icon(Icons.picture_as_pdf_outlined),
-                          label: const Text('Export PDF'),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
+        actions: [
+          if (pages.isNotEmpty)
+            PopupMenuButton<PagesLayout>(
+              tooltip: 'Change view',
+              icon: Icon(_layout.icon),
+              initialValue: _layout,
+              onSelected: (layout) => setState(() => _layout = layout),
+              itemBuilder: (context) => [
+                for (final l in PagesLayout.values)
+                  CheckedPopupMenuItem(value: l, checked: l == _layout, child: Text(l.label)),
+              ],
+            ),
+          if (pages.isNotEmpty) ...[
+            IconButton(
+              tooltip: 'Batch edit',
+              icon: const Icon(Icons.library_add_check_outlined),
+              onPressed: state.busy
+                  ? null
+                  : () =>
+                        Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const BatchReviewScreen())),
+            ),
+            IconButton(
+              tooltip: 'Undo',
+              icon: const Icon(Icons.undo),
+              onPressed: state.canUndo ? controller.undo : null,
+            ),
+            IconButton(
+              tooltip: 'Redo',
+              icon: const Icon(Icons.redo),
+              onPressed: state.canRedo ? controller.redo : null,
+            ),
+          ],
+          if (pages.isNotEmpty)
+            IconButton(
+              tooltip: 'Delete scan',
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () => _confirmDelete(context, ref, name ?? 'this scan'),
+            ),
+        ],
       ),
+      body: empty
+          ? _EmptyState(busy: state.busy, onScan: (s) => _scan(context, ref, s))
+          : Column(
+              children: [
+                if (adding != null) AddingBanner(progress: adding),
+                Expanded(
+                  // Page view needs a page to show, so a document with none yet
+                  // shows its placeholders in the gallery.
+                  child: switch (pages.isEmpty ? PagesLayout.gallery : _layout) {
+                    PagesLayout.gallery => PageGallery(pages: pages),
+                    PagesLayout.page => PageSingleView(pages: pages),
+                    PagesLayout.list => ReorderableListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                      itemCount: pages.length + (adding == null ? 0 : adding.total),
+                      buildDefaultDragHandles: false,
+                      onReorderItem: (from, to) {
+                        // Placeholders are not pages, so they cannot be moved or moved onto.
+                        if (from < pages.length && to <= pages.length) controller.move(from, to);
+                      },
+                      itemBuilder: (context, i) => i < pages.length
+                          ? _PageCard(key: ValueKey(pages[i].id), index: i, page: pages[i])
+                          : _PlaceholderCard(
+                              key: ValueKey('adding-$i'),
+                              number: i + 1,
+                              state: adding!.stateOf(i - pages.length),
+                            ),
+                    ),
+                  },
+                ),
+              ],
+            ),
+      bottomNavigationBar: pages.isEmpty
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+                        onPressed: state.busy ? null : () => showAddPagesSheet(context, ref),
+                        icon: const Icon(Icons.add_a_photo_outlined),
+                        label: const Text('Add pages'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: state.busy ? null : () => showExportChoice(context, ref),
+                        icon: const Icon(Icons.ios_share),
+                        label: const Text('Export'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 
-  /// Asks before leaving a draft that hasn't been exported since it changed.
-  /// The pages are autosaved, so keeping the draft loses nothing.
-  Future<void> _confirmLeave(BuildContext context, WidgetRef ref) async {
-    final choice = await showDialog<_LeaveChoice>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Leave without exporting?'),
-        content: const Text(
-          "These pages haven't been saved as a PDF yet. Keep them as a draft to finish later, or discard them.",
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, _LeaveChoice.discard), child: const Text('Discard')),
-          FilledButton(onPressed: () => Navigator.pop(context, _LeaveChoice.keep), child: const Text('Keep draft')),
-        ],
-      ),
-    );
-    if (choice == null || !context.mounted) return;
-    final navigator = Navigator.of(context);
-    final draft = ref.read(scanControllerProvider.notifier);
-    // Popping with pages left would ask again, so mark them as handled first.
-    if (choice == _LeaveChoice.keep) draft.markSaved();
-    navigator.pop();
-    // Delete the files after the screen is gone so no page shows a missing image.
-    if (choice == _LeaveChoice.discard) await draft.clear();
+  Future<void> _rename(BuildContext context, WidgetRef ref, String current) async {
+    final name = await showScanRenameDialog(context, current);
+    if (name != null) ref.read(scanControllerProvider.notifier).rename(name);
   }
 
   Future<void> _scan(BuildContext context, WidgetRef ref, ScanSource source) => runScan(context, ref, source);
 
-  Future<void> _confirmDiscard(BuildContext context, WidgetRef ref) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Discard all pages?'),
-        content: const Text('The scanned pages in this draft will be deleted. Exported PDFs are kept.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Discard')),
-        ],
-      ),
-    );
-    if (ok == true) await ref.read(scanControllerProvider.notifier).clear();
+  /// Deletes the scan on screen and its page images, then leaves.
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, String name) async {
+    if (!await confirmScanDelete(context, name) || !context.mounted) return;
+    final navigator = Navigator.of(context);
+    final controller = ref.read(scanControllerProvider.notifier);
+    navigator.maybePop();
+    // Delete the files after the screen is gone so no page shows a missing image.
+    await controller.clear();
   }
 }
-
-enum _LeaveChoice { keep, discard }
 
 /// How the Pages screen lays out the draft's pages.
 enum PagesLayout {
@@ -261,6 +286,34 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
+/// A page still being added, in the list layout. It sits after the real
+/// pages and cannot be dragged.
+class _PlaceholderCard extends StatelessWidget {
+  const _PlaceholderCard({super.key, required this.number, required this.state});
+
+  final int number;
+  final PlaceholderState state;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    margin: const EdgeInsets.only(bottom: 10),
+    child: Padding(
+      padding: const EdgeInsets.all(10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 64,
+            height: 84,
+            child: PagePlaceholder(number: number, state: state),
+          ),
+          const SizedBox(width: 12),
+          Text('Page $number', style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    ),
+  );
+}
+
 class _PageCard extends ConsumerWidget {
   const _PageCard({super.key, required this.index, required this.page});
 
@@ -269,7 +322,6 @@ class _PageCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final controller = ref.read(scanControllerProvider.notifier);
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       clipBehavior: Clip.antiAlias,
@@ -301,7 +353,7 @@ class _PageCard extends ConsumerWidget {
                         IconButton(
                           tooltip: 'Rotate',
                           icon: const Icon(Icons.rotate_right),
-                          onPressed: () => controller.rotate(page.id),
+                          onPressed: () => rotatePage(context, ref, page),
                         ),
                         IconButton(
                           tooltip: 'Delete page',

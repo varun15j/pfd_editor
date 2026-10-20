@@ -13,7 +13,7 @@ import 'pdf_editor_screen.dart';
 /// Lets the user pick a PDF, copies it into app storage (so it stays
 /// readable after the picker's cache is cleared), opens it with pdfrx and
 /// shows the editor. Password-protected files ask for the password.
-Future<void> pickAndEditPdf(BuildContext context, WidgetRef ref) async {
+Future<void> pickAndEditPdf(BuildContext context, WidgetRef ref, {PdfEditorEntry entry = PdfEditorEntry.edit}) async {
   final messenger = ScaffoldMessenger.of(context);
 
   final PlatformFile? picked;
@@ -36,12 +36,18 @@ Future<void> pickAndEditPdf(BuildContext context, WidgetRef ref) async {
     return;
   }
   if (!context.mounted) return;
-  await openPdfInEditor(context, ref, path: path, name: picked.name);
+  await openPdfInEditor(context, ref, path: path, name: picked.name, entry: entry);
 }
 
 /// Opens a PDF that is already in app storage, such as a saved library
 /// document, and shows the editor. Edits are always saved as a new file.
-Future<void> openPdfInEditor(BuildContext context, WidgetRef ref, {required String path, required String name}) async {
+Future<void> openPdfInEditor(
+  BuildContext context,
+  WidgetRef ref, {
+  required String path,
+  required String name,
+  PdfEditorEntry entry = PdfEditorEntry.edit,
+}) async {
   final messenger = ScaffoldMessenger.of(context);
   final navigator = Navigator.of(context);
 
@@ -80,7 +86,7 @@ Future<void> openPdfInEditor(BuildContext context, WidgetRef ref, {required Stri
         password: password,
         pageSizes: [for (final page in document.pages) (page.width, page.height)],
       );
-  await navigator.push(MaterialPageRoute(builder: (_) => PdfEditorScreen.forDocument(document)));
+  await navigator.push(MaterialPageRoute(builder: (_) => PdfEditorScreen.forDocument(document, entry: entry)));
 }
 
 Future<String?> _askPassword(BuildContext context, {required bool retry}) => showDialog<String>(

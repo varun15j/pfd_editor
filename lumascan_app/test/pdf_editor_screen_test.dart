@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumascan/features/markup/markup_style.dart';
 import 'package:lumascan/features/pdf_editor/pdf_editor_screen.dart';
 import 'package:lumascan/pdf_edit/annotations.dart';
 import 'package:lumascan/pdf_edit/pdf_edit_controller.dart';
@@ -11,7 +12,7 @@ void main() {
 
   PdfEditState state() => container.read(pdfEditControllerProvider);
 
-  Future<void> pumpEditor(WidgetTester tester) async {
+  Future<void> pumpEditor(WidgetTester tester, {PdfEditorEntry entry = PdfEditorEntry.edit}) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 2.6;
     addTearDown(tester.view.reset);
@@ -25,6 +26,7 @@ void main() {
         container: container,
         child: MaterialApp(
           home: PdfEditorScreen(
+            entry: entry,
             pageImage: (page, {thumbnail = false}) =>
                 ColoredBox(key: ValueKey('img${page.sourcePage}'), color: Colors.white),
           ),
@@ -54,6 +56,52 @@ void main() {
     expect(ink.points.first.x, closeTo(0.5, 0.02));
     expect(ink.highlighter, isFalse);
     expect(state().dirty, isTrue);
+  });
+
+  testWidgets('one colour and thickness picker serves pen, highlighter and text', (tester) async {
+    await pumpEditor(tester);
+    await tester.tap(find.text('Pen'));
+    await tester.pump();
+    final blue = find.byWidgetPredicate(
+      (w) =>
+          w is Container &&
+          w.decoration is BoxDecoration &&
+          (w.decoration! as BoxDecoration).color == MarkupStyle.palette[1],
+    );
+    await tester.tap(blue);
+    await tester.pump();
+    await tester.tap(find.text('Thin'));
+    await tester.pump();
+
+    Future<void> stroke() async {
+      await tester.dragFrom(tester.getCenter(pageImage(1)), const Offset(80, 0));
+      await tester.pump();
+    }
+
+    await stroke();
+    await tester.ensureVisible(find.text('Highlight'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Highlight'));
+    await tester.pumpAndSettle();
+    await stroke();
+    await tester.ensureVisible(find.text('Text'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Text'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(tester.getTopLeft(pageImage(1)) + const Offset(40, 40));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Hi');
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    const thin = MarkupStyle(size: MarkupSize.thin);
+    final marks = state().pages.first.annotations;
+    final pen = marks[0] as InkAnnotation;
+    final marker = marks[1] as InkAnnotation;
+    final label = marks[2] as TextAnnotation;
+    expect((pen.color, pen.width), (MarkupStyle.palette[1].toARGB32(), thin.inkWidth(highlighter: false)));
+    expect((marker.color, marker.width), (MarkupStyle.palette[1].toARGB32(), thin.inkWidth(highlighter: true)));
+    expect((label.color, label.fontSize), (MarkupStyle.palette[1].toARGB32(), thin.fontSize));
   });
 
   testWidgets('drawing in View mode does nothing', (tester) async {
@@ -98,6 +146,8 @@ void main() {
 
   testWidgets('signature is drawn on the pad and placed on the page', (tester) async {
     await pumpEditor(tester);
+    // The toolbar scrolls, so Sign starts off-screen on a phone.
+    await tester.ensureVisible(find.text('Sign'));
     await tester.tap(find.text('Sign'));
     await tester.pumpAndSettle();
     expect(find.text('Draw your signature'), findsOneWidget);
@@ -119,6 +169,17 @@ void main() {
     await tester.pumpAndSettle();
     final moved = state().pages.first.annotations.single as SignatureAnnotation;
     expect(moved.left, lessThan(before));
+  });
+
+  testWidgets('entry sign opens the signature pad at once', (tester) async {
+    await pumpEditor(tester, entry: PdfEditorEntry.sign);
+    expect(find.byType(Signature), findsOneWidget);
+  });
+
+  testWidgets('entry organize opens the page organizer at once', (tester) async {
+    await pumpEditor(tester, entry: PdfEditorEntry.organize);
+    expect(find.text('3 pages'), findsOneWidget);
+    expect(find.byTooltip('Page actions'), findsWidgets);
   });
 
   testWidgets('organize screen reorders and deletes pages', (tester) async {

@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3200" height="2240" viewBox="0 0 3200 2240" role="img" aria-labelledby="title desc">
+  <title id="title">LumaScan batch edit UI UX flow</title>
+  <desc id="desc">Figma-style product design board showing eight mobile screens for selecting, editing, organizing, and exporting multiple scanned pages.</desc>
+  <defs>
+    <linearGradient id="board" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8faf8"/><stop offset="1" stop-color="#eef3ef"/></linearGradient>
+    <linearGradient id="hero" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#08796d"/><stop offset="1" stop-color="#075c55"/></linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffef9"/><stop offset="1" stop-color="#e9ece6"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#16372f" flood-opacity=".16"/></filter>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#173d34" flood-opacity=".12"/></filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0l10 5-10 5z" fill="#0b7569"/></marker>
+    <style>
+      text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#142d28}.display{font-size:64px;font-weight:750;letter-spacing:-2px}.subtitle{font-size:24px;fill:#60746e}.section{font-size:20px;font-weight:800;letter-spacing:2.5px;fill:#0b7569}.step{font-size:22px;font-weight:800;fill:white}.phoneTitle{font-size:28px;font-weight:750;letter-spacing:-.4px}.body{font-size:18px}.small{font-size:15px;fill:#64756f}.tiny{font-size:12px;fill:#6f7e79}.label{font-size:14px;font-weight:750}.white{fill:white}.muted{fill:#697b75}.teal{fill:#08796d}.line{stroke:#d9e3df;stroke-width:2}.icon{fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}.connector{fill:none;stroke:#0b7569;stroke-width:4;stroke-linecap:round;stroke-dasharray:9 10;marker-end:url(#arrow)}
+    </style>
+    <g id="status"><text x="28" y="29" class="label">9:41</text><rect x="294" y="18" width="22" height="11" rx="3" fill="none" stroke="#142d28" stroke-width="2"/><rect x="317" y="21" width="3" height="5" rx="1" fill="#142d28"/><rect x="297" y="21" width="14" height="5" rx="1" fill="#142d28"/><path d="M265 28c6-7 13-7 19 0M270 28c3-4 7-4 10 0" fill="none" stroke="#142d28" stroke-width="2"/><circle cx="275" cy="29" r="1.5"/></g>
+    <g id="thumb"><rect width="104" height="136" rx="10" fill="url(#paper)" stroke="#d9e1dd"/><rect x="16" y="20" width="72" height="6" rx="3" fill="#bac7c1"/><rect x="16" y="35" width="62" height="4" rx="2" fill="#d2dad6"/><rect x="16" y="47" width="70" height="4" rx="2" fill="#d2dad6"/><rect x="16" y="63" width="72" height="42" rx="4" fill="#e2e7e4"/><rect x="16" y="114" width="46" height="4" rx="2" fill="#d2dad6"/></g>
+    <g id="check"><circle r="13" fill="#08796d" stroke="white" stroke-width="3"/><path d="M-6 0l4 4 8-9" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="phoneShell"><rect width="390" height="780" rx="48" fill="#16342d" filter="url(#shadow)"/><rect x="8" y="8" width="374" height="764" rx="41" fill="#f5f7f5"/><rect x="143" y="17" width="104" height="26" rx="14" fill="#16342d"/></g>
+  </defs>
+
+  <rect width="3200" height="2240" fill="url(#board)"/>
+  <circle cx="3020" cy="120" r="310" fill="#dcece7" opacity=".65"/><circle cx="155" cy="2120" r="280" fill="#e5eee6"/>
+  <text x="120" y="125" class="section">LUMASCAN · PRODUCT FLOW / BATCH MODE</text>
+  <text x="120" y="210" class="display">Batch edit, without the busywork.</text>
+  <text x="120" y="260" class="subtitle">One visual system for selecting, enhancing, organizing and exporting many pages.</text>
+  <g transform="translate(2550 105)"><rect width="500" height="130" rx="26" fill="white" filter="url(#soft)"/><circle cx="65" cy="65" r="30" fill="#dff1eb"/><path d="M51 65h28M65 51v28" stroke="#08796d" stroke-width="4" stroke-linecap="round"/><text x="115" y="55" class="label teal">FLOW PRINCIPLE</text><text x="115" y="84" class="body">Select once · preview always</text><text x="115" y="109" class="small">Every destructive action supports undo</text></g>
+
+  <!-- connectors, drawn behind the devices -->
+  <path class="connector" d="M510 725H665"/><path class="connector" d="M1090 725h155"/><path class="connector" d="M1670 725h155"/><path class="connector" d="M2250 725h155"/>
+  <path class="connector" d="M2615 1125v135h-2325v118"/>
+  <path class="connector" d="M510 1775h155"/><path class="connector" d="M1090 1775h155"/>
+
+  <!-- 01 pages -->
+  <g transform="translate(120 355)">
+    <circle cx="25" cy="-28" r="25" fill="#08796d"/><text x="25" y="-20" text-anchor="middle" class="step">01</text><text x="64" y="-20" class="body" font-weight="750">Open document</text>
+    <use href="#phoneShell"/><g transform="translate(8 8)"><use href="#status"/>
+      <text x="24" y="83" class="phoneTitle">Algebra notes</text><text x="24" y="109" class="small">12 pages · Edited just now</text>
+      <rect x="24" y="132" width="326" height="48" rx="14" fill="#e4f0ec"/><text x="187" y="162" text-anchor="middle" class="label teal">Select pages</text>
+      <g transform="translate(34 205)"><use href="#thumb"/><use href="#thumb" x="118"/><use href="#thumb" x="236"/><use href="#thumb" y="156"/><use href="#thumb" x="118" y="156"/><use href="#thumb" x="236" y="156"/><use href="#thumb" y="312"/><use href="#thumb" x="118" y="312"/><use href="#thumb" x="236" y="312"/></g>
+      <rect x="24" y="690" width="326" height="54" rx="18" fill="url(#hero)"/><text x="187" y="723" text-anchor="middle" class="label white">+ Add pages</text>
+    </g>
+    <rect x="24" y="804" width="342" height="78" rx="18" fill="white" filter="url(#soft)"/><text x="44" y="834" class="label teal">ENTRY</text><text x="44" y="861" class="small">Tap Select pages or long-press any page.</text>
+  </g>
+
+  <!-- 02 select -->
+  <g transform="translate(700 355)">
+    <circle cx="25" cy="-28" r="25" fill="#08796d"/><text x="25" y="-20" text-anchor="middle" class="step">02</text><text x="64" y="-20" class="body" font-weight="750">Choose pages</text>
+    <use href="#phoneShell"/><g transform="translate(8 8)"><use href="#status"/>
+      <text x="24" y="84" class="label teal">CANCEL</text><text x="187" y="84" text-anchor="middle" class="phoneTitle">4 selected</text><text x="350" y="84" text-anchor="end" class="label teal">ALL 12</text>
+      <g transform="translate(34 125)"><use href="#thumb"/><use href="#check" x="91" y="13"/><use href="#thumb" x="118"/><use href="#check" x="209" y="13"/><use href="#thumb" x="236"/><use href="#thumb" y="156"/><use href="#check" x="91" y="169"/><use href="#thumb" x="118" y="156"/><use href="#thumb" x="236" y="156"/><use href="#check" x="327" y="169"/><use href="#thumb" y="312"/><use href="#thumb" x="118" y="312"/><use href="#thumb" x="236" y="312"/></g>
+      <rect x="0" y="643" width="374" height="101" fill="white" stroke="#dde5e1"/>
+      <g class="teal" text-anchor="middle"><text x="47" y="683" font-size="25">✦</text><text x="47" y="712" class="tiny">Enhance</text><text x="140" y="683" font-size="25">↻</text><text x="140" y="712" class="tiny">Rotate</text><text x="234" y="683" font-size="25">↕</text><text x="234" y="712" class="tiny">Organize</text><text x="327" y="683" font-size="25">•••</text><text x="327" y="712" class="tiny">More</text></g>
+    </g>
+    <rect x="24" y="804" width="342" height="78" rx="18" fill="white" filter="url(#soft)"/><text x="44" y="834" class="label teal">SELECTION STATE</text><text x="44" y="861" class="small">Selected count stays visible; Select all is reversible.</text>
+  </g>
+
+  <!-- 03 actions -->
+  <g transform="translate(1280 355)">
+    <circle cx="25" cy="-28" r="25" fill="#08796d"/><text x="25" y="-20" text-anchor="middle" class="step">03</text><text x="64" y="-20" class="body" font-weight="750">Batch actions</text>
+    <use href="#phoneShell"/><g transform="translate(8 8)"><use href="#status"/>
+      <text x="24" y="83" class="phoneTitle">Edit 4 pages</text><text x="24" y="110" class="small">Changes apply to selected pages only</text>
+      <g transform="translate(24 140)">
+        <rect width="326" height="86" rx="18" fill="white" filter="url(#soft)"/><circle cx="45" cy="43" r="24" fill="#dff1eb"/><text x="45" y="51" text-anchor="middle" font-size="26" class="teal">✦</text><text x="84" y="36" class="body" font-weight="750">Enhance</text><text x="84" y="60" class="small">Filter · cleanup · contrast</text><text x="299" y="50" class="body teal">›</text>
+        <rect y="102" width="326" height="86" rx="18" fill="white" filter="url(#soft)"/><circle cx="45" cy="145" r="24" fill="#e8eef8"/><text x="45" y="153" text-anchor="middle" font-size="26" fill="#4b68a8">⌗</text><text x="84" y="138" class="body" font-weight="750">Crop &amp; rotate</text><text x="84" y="162" class="small">Same crop or individual review</text><text x="299" y="152" class="body teal">›</text>
+        <rect y="204" width="326" height="86" rx="18" fill="white" filter="url(#soft)"/><circle cx="45" cy="247" r="24" fill="#f1e8dc"/><text x="45" y="255" text-anchor="middle" font-size="26" fill="#9a672d">↕</text><text x="84" y="240" class="body" font-weight="750">Organize pages</text><text x="84" y="264" class="small">Reorder · duplicate · remove</text><text x="299" y="254" class="body teal">›</text>
+        <rect y="306" width="326" height="86" rx="18" fill="white" filter="url(#soft)"/><circle cx="45" cy="349" r="24" fill="#f8e6e8"/><text x="45" y="357" text-anchor="middle" font-size="24" fill="#b44450">⌫</text><text x="84" y="342" class="body" font-weight="750">Delete pages</text><text x="84" y="366" class="small">Confirmation + 8 second undo</text><text x="299" y="356" class="body teal">›</text>
+      </g>
+      <rect x="24" y="690" width="326" height="54" rx="18" fill="#e4f0ec"/><text x="187" y="723" text-anchor="middle" class="label teal">Export selected pages</text>
+    </g>
+    <rect x="24" y="804" width="342" height="78" rx="18" fill="white" filter="url(#soft)"/><text x="44" y="834" class="label teal">ACTION HUB</text><text x="44" y="861" class="small">Options adapt to the current selection.</text>
+  </g>
+
+  <!-- 04 enhance -->
+  <g transform="translate(1860 355)">
+    <circle cx="25" cy="-28" r="25" fill="#08796d"/><text x="25" y="-20" text-anchor="middle" class="step">04</text><text x="64" y="-20" class="body" font-weight="750">Enhance selected</text>
+    <use href="#phoneShell"/><g transform="translate(8 8)"><use href="#status"/>
+      <text x="24" y="84" class="body teal">‹ Back</text><text x="187" y="84" text-anchor="middle" class="phoneTitle">Enhance</text><text x="350" y="84" text-anchor="end" class="label teal">APPLY</text>
+      <rect x="38" y="112" width="298" height="360" rx="18" fill="url(#paper)" filter="url(#soft)"/><rect x="70" y="150" width="234" height="12" rx="6" fill="#aab9b3"/><rect x="70" y="178" width="202" height="7" rx="3" fill="#ced7d3"/><rect x="70" y="200" width="226" height="7" rx="3" fill="#ced7d3"/><rect x="70" y="240" width="234" height="160" rx="8" fill="#dbe3df"/><line x1="187" y1="112" x2="187" y2="472" stroke="white" stroke-width="3"/><circle cx="187" cy="292" r="17" fill="white" filter="url(#soft)"/><text x="187" y="299" text-anchor="middle" class="label teal">↔</text>
+      <text x="24" y="510" class="label">Filter</text><g transform="translate(24 530)"><rect width="74" height="70" rx="14" fill="#e4f0ec" stroke="#08796d" stroke-width="2"/><text x="37" y="29" text-anchor="middle" class="label teal">AUTO</text><text x="37" y="51" text-anchor="middle" class="tiny">Balanced</text><rect x="83" width="74" height="70" rx="14" fill="white"/><text x="120" y="29" text-anchor="middle" class="label">COLOR</text><text x="120" y="51" text-anchor="middle" class="tiny">Vivid</text><rect x="166" width="74" height="70" rx="14" fill="white"/><text x="203" y="29" text-anchor="middle" class="label">GRAY</text><text x="203" y="51" text-anchor="middle" class="tiny">Soft</text><rect x="249" width="74" height="70" rx="14" fill="white"/><text x="286" y="29" text-anchor="middle" class="label">B&amp;W</text><text x="286" y="51" text-anchor="middle" class="tiny">Crisp</text></g>
+      <text x="24" y="638" class="label">Strength</text><text x="350" y="638" text-anchor="end" class="label teal">72%</text><line x1="24" y1="661" x2="350" y2="661" stroke="#cedbd6" stroke-width="6" stroke-linecap="round"/><line x1="24" y1="661" x2="258" y2="661" stroke="#08796d" stroke-width="6" stroke-linecap="round"/><circle cx="258" cy="661" r="12" fill="#08796d"/>
+      <rect x="24" y="690" width="326" height="54" rx="18" fill="url(#hero)"/><text x="187" y="723" text-anchor="middle" class="label white">Apply to 4 pages</text>
+    </g>
+    <rect x="24" y="804" width="342" height="78" rx="18" fill="white" filter="url(#soft)"/><text x="44" y="834" class="label teal">LIVE PREVIEW</text><text x="44" y="861" class="small">Before/after preview; originals remain untouched.</text>
+  </g>
+
+  <!-- 05 crop -->
+  <g transform="translate(2440 355)">
+    <circle cx="25" cy="-28" r="25" fill="#08796d"/><text x="25" y="-20" text-anchor="middle" class="step">05</text><text x="64" y="-20" class="body" font-weight="750">Crop &amp; rotate</text>
+    <use href="#phoneShell"/><g transform="translate(8 8)"><use href="#status"/>
+      <text x="24" y="84" class="body teal">‹ Back</text><text x="187" y="84" text-anchor="middle" class="phoneTitle">Crop &amp; rotate</text><text x="350" y="84" text-anchor="end" class="label teal">NEXT</text>
+      <rect x="26" y="110" width="322" height="404" rx="22" fill="#233f37"/><path d="M67 151L309 137l18 323L51 475z" fill="url(#paper)" stroke="#58dfc7" stroke-width="4"/><g fill="#58dfc7" stroke="white" stroke-width="3"><circle cx="67" cy="151" r="10"/><circle cx="309" cy="137" r="10"/><circle cx="327" cy="460" r="10"/><circle cx="51" cy="475" r="10"/></g><rect x="97" y="195" width="180" height="9" rx="4" fill="#b8c4be"/><rect x="97" y="219" width="154" height="6" rx="3" fill="#d1d8d5"/><rect x="97" y="240" width="176" height="6" rx="3" fill="#d1d8d5"/><rect x="97" y="280" width="180" height="112" rx="7" fill="#e0e5e2"/>
+      <g transform="translate(24 535)"><rect width="326" height="55" rx="16" fill="white"/><text x="16" y="34" class="label">Apply crop shape</text><text x="310" y="34" text-anchor="end" class="label teal">Each page ▾</text><rect y="69" width="158" height="52" rx="16" fill="#e4f0ec"/><text x="79" y="101" text-anchor="middle" class="label teal">↺ Rotate left</text><rect x="168" y="69" width="158" height="52" rx="16" fill="#e4f0ec"/><text x="247" y="101" text-anchor="middle" class="label teal">↻ Rotate right</text></g>
+      <rect x="24" y="690" width="326" height="54" rx="18" fill="url(#hero)"/><text x="187" y="723" text-anchor="middle" class="label white">Review page 1 of 4</text>
+    </g>
+    <rect x="24" y="804" width="342" height="78" rx="18" fill="white" filter="url(#soft)"/><text x="44" y="834" class="label teal">SAFE DEFAULT</text><text x="44" y="861" class="small">Rotate all; review individual crop boundaries.</text>
+  </g>
+
+  <!-- 06 organize -->
+  <g transform="translate(120 1405)">
+    <circle cx="25" cy="-28" r="25" fill="#08796d"/><text x="25" y="-20" text-anchor="middle" class="step">06</text><text x="64" y="-20" class="body" font-weight="750">Organize pages</text>
+    <use href="#phoneShell"/><g transform="translate(8 8)"><use href="#status"/>
+      <text x="24" y="84" class="body teal">‹ Back</text><text x="187" y="84" text-anchor="middle" class="phoneTitle">Organize</text><text x="350" y="84" text-anchor="end" class="label teal">DONE</text>
+      <rect x="24" y="112" width="326" height="47" rx="14" fill="#e4f0ec"/><text x="187" y="141" text-anchor="middle" class="small teal">Hold and drag to reorder · 4 selected</text>
+      <g transform="translate(36 180)"><use href="#thumb"/><text x="52" y="158" text-anchor="middle" class="label">1</text><use href="#check" x="91" y="13"/><use href="#thumb" x="118"/><text x="170" y="158" text-anchor="middle" class="label">2</text><use href="#check" x="209" y="13"/><use href="#thumb" x="236"/><text x="288" y="158" text-anchor="middle" class="label">3</text><use href="#thumb" y="188"/><text x="52" y="346" text-anchor="middle" class="label">4</text><use href="#check" x="91" y="201"/><use href="#thumb" x="118" y="188"/><text x="170" y="346" text-anchor="middle" class="label">5</text><use href="#thumb" x="236" y="188"/><text x="288" y="346" text-anchor="middle" class="label">6</text><use href="#check" x="327" y="201"/></g>
+      <rect x="24" y="590" width="326" height="76" rx="18" fill="white" filter="url(#soft)"/><text x="46" y="620" class="label">Selected-page options</text><text x="46" y="647" class="small">Duplicate · Move to end · Delete</text>
+      <rect x="24" y="690" width="326" height="54" rx="18" fill="url(#hero)"/><text x="187" y="723" text-anchor="middle" class="label white">Save page order</text>
+    </g>
+    <rect x="24" y="804" width="342" height="78" rx="18" fill="white" filter="url(#soft)"/><text x="44" y="834" class="label teal">ORGANIZE STATE</text><text x="44" y="861" class="small">Drag, or use accessible move actions.</text>
+  </g>
+
+  <!-- 07 export -->
+  <g transform="translate(700 1405)">
+    <circle cx="25" cy="-28" r="25" fill="#08796d"/><text x="25" y="-20" text-anchor="middle" class="step">07</text><text x="64" y="-20" class="body" font-weight="750">Export options</text>
+    <use href="#phoneShell"/><g transform="translate(8 8)"><use href="#status"/>
+      <text x="24" y="84" class="body teal">‹ Back</text><text x="187" y="84" text-anchor="middle" class="phoneTitle">Export 4 pages</text>
+      <text x="24" y="127" class="label">Format</text><g transform="translate(24 145)"><rect width="100" height="78" rx="16" fill="#e4f0ec" stroke="#08796d" stroke-width="2"/><text x="50" y="35" text-anchor="middle" class="body teal" font-weight="800">PDF</text><text x="50" y="58" text-anchor="middle" class="tiny">Document</text><rect x="113" width="100" height="78" rx="16" fill="white"/><text x="163" y="35" text-anchor="middle" class="body" font-weight="800">JPG</text><text x="163" y="58" text-anchor="middle" class="tiny">4 images</text><rect x="226" width="100" height="78" rx="16" fill="white"/><text x="276" y="35" text-anchor="middle" class="body" font-weight="800">PNG</text><text x="276" y="58" text-anchor="middle" class="tiny">Lossless</text></g>
+      <text x="24" y="260" class="label">Quality</text><g transform="translate(24 278)"><rect width="326" height="58" rx="15" fill="white"/><circle cx="25" cy="29" r="10" fill="#08796d"/><circle cx="25" cy="29" r="4" fill="white"/><text x="48" y="25" class="label">Recommended</text><text x="48" y="45" class="tiny">Clear text · about 4.8 MB</text><rect y="68" width="326" height="58" rx="15" fill="white"/><circle cx="25" cy="97" r="10" fill="none" stroke="#9baba5" stroke-width="2"/><text x="48" y="93" class="label">Small file</text><text x="48" y="113" class="tiny">Email-friendly · about 1.9 MB</text><rect y="136" width="326" height="58" rx="15" fill="white"/><circle cx="25" cy="165" r="10" fill="none" stroke="#9baba5" stroke-width="2"/><text x="48" y="161" class="label">Best quality</text><text x="48" y="181" class="tiny">Print-ready · about 11.2 MB</text></g>
+      <rect x="24" y="496" width="326" height="62" rx="16" fill="white"/><text x="44" y="523" class="label">Searchable text (OCR)</text><text x="44" y="544" class="tiny">Keeps text selectable</text><rect x="294" y="513" width="40" height="24" rx="12" fill="#08796d"/><circle cx="322" cy="525" r="9" fill="white"/>
+      <rect x="24" y="573" width="326" height="77" rx="16" fill="#edf5f2"/><text x="44" y="602" class="label teal">FILE SUMMARY</text><text x="44" y="628" class="small">Algebra-notes.pdf</text><text x="330" y="628" text-anchor="end" class="small">4.8 MB</text>
+      <rect x="24" y="690" width="326" height="54" rx="18" fill="url(#hero)"/><text x="187" y="723" text-anchor="middle" class="label white">Export PDF</text>
+    </g>
+    <rect x="24" y="804" width="342" height="78" rx="18" fill="white" filter="url(#soft)"/><text x="44" y="834" class="label teal">EXPORT STATE</text><text x="44" y="861" class="small">Format, quality, OCR and size stay visible.</text>
+  </g>
+
+  <!-- 08 progress + success -->
+  <g transform="translate(1280 1405)">
+    <circle cx="25" cy="-28" r="25" fill="#08796d"/><text x="25" y="-20" text-anchor="middle" class="step">08</text><text x="64" y="-20" class="body" font-weight="750">Progress &amp; result</text>
+    <use href="#phoneShell"/><g transform="translate(8 8)"><use href="#status"/>
+      <text x="187" y="84" text-anchor="middle" class="phoneTitle">Creating your PDF</text>
+      <circle cx="187" cy="252" r="88" fill="#e4f0ec"/><circle cx="187" cy="252" r="64" fill="none" stroke="#c7d9d3" stroke-width="12"/><path d="M187 188a64 64 0 1 1-60 42" fill="none" stroke="#08796d" stroke-width="12" stroke-linecap="round"/><text x="187" y="260" text-anchor="middle" font-size="28" font-weight="800" class="teal">76%</text>
+      <text x="187" y="372" text-anchor="middle" class="body" font-weight="750">Optimizing page 3 of 4</text><text x="187" y="401" text-anchor="middle" class="small">You can leave this screen safely.</text>
+      <rect x="24" y="438" width="326" height="84" rx="18" fill="white" filter="url(#soft)"/><circle cx="63" cy="480" r="24" fill="#dff1eb"/><path d="M53 480l7 7 14-17" fill="none" stroke="#08796d" stroke-width="4" stroke-linecap="round"/><text x="101" y="474" class="label">Edits saved</text><text x="101" y="499" class="small">Original pages remain available</text>
+      <rect x="24" y="545" width="326" height="100" rx="18" fill="url(#hero)"/><text x="44" y="580" class="label white">WHEN COMPLETE</text><text x="44" y="609" class="body white" font-weight="750">Share · Save to device · Open</text><text x="44" y="632" class="tiny white">Actual size replaces the estimate</text>
+      <rect x="24" y="690" width="326" height="54" rx="18" fill="#e4f0ec"/><text x="187" y="723" text-anchor="middle" class="label teal">Cancel export</text>
+    </g>
+    <rect x="24" y="804" width="342" height="78" rx="18" fill="white" filter="url(#soft)"/><text x="44" y="834" class="label teal">ASYNC STATE</text><text x="44" y="861" class="small">Progress, cancellation, success and recovery.</text>
+  </g>
+
+  <!-- decision/state legend -->
+  <g transform="translate(1860 1405)">
+    <rect width="1160" height="780" rx="38" fill="#153b33" filter="url(#shadow)"/>
+    <text x="56" y="76" class="section" fill="#72ddc8">FEATURE STATES / DESIGN CONTRACT</text>
+    <text x="56" y="130" font-size="38" font-weight="750" class="white">Every batch action has a visible state.</text>
+    <g transform="translate(56 180)">
+      <g><circle cx="18" cy="18" r="18" fill="#72ddc8"/><text x="18" y="24" text-anchor="middle" class="label">1</text><text x="54" y="17" class="body white" font-weight="750">Idle</text><text x="54" y="43" class="small white">No selection; single-page actions remain available.</text></g>
+      <g transform="translate(0 82)"><circle cx="18" cy="18" r="18" fill="#72ddc8"/><text x="18" y="24" text-anchor="middle" class="label">2</text><text x="54" y="17" class="body white" font-weight="750">Selecting</text><text x="54" y="43" class="small white">Count, Select all and Cancel are persistent.</text></g>
+      <g transform="translate(0 164)"><circle cx="18" cy="18" r="18" fill="#72ddc8"/><text x="18" y="24" text-anchor="middle" class="label">3</text><text x="54" y="17" class="body white" font-weight="750">Previewing</text><text x="54" y="43" class="small white">Before/after; apply scope is named on the CTA.</text></g>
+      <g transform="translate(0 246)"><circle cx="18" cy="18" r="18" fill="#72ddc8"/><text x="18" y="24" text-anchor="middle" class="label">4</text><text x="54" y="17" class="body white" font-weight="750">Processing</text><text x="54" y="43" class="small white">Progress is resumable and safe to leave.</text></g>
+      <g transform="translate(0 328)"><circle cx="18" cy="18" r="18" fill="#72ddc8"/><text x="18" y="24" text-anchor="middle" class="label">5</text><text x="54" y="17" class="body white" font-weight="750">Success</text><text x="54" y="43" class="small white">Show actual output and next actions.</text></g>
+      <g transform="translate(0 410)"><circle cx="18" cy="18" r="18" fill="#ffce70"/><text x="18" y="24" text-anchor="middle" class="label">!</text><text x="54" y="17" class="body white" font-weight="750">Partial failure</text><text x="54" y="43" class="small white">Keep successful pages; identify pages needing review.</text></g>
+      <g transform="translate(0 492)"><circle cx="18" cy="18" r="18" fill="#ff8993"/><text x="18" y="24" text-anchor="middle" class="label">×</text><text x="54" y="17" class="body white" font-weight="750">Destructive confirmation</text><text x="54" y="43" class="small white">Name the count and provide timed Undo.</text></g>
+    </g>
+    <g transform="translate(595 188)">
+      <rect width="505" height="220" rx="24" fill="#214b42"/><text x="28" y="42" class="label" fill="#72ddc8">BATCH FEATURE MATRIX</text>
+      <text x="28" y="79" class="small white">Enhance</text><text x="476" y="79" text-anchor="end" class="small white">Filter · strength · cleanup</text>
+      <text x="28" y="113" class="small white">Crop</text><text x="476" y="113" text-anchor="end" class="small white">Rotate all · crop individually</text>
+      <text x="28" y="147" class="small white">Organize</text><text x="476" y="147" text-anchor="end" class="small white">Move · duplicate · delete</text>
+      <text x="28" y="181" class="small white">Export</text><text x="476" y="181" text-anchor="end" class="small white">PDF/JPG/PNG · OCR · quality</text>
+      <rect y="252" width="505" height="246" rx="24" fill="#214b42"/><text x="28" y="295" class="label" fill="#72ddc8">ACCESSIBILITY &amp; TRUST</text>
+      <text x="28" y="335" class="small white">• 48 × 48 minimum touch targets</text><text x="28" y="370" class="small white">• Selection is never color-only</text><text x="28" y="405" class="small white">• No drag-only reorder command</text><text x="28" y="440" class="small white">• Originals are non-destructive</text><text x="28" y="475" class="small white">• Screen reader announces page count</text>
+    </g>
+  </g>
+
+  <text x="120" y="2190" class="tiny">LumaScan · Batch edit UX flow · SVG master board · 3200 × 2240 · Source of truth: product requirements, screen design and current Flutter feature set</text>
+</svg>

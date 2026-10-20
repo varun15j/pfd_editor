@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:pdf/pdf.dart';
@@ -8,13 +9,11 @@ import 'package:pdf/widgets.dart' as pw;
 import '../data/page_store.dart';
 import '../domain/models.dart';
 import '../imaging/page_renderer.dart';
+import '../pdf_edit/annotations.dart';
+import '../pdf_edit/pdf_flattener.dart';
 
 class ExportOptions {
-  const ExportOptions({
-    this.pageSize = PdfPageSize.a4,
-    this.quality = ExportQuality.medium,
-    this.fileName,
-  });
+  const ExportOptions({this.pageSize = PdfPageSize.a4, this.quality = ExportQuality.medium, this.fileName});
 
   final PdfPageSize pageSize;
   final ExportQuality quality;
@@ -22,10 +21,13 @@ class ExportOptions {
 }
 
 class _PageImage {
-  const _PageImage(this.jpeg, this.width, this.height);
+  const _PageImage(this.jpeg, this.width, this.height, [this.annotations = const []]);
   final Uint8List jpeg;
   final int width;
   final int height;
+
+  /// Marks drawn over the image, normalized to the image.
+  final List<Annotation> annotations;
 }
 
 /// Builds a scan PDF with the `pdf` package (ADR-011). Each page is rendered
@@ -81,13 +83,9 @@ class PdfExporter {
 // Isolate entry points are top-level so their closures capture only the
 // arguments, never the exporter or the caller's progress callback.
 Future<_PageImage> _renderInIsolate(ScanPage page, ExportQuality q) => Isolate.run(() {
-      final rendered = renderRecipe(
-        File(page.originalPath).readAsBytesSync(),
-        page.recipe,
-        maxDimension: q.maxDimension,
-      );
-      return _PageImage(rendered.encodeJpg(quality: q.jpegQuality), rendered.width, rendered.height);
-    });
+  final rendered = renderRecipe(File(page.originalPath).readAsBytesSync(), page.recipe, maxDimension: q.maxDimension);
+  return _PageImage(rendered.encodeJpg(quality: q.jpegQuality), rendered.width, rendered.height, page.annotations);
+});
 
 Future<Uint8List> _buildPdfInIsolate(List<_PageImage> images, PdfPageSize size) =>
     Isolate.run(() => _buildPdf(images, size));
@@ -111,15 +109,45 @@ Future<Uint8List> _buildPdf(List<_PageImage> images, PdfPageSize size) {
         format = landscape ? PdfPageFormat.letter.landscape : PdfPageFormat.letter;
         margin = 18;
     }
-    doc.addPage(pw.Page(
-      pageFormat: format,
-      margin: pw.EdgeInsets.all(margin),
-      build: (_) => pw.Center(child: pw.Image(mem, fit: pw.BoxFit.contain)),
-    ));
+    doc.addPage(
+      pw.Page(
+        pageFormat: format,
+        margin: pw.EdgeInsets.all(margin),
+        build: (_) {
+          if (image.annotations.isEmpty) return pw.Center(child: pw.Image(mem, fit: pw.BoxFit.contain));
+          // The marks are normalized to the image, so draw them in a box the
+          // size of the image as it is fitted on the page.
+          final scale = math.min(
+            (format.width - 2 * margin) / image.width,
+            (format.height - 2 * margin) / image.height,
+          );
+          final w = image.width * scale, h = image.height * scale;
+          return pw.Center(
+            child: pw.SizedBox(
+              width: w,
+              height: h,
+              child: pw.Stack(
+                fit: pw.StackFit.expand,
+                children: [
+                  pw.Image(mem, fit: pw.BoxFit.fill),
+                  ...markWidgets(image.annotations, w, h),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
   return doc.save();
 }
 
 /// Test hook: builds a PDF from raw JPEG bytes.
-Future<Uint8List> buildPdfFromJpegs(List<(Uint8List, int, int)> pages, PdfPageSize size) =>
-    _buildPdf([for (final (b, w, h) in pages) _PageImage(b, w, h)], size);
+Future<Uint8List> buildPdfFromJpegs(
+  List<(Uint8List, int, int)> pages,
+  PdfPageSize size, {
+  List<List<Annotation>> annotations = const [],
+}) => _buildPdf([
+  for (var i = 0; i < pages.length; i++)
+    _PageImage(pages[i].$1, pages[i].$2, pages[i].$3, i < annotations.length ? annotations[i] : const []),
+], size);

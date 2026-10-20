@@ -58,3 +58,18 @@ If the user denies the camera, the app explains why it is needed and offers **Tr
 - Native builds were not run here. Analysis and all Dart tests pass, but the build machine could not download the Android SDK, so the first `flutter run` on a device is the real check of the Gradle and Xcode setup.
 - Filter quality has been checked against synthetic images in the tests, not a corpus of real phone captures. `docs/document.md` §14 calls for golden-image tests on real documents before shipping.
 - The custom camera surface (ADR-008, milestone M7), OCR and annotations are out of scope for this flow.
+
+## Every scan is saved (1.3.0)
+
+There is no separate draft step any more. Each scan is kept on the phone as page images from its first page, and every
+edit is saved as it happens, so leaving the pages screen never asks anything.
+
+- **Name:** a scan is named from the day it was made: `2026-10-11 Scan`, then `2026-10-11 Scan 2`, `2026-10-11 Scan 3`
+  for later scans that day. Tap the name on the pages screen, or use the menu on Home, to rename it.
+- **Enhanced by default:** new pages start with the Auto colour filter (Settings can change it), and camera and
+  imported pages are auto-cropped as before. Smart crop stays Pro/Gold; Basic keeps the older crop, still applied.
+  Settings files from older versions, which always held Original, move to Auto colour once.
+- **Home:** a Documents section lists the scans and recent PDFs with a preview of the first page, as a gallery by
+  default or as a list (the toggle is remembered). Scans have Rename and Delete in their menu.
+- **Export:** copies only. PDF works as before and is offered the scan's name; JPG images saves one file per page to
+  `exports/<name>/` and opens the share sheet. Marks are drawn only in PDFs.
