@@ -319,7 +319,7 @@ void main() {
           imageProfilerProvider.overrideWithValue(ImageProfiler(store: MemoryProfileStore(), available: debug)),
         ],
       );
-      await tester.tap(find.text('Settings').last);
+      await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
     }
 

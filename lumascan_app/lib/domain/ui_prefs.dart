@@ -7,7 +7,7 @@ enum LibraryView { list, grid }
 class UiPrefs {
   const UiPrefs({
     this.libraryView = LibraryView.list,
-    this.homeView = LibraryView.grid,
+    this.homeView = LibraryView.list,
     this.dismissedCards = const {},
   });
 
@@ -35,7 +35,7 @@ class UiPrefs {
 
   static UiPrefs fromJson(Map<String, Object?> json) => UiPrefs(
     libraryView: LibraryView.values.asNameMap()[json['libraryView']] ?? LibraryView.list,
-    homeView: LibraryView.values.asNameMap()[json['homeView']] ?? LibraryView.grid,
+    homeView: LibraryView.values.asNameMap()[json['homeView']] ?? LibraryView.list,
     dismissedCards: {for (final id in (json['dismissedCards'] as List?) ?? const []) id as String},
   );
 }

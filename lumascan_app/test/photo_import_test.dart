@@ -100,7 +100,9 @@ void main() {
           pageStoreProvider.overrideWithValue(NoCopyPageStore()),
         ],
       );
-      await tester.tap(find.bySemanticsLabel('Import'));
+      await tester.tap(find.byTooltip('Create'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Import photos'));
       await tester.pumpAndSettle();
     }
 
@@ -181,7 +183,9 @@ void main() {
 
     testWidgets('import screen fits at 200% text', (tester) async {
       await pumpApp(tester, textScale: 2, overrides: [photoPickerProvider.overrideWithValue(picker)]);
-      await tester.tap(find.bySemanticsLabel('Import'));
+      await tester.tap(find.byTooltip('Create'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Import photos'));
       await tester.pumpAndSettle();
       expect(find.byType(Switch), findsOneWidget);
       expect(tester.takeException(), isNull);

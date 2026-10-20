@@ -321,10 +321,13 @@ void main() {
 
     testWidgets('Tools has PDF to Word and Word to PDF; on Basic PDF to Word is marked Pro', (tester) async {
       await pumpTools(tester, AppPlan.basic);
+      await tester.scrollUntilVisible(find.text('PDF to Word'), 200);
       expect(find.text('PDF to Word'), findsOneWidget);
       expect(find.text('Word to PDF'), findsOneWidget);
       expect(find.widgetWithText(PremiumBadge, 'Pro'), findsOneWidget);
 
+      await tester.ensureVisible(find.text('PDF to Word'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('PDF to Word'));
       await tester.pumpAndSettle();
       expect(find.text('Upgrade to Pro'), findsWidgets);
@@ -332,6 +335,7 @@ void main() {
 
     testWidgets('on Gold PDF to Word has no lock', (tester) async {
       await pumpTools(tester, AppPlan.gold);
+      await tester.scrollUntilVisible(find.text('PDF to Word'), 200);
       expect(find.byType(PremiumBadge), findsNothing);
     });
 

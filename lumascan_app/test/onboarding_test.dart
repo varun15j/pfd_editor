@@ -67,7 +67,7 @@ void main() {
       await tester.tap(find.text('No thanks'));
       await tester.pumpAndSettle();
       expect(find.byType(OnboardingScreen), findsNothing);
-      expect(find.text('Home'), findsWidgets);
+      expect(find.text('Docs'), findsWidgets);
       expect(store.settings.onboardingSeen, isTrue);
       expect(store.settings.analytics, isFalse);
     });
@@ -97,7 +97,7 @@ void main() {
     testWidgets('is not shown again once seen', (tester) async {
       await firstRun(tester, saved: const AppSettings(onboardingSeen: true));
       expect(find.byType(OnboardingScreen), findsNothing);
-      expect(find.text('Home'), findsWidgets);
+      expect(find.text('Docs'), findsWidgets);
     });
 
     testWidgets('waits for the saved choice instead of flashing the intro', (tester) async {
@@ -131,7 +131,7 @@ void main() {
     Future<void> openSettings(WidgetTester tester, {AppSettings? saved}) async {
       store = MemoryAppSettingsStore(saved ?? const AppSettings(onboardingSeen: true));
       await pumpApp(tester, settings: store);
-      await tester.tap(find.text('Settings').last);
+      await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
       tester.view.physicalSize = const Size(1080, 7000);
       await tester.pumpAndSettle();

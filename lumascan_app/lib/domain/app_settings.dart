@@ -60,7 +60,7 @@ enum AutoCaptureSteadiness {
 @immutable
 class AppSettings {
   const AppSettings({
-    this.themeMode = ThemeMode.system,
+    this.themeMode = ThemeMode.dark,
     this.defaultFilter = DocumentFilter.magicColor,
     this.autoCropOnImport = true,
     this.keepOriginals = true,
@@ -177,7 +177,7 @@ class AppSettings {
   /// Unknown or missing values fall back to the defaults, so a settings file
   /// from an older or newer version still opens.
   static AppSettings fromJson(Map<String, Object?> json) => AppSettings(
-    themeMode: ThemeMode.values.asNameMap()[json['themeMode']] ?? ThemeMode.system,
+    themeMode: ThemeMode.values.asNameMap()[json['themeMode']] ?? ThemeMode.dark,
     defaultFilter: _filterFromJson(json),
     autoCropOnImport: json['autoCropOnImport'] as bool? ?? true,
     keepOriginals: json['keepOriginals'] as bool? ?? true,

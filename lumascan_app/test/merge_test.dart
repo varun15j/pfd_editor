@@ -577,7 +577,8 @@ void main() {
 
     testWidgets('shows Sign, Reorder pages and Merge PDFs, and nothing that is not built', (tester) async {
       await pumpTools(tester);
-      for (final title in ['Sign', 'Reorder pages', 'Merge PDFs']) {
+      for (final title in ['Merge PDFs', 'Sign', 'Reorder pages']) {
+        await tester.scrollUntilVisible(find.text(title), 200);
         expect(find.text(title), findsOneWidget);
       }
       for (final missing in ['Compress', 'Split', 'Protect', 'OCR']) {
@@ -587,6 +588,9 @@ void main() {
 
     testWidgets('Merge PDFs opens the merge screen', (tester) async {
       await pumpTools(tester);
+      await tester.scrollUntilVisible(find.text('Merge PDFs'), 200);
+      await tester.ensureVisible(find.text('Merge PDFs'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Merge PDFs'));
       await tester.pumpAndSettle();
       expect(find.byType(MergeScreen), findsOneWidget);
@@ -597,6 +601,8 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.scrollUntilVisible(find.text('Photos to PDF'), 200);
       expect(find.text('Photos to PDF'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('PDF to Word'), 200);
+      expect(find.text('PDF to Word'), findsOneWidget);
     });
   });
 }
