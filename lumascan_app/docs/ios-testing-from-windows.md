@@ -143,6 +143,41 @@ Do these yourself; they need your Apple account and payment.
 
 Keep `dist.key`, the `.p12` and the `.p8` out of the repository.
 
+## 3b. Automated iOS tests on Codemagic
+
+`codemagic.yaml` at the repository root defines one workflow, **iOS tests and unsigned build**. It runs on a
+Codemagic Mac mini M2 and does four things, stopping at the first failure:
+
+1. `flutter pub get`.
+2. All unit and widget tests in `test/` (375 when this was written), except the golden screenshot tests. Those
+   are rendered on Linux and do not match pixel for pixel on macOS.
+3. `integration_test/app_smoke_test.dart` on an iOS simulator. This starts the real app with its real iOS plugins
+   and storage, goes through the intro, opens every tab and switches the theme. It catches a plugin that does not
+   load on iOS or a crash at start-up, which the widget tests cannot see.
+4. An unsigned release build, saved as `LumaScan-unsigned.ipa`. Download it from the build page and install it
+   with Sideloadly as in section 3.
+
+Test results show in the build's **Tests** tab, and the `.ipa` and result files are under **Artifacts**.
+
+It starts by itself for every pull request into `feature/scan_save`, and again on each push to that pull request.
+A newer push cancels the run still going for the same pull request.
+
+### Setting it up in Codemagic (once)
+
+1. Open the app in Codemagic and, in its settings, switch the build configuration from the Workflow Editor to
+   **codemagic.yaml**. Codemagic then reads the file from the branch being built.
+2. Check that Codemagic's GitHub access covers `varun15j/pfd_editor`, so pull requests can start builds.
+3. Start the first run by hand: **Start new build**, pick the branch of the pull request that adds the file, and
+   pick the workflow **iOS tests and unsigned build**.
+
+No secrets or Apple account are needed, because nothing is signed. Each run uses some of the 500 free macOS
+minutes a month. How many is not known until the first run; check the build time on that run and switch the
+trigger off (remove the `triggering` block) if pull requests use up the minutes too fast.
+
+What it does not test: the document camera, the photo and file pickers, and the share sheet. The simulator has no
+document camera, and system sheets are outside the test's reach. Those still need the checks in section 4 on
+the iPhone.
+
 ## 4. Checking the app on the iPhone
 
 Use real paper on a desk with normal light, and test on the iPhone itself; the iOS document camera does not run in
@@ -187,7 +222,7 @@ For crashes, the iPhone keeps reports in Settings > Privacy & Security > Analyti
 
 Not verified (this guide was written without a Mac or an iPhone):
 
-- The workflow has not been run yet. The first run may need fixes, for example if `subosito/flutter-action` cannot
+- Neither the GitHub workflow nor the Codemagic pipeline has been run yet. The first run may need fixes, for example if `subosito/flutter-action` cannot
   find Flutter 3.47.6 or a plugin needs a newer Xcode than the runner has.
 - Whether the app builds for iOS at all. No iOS build of LumaScan has been made so far.
 - Whether `com.lumascan.lumascan` is still free to register with Apple.
@@ -199,6 +234,7 @@ Only you can do:
 
 - Sign in to Sideloadly with your Apple ID and approve the two-factor prompt.
 - Trust the developer certificate and turn on Developer Mode on the iPhone.
+- Switch the Codemagic app to codemagic.yaml and start its first build (section 3b).
 - Start the workflow on GitHub (and raise the Actions spending limit if you ever want more than the free minutes).
 - Pay for and enrol in the Apple Developer Program, create the App ID, the App Store Connect app and the API key,
   and add the signing secrets, if you move to TestFlight.
