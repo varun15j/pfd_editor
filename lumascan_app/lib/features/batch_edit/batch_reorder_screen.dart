@@ -56,7 +56,7 @@ class _BatchReorderScreenState extends ConsumerState<BatchReorderScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         buildDefaultDragHandles: false,
         itemCount: order.length,
-        onReorderItem: _move,
+        onReorder: (from, to) => _move(from, to > from ? to - 1 : to),
         itemBuilder: (context, i) => _ReorderTile(
           key: ValueKey(order[i]),
           page: byId[order[i]]!,

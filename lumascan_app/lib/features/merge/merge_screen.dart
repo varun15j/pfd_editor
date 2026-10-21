@@ -113,7 +113,7 @@ class MergeScreen extends ConsumerWidget {
                     buildDefaultDragHandles: false,
                     padding: const EdgeInsets.fromLTRB(Space.page, 0, Space.page, Space.lg),
                     itemCount: sources.length,
-                    onReorderItem: controller.reorder,
+                    onReorder: (from, to) => controller.reorder(from, to > from ? to - 1 : to),
                     itemBuilder: (context, i) => _SourceTile(
                       key: ValueKey(sources[i].key),
                       index: i,

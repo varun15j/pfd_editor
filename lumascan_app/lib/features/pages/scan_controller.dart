@@ -704,7 +704,9 @@ class ScanController extends Notifier<ScanState> {
             await files.deleteOriginal(path);
           }
         })
-        .catchError((Object e) => debugPrint('Could not delete scan: $e'));
+        .catchError((Object e) {
+          debugPrint('Could not delete scan: $e');
+        });
     await _draftIo;
   }
 

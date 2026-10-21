@@ -386,7 +386,7 @@ void main() {
       for (final m in ['Docs', 'Book', 'Text', 'OCR Doc', 'QR', 'Photo']) {
         expect(find.bySemanticsLabel('$m capture mode'), findsOneWidget, reason: m);
       }
-      expect(tester.getSemantics(find.bySemanticsLabel('Docs capture mode')), isSemantics(isSelected: true));
+      expect(tester.getSemantics(find.bySemanticsLabel('Docs capture mode')), containsSemantics(isSelected: true));
     });
 
     testWidgets('auto capture takes the page once it holds still, and only once', (tester) async {

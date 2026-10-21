@@ -72,8 +72,8 @@ void main() {
     );
 
     for (final finder in [
-      find.byType(FilledButton),
-      find.byType(OutlinedButton),
+      find.bySubtype<FilledButton>(),
+      find.bySubtype<OutlinedButton>(),
       find.byType(IconButton),
     ]) {
       final size = tester.getSize(finder);

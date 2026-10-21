@@ -128,7 +128,8 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
                       itemCount: pages.length + (adding == null ? 0 : adding.total),
                       buildDefaultDragHandles: false,
-                      onReorderItem: (from, to) {
+                      onReorder: (from, to) {
+                        if (to > from) to -= 1;
                         // Placeholders are not pages, so they cannot be moved or moved onto.
                         if (from < pages.length && to <= pages.length) controller.move(from, to);
                       },

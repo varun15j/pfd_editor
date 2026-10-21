@@ -150,7 +150,7 @@ void main() {
 
   String nameField(WidgetTester tester) => tester.widget<TextField>(find.byType(TextField)).controller!.text;
 
-  FilledButton saveButton(WidgetTester tester) => tester.widget<FilledButton>(find.byType(FilledButton));
+  FilledButton saveButton(WidgetTester tester) => tester.widget<FilledButton>(find.bySubtype<FilledButton>());
 
   testWidgets('offers the scan\'s name, like "11-Oct-2026_16-47_SCAN"', (tester) async {
     await pumpSheet(tester);

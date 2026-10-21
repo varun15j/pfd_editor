@@ -29,7 +29,7 @@ class OrganizePagesScreen extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         buildDefaultDragHandles: false,
         itemCount: pages.length,
-        onReorderItem: controller.movePage,
+        onReorder: (from, to) => controller.movePage(from, to > from ? to - 1 : to),
         itemBuilder: (context, i) {
           final page = pages[i];
           return Card(

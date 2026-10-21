@@ -119,7 +119,7 @@ class DocxReader {
     double pt(String? twips, int fallback) => (int.tryParse(twips ?? '') ?? fallback) / 20;
     final size = sectPr?.childElements.where((e) => _isW(e, 'pgSz')).firstOrNull;
     final margin = sectPr?.childElements.where((e) => _isW(e, 'pgMar')).firstOrNull;
-    String? attr(XmlElement? e, String name) => e?.getAttribute(name, namespaceUri: _w);
+    String? attr(XmlElement? e, String name) => e?.getAttribute(name, namespace: _w);
     return DocxSection(
       pageWidthPt: pt(attr(size, 'w'), _defaultWidthTwips),
       pageHeightPt: pt(attr(size, 'h'), _defaultHeightTwips),
@@ -159,7 +159,7 @@ class DocxReader {
     final run = t.parentElement;
     final rPr = run?.childElements.where((e) => _isW(e, 'rPr')).firstOrNull;
     final b = rPr?.childElements.where((e) => _isW(e, 'b')).firstOrNull;
-    final val = b?.getAttribute('val', namespaceUri: _w);
+    final val = b?.getAttribute('val', namespace: _w);
     return b != null && val != 'false' && val != '0';
   }
 

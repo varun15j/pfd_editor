@@ -87,8 +87,8 @@ void main() {
     testWidgets('selected tab is announced as selected', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpApp(tester);
-      expect(tester.getSemantics(find.bySemanticsLabel('Docs')), isSemantics(isSelected: true, isButton: true));
-      expect(tester.getSemantics(find.bySemanticsLabel('Tools')), isSemantics(isSelected: false, isButton: true));
+      expect(tester.getSemantics(find.bySemanticsLabel('Docs')), containsSemantics(isSelected: true, isButton: true));
+      expect(tester.getSemantics(find.bySemanticsLabel('Tools')), containsSemantics(isSelected: false, isButton: true));
       handle.dispose();
     });
 
