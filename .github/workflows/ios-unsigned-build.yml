@@ -1,0 +1,51 @@
+# Builds an unsigned iOS app (.ipa) on a GitHub macOS runner so LumaScan can be
+# tested on an iPhone from a Windows PC. The .ipa is signed on the PC with
+# Sideloadly and a free Apple ID; see lumascan_app/docs/ios-testing-from-windows.md.
+# It only runs when started by hand, because macOS minutes count 10x against
+# the free allowance on private repositories.
+name: iOS unsigned build
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit to build
+        required: true
+        default: feature/scan_save
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: lumascan_app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.6
+          cache: true
+
+      - run: flutter pub get
+
+      # Release mode: an iOS debug build only starts with a debugger attached,
+      # so it would close at once when opened from the home screen.
+      - run: flutter build ios --release --no-codesign
+
+      - name: Package .ipa
+        run: |
+          mkdir -p build/ipa/Payload
+          cp -R build/ios/iphoneos/Runner.app build/ipa/Payload/
+          cd build/ipa
+          zip -qry LumaScan-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LumaScan-unsigned-ipa
+          path: lumascan_app/build/ipa/LumaScan-unsigned.ipa
+          retention-days: 7

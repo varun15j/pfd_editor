@@ -1,0 +1,66 @@
+# Codemagic pipeline for LumaScan on iOS. See lumascan_app/docs/ios-testing-from-windows.md.
+# Each run uses free macOS M2 minutes (500 a month on a personal account).
+workflows:
+  ios-tests:
+    name: iOS tests and unsigned build
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    working_directory: lumascan_app
+    environment:
+      flutter: 3.47.6
+      xcode: latest
+      cocoapods: default
+    triggering:
+      # Every pull request into the base branch, and again on each push to it.
+      events:
+        - pull_request
+      branch_patterns:
+        - pattern: feature/scan_save
+          include: true
+          source: false
+      cancel_previous_builds: true
+    scripts:
+      - name: Get packages
+        script: flutter pub get
+
+      - name: Unit and widget tests
+        # Golden screenshots are made on Linux and differ on macOS, so they are left out.
+        script: |
+          mkdir -p test-results
+          flutter test --exclude-tags golden --file-reporter json:test-results/unit.json
+        test_report: test-results/unit.json
+
+      - name: Start-up test on the iOS simulator
+        # Picks one iPhone simulator on the newest iOS runtime by its id, so the
+        # device choice is never ambiguous, and waits until it has fully booted.
+        script: |
+          set -e
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          runtimes = [k for k in devices if ".iOS-" in k]
+          runtimes.sort(key=lambda k: [int(p) for p in k.split(".iOS-")[1].split("-")])
+          for runtime in reversed(runtimes):
+              phones = [d for d in devices[runtime] if d["name"].startswith("iPhone")]
+              if phones:
+                  print(phones[0]["udid"])
+                  break
+          ')
+          if [ -z "$UDID" ]; then echo "No iPhone simulator found"; xcrun simctl list devices available; exit 1; fi
+          echo "Using simulator $UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          flutter devices
+          flutter test integration_test -d "$UDID" --file-reporter json:test-results/ios-simulator.json
+        test_report: test-results/ios-simulator.json
+
+      - name: Build unsigned iOS app
+        # Release mode, because an iOS debug build only starts with a debugger attached.
+        script: |
+          flutter build ios --release --no-codesign
+          mkdir -p build/ipa/Payload
+          cp -R build/ios/iphoneos/Runner.app build/ipa/Payload/
+          cd build/ipa && zip -qry LumaScan-unsigned.ipa Payload
+    # Artifact paths start at the repository root, not at working_directory.
+    artifacts:
+      - lumascan_app/build/ipa/LumaScan-unsigned.ipa
+      - lumascan_app/test-results/*.json
