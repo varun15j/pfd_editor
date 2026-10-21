@@ -126,3 +126,4 @@ class MainActivity : FlutterActivity() {
         private const val EXTRA_SIMULATE_HANG = "lumascan.simulate_hang"
     }
 }
+class MainActivity : FlutterActivity()
