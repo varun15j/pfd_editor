@@ -11,6 +11,7 @@ import '../export/export_choice.dart';
 import '../filters/filter_screen.dart';
 import '../home/home_documents.dart';
 import '../pdf_editor/open_pdf.dart';
+import 'add_page_tile.dart';
 import 'adding_progress.dart';
 import 'page_actions.dart';
 import 'page_gallery.dart';
@@ -126,7 +127,8 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
                     PagesLayout.page => PageSingleView(pages: pages),
                     PagesLayout.list => ReorderableListView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                      itemCount: pages.length + (adding == null ? 0 : adding.total),
+                      // Pages being added, or else the "Add a new page" card.
+                      itemCount: pages.length + (adding == null ? 1 : adding.total),
                       buildDefaultDragHandles: false,
                       onReorderItem: (from, to) {
                         // Placeholders are not pages, so they cannot be moved or moved onto.
@@ -134,10 +136,16 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
                       },
                       itemBuilder: (context, i) => i < pages.length
                           ? _PageCard(key: ValueKey(pages[i].id), index: i, page: pages[i])
+                          : adding == null
+                          ? const Padding(
+                              key: ValueKey('add-page'),
+                              padding: EdgeInsets.only(bottom: 10),
+                              child: SizedBox(height: 104, child: AddPageTile()),
+                            )
                           : _PlaceholderCard(
                               key: ValueKey('adding-$i'),
                               number: i + 1,
-                              state: adding!.stateOf(i - pages.length),
+                              state: adding.stateOf(i - pages.length),
                             ),
                     ),
                   },

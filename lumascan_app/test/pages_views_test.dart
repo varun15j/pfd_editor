@@ -159,7 +159,13 @@ void main() {
     await tester.tap(find.text('3'));
     await tester.pumpAndSettle();
     expect(find.text('Page 3 of 3'), findsOneWidget);
+    // Next from the last page goes to the "Add a new page" page, and stops there.
+    await tester.tap(find.byTooltip('Next page'));
+    await tester.pumpAndSettle();
+    expect(find.text('New page'), findsOneWidget);
     expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.chevron_right)).onPressed, isNull);
+    await tester.tap(find.text('3'));
+    await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('Rotate'));
     await tester.tap(find.text('Rotate'));
@@ -298,6 +304,31 @@ void main() {
     for (final view in ['Gallery view', 'Page view', 'List view']) {
       await selectLayout(tester, view);
       expect(tester.takeException(), isNull, reason: view);
+    }
+  });
+
+  testWidgets('every view ends with an empty "Add a new page" page', (tester) async {
+    await pumpPages(tester);
+    // Page view: in the strip, and as the page after the last one.
+    expect(find.bySemanticsLabel('Add a new page'), findsOneWidget);
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.byTooltip('Next page'));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('New page'), findsOneWidget);
+    expect(find.bySemanticsLabel('Add a new page'), findsNWidgets(2));
+    await tester.tap(find.byTooltip('Previous page'));
+    await tester.pumpAndSettle();
+    expect(find.text('Page 3 of 3'), findsOneWidget);
+
+    for (final view in ['Gallery view', 'List view']) {
+      await selectLayout(tester, view);
+      await tester.scrollUntilVisible(
+        find.bySemanticsLabel('Add a new page'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.bySemanticsLabel('Add a new page'), findsOneWidget, reason: view);
     }
   });
 }

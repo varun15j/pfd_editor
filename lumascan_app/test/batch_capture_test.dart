@@ -97,6 +97,7 @@ void main() {
     final harness = ScreenHarness();
     late Directory shots;
     late FakeBatchCamera camera;
+    late FakePhotoPicker picker;
 
     tearDown(() {
       harness.dispose();
@@ -105,19 +106,28 @@ void main() {
 
     /// [fromHome] opens the camera the way Home's Scan does, so the document
     /// opens after the camera closes.
-    Future<void> open(WidgetTester tester, {int pageCount = 0, bool deny = false, bool fromHome = false}) async {
+    /// [screen] opens another screen instead of the camera.
+    Future<void> open(
+      WidgetTester tester, {
+      int pageCount = 0,
+      bool deny = false,
+      bool fromHome = false,
+      WidgetBuilder? screen,
+    }) async {
       shots = Directory.systemTemp.createTempSync('lumascan_shots');
       camera = FakeBatchCamera(shots, deny: deny);
+      picker = FakePhotoPicker();
       await tester.runAsync(
         () => harness.setUp(
           pageCount: pageCount,
           overrides: [
             batchCameraProvider.overrideWithValue(() => camera),
             photoAnalyzerProvider.overrideWithValue(FakePhotoAnalyzer()),
+            photoPickerProvider.overrideWithValue(picker),
           ],
         ),
       );
-      if (!fromHome) return harness.pumpRoute(tester, (_) => const BatchCaptureScreen());
+      if (!fromHome) return harness.pumpRoute(tester, screen ?? (_) => const BatchCaptureScreen());
       await harness.pump(
         tester,
         Scaffold(
@@ -374,6 +384,49 @@ void main() {
       await harness.settle(tester);
 
       expect(find.bySemanticsLabel('Auto Off'), findsOneWidget);
+    });
+
+    testWidgets('a new document offers Gallery and Files import until the first photo', (tester) async {
+      await open(tester);
+      expect(find.bySemanticsLabel('Import from gallery'), findsOneWidget);
+      expect(find.bySemanticsLabel('Import from file'), findsOneWidget);
+      expect(find.bySemanticsLabel('No captured photos yet'), findsNothing);
+
+      await shoot(tester);
+
+      expect(find.bySemanticsLabel('Import from gallery'), findsNothing);
+      expect(find.bySemanticsLabel('Import from file'), findsNothing);
+      expect(find.bySemanticsLabel('Open preview of 1 captured photo'), findsOneWidget);
+      expect(find.bySemanticsLabel('1 page captured'), findsOneWidget);
+    });
+
+    testWidgets('a document that has pages shows its thumbnail, not import', (tester) async {
+      await open(tester, pageCount: 2);
+      expect(find.bySemanticsLabel('Import from gallery'), findsNothing);
+      expect(find.bySemanticsLabel('Import from file'), findsNothing);
+    });
+
+    for (final (label, fromFiles) in [('Import from gallery', false), ('Import from file', true)]) {
+      testWidgets('$label closes the camera and opens the right picker', (tester) async {
+        await open(tester, fromHome: true);
+        await tester.tap(find.bySemanticsLabel(label));
+        await harness.settle(tester);
+
+        expect(find.byType(BatchCaptureScreen), findsNothing);
+        expect(picker.picks, 1);
+        expect(picker.lastFromFiles, fromFiles);
+      });
+    }
+
+    testWidgets('"Add a new page" in a document opens the camera and adds to that document', (tester) async {
+      await open(tester, pageCount: 2, screen: (_) => const PagesScreen());
+
+      await tester.tap(find.bySemanticsLabel('Add a new page'));
+      await harness.settle(tester);
+      expect(find.byType(BatchCaptureScreen), findsOneWidget);
+      await shoot(tester);
+
+      expect(harness.pages, hasLength(3));
     });
 
     testWidgets('blocked camera access explains itself and links to Settings', (tester) async {

@@ -51,8 +51,8 @@ Future<void> openBatchCapture(
     ),
   );
   if (!context.mounted) return;
-  if (exit == _importPhotosInstead) {
-    final added = await importPhotosFlow(context, ref);
+  if (exit == _importPhotosInstead || exit == _importFilesInstead) {
+    final added = await importPhotosFlow(context, ref, fromFiles: exit == _importFilesInstead);
     if (added && openDraftAfter && context.mounted) openDraft(context);
     return;
   }
@@ -65,6 +65,9 @@ Future<void> openBatchCapture(
 /// What the camera closes with when photo import is picked instead.
 const _importPhotosInstead = #importPhotos;
 
+/// What the camera closes with when import from files is picked instead.
+const _importFilesInstead = #importFiles;
+
 /// The camera (iOS flow prototype, screen 02 "Camera preview"; BE-01;
 /// docs/capture-modes-algorithms.md). It stays open between shots: each
 /// press of the shutter saves a page to the draft and the camera is ready
@@ -76,7 +79,9 @@ const _importPhotosInstead = #importPhotos;
 /// guides of the current mode. Below it: the page count, the capture modes
 /// (Docs, Book, Text, OCR Doc, QR, Photo), and the thumbnail (opens Captured
 /// photos, where a page can be retaken and the batch reviewed), the shutter,
-/// and the cross that discards the photos taken in this visit.
+/// and the cross that discards the photos taken in this visit. Until the
+/// document has a page, Gallery and Files import buttons stand where the
+/// thumbnail goes.
 class BatchCaptureScreen extends ConsumerStatefulWidget {
   const BatchCaptureScreen({super.key, this.returnToReview = false, this.initialMode = CameraMode.docs});
 
@@ -975,6 +980,8 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
                 count: pages.length,
                 showCount: _batch && _mode.addsPages,
                 lastPage: last,
+                // A new document offers import until its first photo is taken.
+                showImport: pages.isEmpty && _taken.isEmpty && _saving == 0 && !_shooting && _retakeId == null,
                 saving: _saving > 0,
                 shooting: _shooting || _reading,
                 canShoot: ready && !_covered && !_reading,
@@ -985,6 +992,8 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
                 onMode: _setMode,
                 onShoot: _shoot,
                 onPhotos: _openPhotos,
+                onImportGallery: () => Navigator.of(context).pop(_importPhotosInstead),
+                onImportFiles: () => Navigator.of(context).pop(_importFilesInstead),
                 onDiscard: _discard,
               ),
             ],
@@ -1445,6 +1454,7 @@ class _ControlPanel extends StatelessWidget {
     required this.count,
     required this.showCount,
     required this.lastPage,
+    required this.showImport,
     required this.saving,
     required this.shooting,
     required this.canShoot,
@@ -1455,12 +1465,17 @@ class _ControlPanel extends StatelessWidget {
     required this.onMode,
     required this.onShoot,
     required this.onPhotos,
+    required this.onImportGallery,
+    required this.onImportFiles,
     required this.onDiscard,
   });
 
   final int count;
   final bool showCount;
   final ScanPage? lastPage;
+
+  /// Shows the Gallery and Files import buttons instead of the thumbnail.
+  final bool showImport;
   final bool saving;
   final bool shooting;
   final bool canShoot;
@@ -1473,6 +1488,8 @@ class _ControlPanel extends StatelessWidget {
   final ValueChanged<CameraMode> onMode;
   final VoidCallback onShoot;
   final VoidCallback onPhotos;
+  final VoidCallback onImportGallery;
+  final VoidCallback onImportFiles;
   final VoidCallback onDiscard;
 
   @override
@@ -1503,20 +1520,34 @@ class _ControlPanel extends StatelessWidget {
                   Expanded(
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: Semantics(
-                        button: true,
-                        label: count == 0
-                            ? 'No captured photos yet'
-                            : 'Open preview of $count captured photo${count == 1 ? '' : 's'}',
-                        excludeSemantics: true,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: onPhotos,
-                          child: Padding(
-                            padding: const EdgeInsets.all(6),
-                            child: _Thumbnail(page: lastPage, count: count, saving: saving),
-                          ),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        transitionBuilder: (child, a) => FadeTransition(
+                          opacity: a,
+                          child: ScaleTransition(scale: Tween(begin: 0.9, end: 1.0).animate(a), child: child),
                         ),
+                        child: showImport
+                            ? _ImportButtons(
+                                key: const ValueKey('import'),
+                                onGallery: onImportGallery,
+                                onFiles: onImportFiles,
+                              )
+                            : Semantics(
+                                key: const ValueKey('thumbnail'),
+                                button: true,
+                                label: count == 0
+                                    ? 'No captured photos yet'
+                                    : 'Open preview of $count captured photo${count == 1 ? '' : 's'}',
+                                excludeSemantics: true,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap: onPhotos,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(6),
+                                    child: _Thumbnail(page: lastPage, count: count, saving: saving),
+                                  ),
+                                ),
+                              ),
                       ),
                     ),
                   ),
@@ -1551,6 +1582,82 @@ class _ControlPanel extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Import from the gallery or from files, side by side where the thumbnail
+/// goes until the first photo is taken.
+class _ImportButtons extends StatelessWidget {
+  const _ImportButtons({super.key, required this.onGallery, required this.onFiles});
+
+  final VoidCallback onGallery;
+  final VoidCallback onFiles;
+
+  @override
+  // Scales down rather than overflow on narrow screens or large text.
+  Widget build(BuildContext context) => FittedBox(
+    fit: BoxFit.scaleDown,
+    alignment: Alignment.centerLeft,
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _ImportButton(
+          icon: Icons.photo_library_outlined,
+          label: 'Gallery',
+          semantics: 'Import from gallery',
+          onTap: onGallery,
+        ),
+        const SizedBox(width: 6),
+        _ImportButton(icon: Icons.folder_open_outlined, label: 'Files', semantics: 'Import from file', onTap: onFiles),
+      ],
+    ),
+  );
+}
+
+class _ImportButton extends StatelessWidget {
+  const _ImportButton({required this.icon, required this.label, required this.semantics, required this.onTap});
+
+  final IconData icon;
+  final String label;
+  final String semantics;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = LumaColors.of(context);
+    return Semantics(
+      button: true,
+      label: semantics,
+      excludeSemantics: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: colors.surfaceRaised,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: colors.line),
+                ),
+                child: Icon(icon, size: 22, color: colors.accent),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                style: TextStyle(color: colors.muted, fontSize: 11, fontWeight: FontWeight.w600),
               ),
             ],
           ),

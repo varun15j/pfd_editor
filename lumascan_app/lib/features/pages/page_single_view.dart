@@ -7,6 +7,7 @@ import '../../app/theme.dart';
 import '../../domain/models.dart';
 import '../../imaging/render_service.dart';
 import '../../ui/compact_action_button.dart';
+import 'add_page_tile.dart';
 import 'adding_progress.dart';
 import 'page_actions.dart';
 import 'page_image.dart';
@@ -14,7 +15,8 @@ import 'scan_controller.dart';
 
 /// Single-page layout for the Pages screen: one large page you can swipe
 /// through, previous/next buttons around a "Page X of N" label, a strip of
-/// numbered thumbnails, and the page actions underneath.
+/// numbered thumbnails, and the page actions underneath. Past the last page
+/// sits an empty "Add a new page" page that opens the camera.
 class PageSingleView extends ConsumerStatefulWidget {
   const PageSingleView({super.key, required this.pages});
 
@@ -31,6 +33,9 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
   final _strip = ScrollController();
   var _index = 0;
 
+  /// Whether the "Add a new page" page past the last page is showing.
+  var _onAddPage = false;
+
   @override
   void dispose() {
     _pager.dispose();
@@ -41,6 +46,12 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
   @override
   void didUpdateWidget(PageSingleView old) {
     super.didUpdateWidget(old);
+    // Pages added from the add page take its place: show the first of them.
+    if (_onAddPage && widget.pages.length > old.pages.length) {
+      _onAddPage = false;
+      _index = old.pages.length;
+      return;
+    }
     // A delete can leave the selection past the end; keep the counter, the
     // big page and the strip on the same page.
     if (_index >= widget.pages.length && widget.pages.isNotEmpty) {
@@ -52,12 +63,15 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
   }
 
   void _goTo(int i) {
-    if (i < 0 || i >= widget.pages.length) return;
+    if (i < 0 || i > widget.pages.length) return;
     _pager.animateToPage(i, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
   }
 
   void _onPageChanged(int i) {
-    setState(() => _index = i);
+    setState(() {
+      _onAddPage = i >= widget.pages.length;
+      if (!_onAddPage) _index = i;
+    });
     if (_strip.hasClients) {
       final position = _strip.position;
       final target = i * _stripItemExtent - (position.viewportDimension - _stripItemExtent) / 2;
@@ -78,21 +92,30 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
     final colors = LumaColors.of(context);
     final busy = ref.watch(scanControllerProvider.select((s) => s.busy));
     final adding = ref.watch(addProgressProvider);
+    // The add page waits until pages being added have arrived.
+    final addPage = adding == null;
+    final onAddPage = _onAddPage && addPage;
 
     return Column(
       children: [
         Expanded(
           child: PageView.builder(
             controller: _pager,
-            itemCount: pages.length,
+            itemCount: pages.length + (addPage ? 1 : 0),
             onPageChanged: _onPageChanged,
             itemBuilder: (context, i) => Padding(
               padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-              child: Semantics(
-                image: true,
-                label: 'Page ${i + 1} of ${pages.length}',
-                child: PageImage(key: ValueKey(pages[i].id), page: pages[i], maxDimension: RenderService.previewSize),
-              ),
+              child: i >= pages.length
+                  ? const AddPageTile(key: ValueKey('add-page'))
+                  : Semantics(
+                      image: true,
+                      label: 'Page ${i + 1} of ${pages.length}',
+                      child: PageImage(
+                        key: ValueKey(pages[i].id),
+                        page: pages[i],
+                        maxDimension: RenderService.previewSize,
+                      ),
+                    ),
             ),
           ),
         ),
@@ -103,7 +126,11 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
               IconButton.filledTonal(
                 tooltip: 'Previous page',
                 icon: const Icon(Icons.chevron_left),
-                onPressed: index > 0 ? () => _goTo(index - 1) : null,
+                onPressed: onAddPage
+                    ? () => _goTo(pages.length - 1)
+                    : index > 0
+                    ? () => _goTo(index - 1)
+                    : null,
               ),
               Expanded(
                 child: Center(
@@ -112,7 +139,7 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                       child: Text(
-                        'Page ${index + 1} of ${pages.length}',
+                        onAddPage ? 'New page' : 'Page ${index + 1} of ${pages.length}',
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -122,7 +149,7 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
               IconButton.filledTonal(
                 tooltip: 'Next page',
                 icon: const Icon(Icons.chevron_right),
-                onPressed: index < pages.length - 1 ? () => _goTo(index + 1) : null,
+                onPressed: !onAddPage && (index < pages.length - 1 || addPage) ? () => _goTo(index + 1) : null,
               ),
             ],
           ),
@@ -134,19 +161,25 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             itemExtent: _stripItemExtent,
-            itemCount: pages.length + (adding?.total ?? 0),
+            itemCount: pages.length + (adding?.total ?? 1),
             itemBuilder: (context, i) => i < pages.length
                 ? _StripThumb(
                     key: ValueKey(pages[i].id),
                     page: pages[i],
                     number: i + 1,
-                    selected: i == index,
+                    selected: i == index && !onAddPage,
                     onTap: () => _goTo(i),
+                  )
+                : addPage
+                ? const Padding(
+                    key: ValueKey('add-page'),
+                    padding: EdgeInsets.symmetric(horizontal: 4),
+                    child: AddPageTile(compact: true),
                   )
                 : Padding(
                     key: ValueKey('adding-$i'),
                     padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: PagePlaceholder(number: i + 1, state: adding!.stateOf(i - pages.length)),
+                    child: PagePlaceholder(number: i + 1, state: adding.stateOf(i - pages.length)),
                   ),
           ),
         ),
@@ -158,14 +191,15 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               Widget button(PageAction a, {double minWidth = 48}) => CompactActionButton(
-                    icon: a.icon,
-                    label: a.shortLabel,
-                    semanticsLabel: a.label,
-                    minWidth: minWidth,
-                    enabled: !busy,
-                    onPressed: busy ? null : () => runPageAction(context, ref, a, page, index),
-                  );
-              final fits = MediaQuery.textScalerOf(context).scale(1) <= 1.3 &&
+                icon: a.icon,
+                label: a.shortLabel,
+                semanticsLabel: a.label,
+                minWidth: minWidth,
+                enabled: !busy && !onAddPage,
+                onPressed: busy || onAddPage ? null : () => runPageAction(context, ref, a, page, index),
+              );
+              final fits =
+                  MediaQuery.textScalerOf(context).scale(1) <= 1.3 &&
                   constraints.maxWidth / PageAction.values.length >= minTapTarget;
               if (fits) {
                 return Row(children: [for (final a in PageAction.values) Expanded(child: button(a, minWidth: 0))]);

@@ -8,11 +8,16 @@ import '../domain/photo_import.dart';
 import '../imaging/page_detector.dart';
 import '../imaging/rgb_image.dart';
 
-/// [PhotoPicker] backed by file_picker's image picker.
+/// [PhotoPicker] backed by file_picker: its image picker for the gallery,
+/// and the file browser limited to image types for files.
 class FilePickerPhotoPicker implements PhotoPicker {
+  static const imageExtensions = ['jpg', 'jpeg', 'png', 'heic', 'heif', 'webp', 'bmp'];
+
   @override
-  Future<List<PickedPhoto>> pick() async {
-    final files = await FilePicker.pickFiles(type: FileType.image);
+  Future<List<PickedPhoto>> pick({bool fromFiles = false}) async {
+    final files = fromFiles
+        ? await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: imageExtensions)
+        : await FilePicker.pickFiles(type: FileType.image);
     return [
       for (final f in files)
         if (f.path != null) PickedPhoto(path: f.path!, name: f.name),
