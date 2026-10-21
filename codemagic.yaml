@@ -27,13 +27,30 @@ workflows:
         # Golden screenshots are made on Linux and differ on macOS, so they are left out.
         script: |
           mkdir -p test-results
-          flutter test --exclude-tags golden --machine > test-results/unit.json
+          flutter test --exclude-tags golden --file-reporter json:test-results/unit.json
         test_report: test-results/unit.json
 
       - name: Start-up test on the iOS simulator
+        # Picks one iPhone simulator on the newest iOS runtime by its id, so the
+        # device choice is never ambiguous, and waits until it has fully booted.
         script: |
-          flutter emulators --launch apple_ios_simulator
-          flutter -d iPhone test --machine integration_test > test-results/ios-simulator.json
+          set -e
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          runtimes = [k for k in devices if ".iOS-" in k]
+          runtimes.sort(key=lambda k: [int(p) for p in k.split(".iOS-")[1].split("-")])
+          for runtime in reversed(runtimes):
+              phones = [d for d in devices[runtime] if d["name"].startswith("iPhone")]
+              if phones:
+                  print(phones[0]["udid"])
+                  break
+          ')
+          if [ -z "$UDID" ]; then echo "No iPhone simulator found"; xcrun simctl list devices available; exit 1; fi
+          echo "Using simulator $UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          flutter devices
+          flutter test integration_test -d "$UDID" --file-reporter json:test-results/ios-simulator.json
         test_report: test-results/ios-simulator.json
 
       - name: Build unsigned iOS app
