@@ -77,17 +77,25 @@ Future<void> scanThenReview(
   await ref.read(scanControllerProvider.notifier).startNewDocument();
   if (!context.mounted) return;
   if (source == ScanSource.camera) return openBatchCapture(context, ref, mode: mode);
-  // Open the draft as soon as the pages are known, so the wait for a long
-  // import is spent looking at the pages arriving.
+  await addShowingDraft(context, (onAdding) => runScan(context, ref, source, onAdding: onAdding));
+}
+
+/// Runs [add], which adds pages to the draft and calls its argument once the
+/// pages being added are known, and opens the draft at that moment, so the
+/// wait for a long import is spent looking at the pages arriving. Without
+/// that call the draft opens when [add] finishes with pages added. Returns
+/// whether pages were added.
+Future<bool> addShowingDraft(BuildContext context, Future<bool> Function(VoidCallback onAdding) add) async {
   final navigator = Navigator.of(context);
   Route<void>? draft;
-  final added = await runScan(context, ref, source, onAdding: () => draft = openDraft(context));
+  final added = await add(() => draft = openDraft(context));
   if (draft == null) {
     if (added && context.mounted) openDraft(context);
   } else if (!added && draft!.isActive) {
     // Nothing could be added (every photo unreadable): do not leave an empty draft open.
     navigator.removeRoute(draft!);
   }
+  return added;
 }
 
 /// Asks the shell to show the Home tab; each request bumps the count.

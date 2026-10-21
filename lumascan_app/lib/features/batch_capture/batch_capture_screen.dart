@@ -52,8 +52,12 @@ Future<void> openBatchCapture(
   );
   if (!context.mounted) return;
   if (exit == _importPhotosInstead) {
-    final added = await importPhotosFlow(context, ref);
-    if (added && openDraftAfter && context.mounted) openDraft(context);
+    // Inside the draft its pages already show the new ones arriving.
+    if (!openDraftAfter) {
+      await importPhotosFlow(context, ref);
+    } else {
+      await addShowingDraft(context, (onAdding) => importPhotosFlow(context, ref, onAdding: onAdding));
+    }
     return;
   }
   if (exit == BatchOutcome.home) return saveAndGoHome(context, ref);
