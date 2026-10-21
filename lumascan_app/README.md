@@ -52,6 +52,8 @@ flutter run -d emulator-5554
 
 ```
 
+To test on an iPhone when you only have a Windows PC, see [docs/ios-testing-from-windows.md](docs/ios-testing-from-windows.md).
+
 Use a real phone. The ML Kit scanner needs Google Play services, and the iOS document camera does not run in the Simulator (the Simulator can still use Import from photos).
 
 ## Permission setup (already applied)
