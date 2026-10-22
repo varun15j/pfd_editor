@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,11 +8,13 @@ import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/photo_import.dart';
 import 'package:lumascan/domain/ui_prefs.dart';
+import 'package:lumascan/features/batch_capture/batch_capture_screen.dart';
 import 'package:lumascan/features/capture/scan_tips.dart';
 import 'package:lumascan/features/pages/adding_progress.dart';
 import 'package:lumascan/features/pages/pages_screen.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 
+import 'support/fake_batch_camera.dart';
 import 'support/fake_photos.dart';
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
@@ -292,6 +295,35 @@ void main() {
       await tester.pump();
       expect(find.byType(PagePlaceholder), findsNWidgets(2));
       expect(find.text('Adding 1 of 2 pages'), findsOneWidget);
+    });
+
+    testWidgets('importing from the blocked camera screen opens the draft at once too', (tester) async {
+      final shots = Directory.systemTemp.createTempSync('lumascan_shots');
+      addTearDown(() => shots.deleteSync(recursive: true));
+      analyzer = _GatedAnalyzer();
+      await pumpApp(
+        tester,
+        prefs: MemoryUiPrefsStore(const UiPrefs(dismissedCards: {scanTipsId})),
+        overrides: [
+          batchCameraProvider.overrideWithValue(() => FakeBatchCamera(shots, deny: true)),
+          photoPickerProvider.overrideWithValue(picker),
+          photoAnalyzerProvider.overrideWithValue(analyzer),
+          pageStoreProvider.overrideWithValue(NoCopyPageStore()),
+        ],
+      );
+      await tester.tap(find.byTooltip('Scan'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Import photos'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add 4 pages'));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(BatchCaptureScreen), findsNothing);
+      expect(find.byType(PagesScreen), findsOneWidget, reason: 'opened before the import is done');
+      expect(find.byType(PagePlaceholder), findsNWidgets(4));
+      expect(find.text('Adding 1 of 4 pages'), findsOneWidget);
     });
 
     testWidgets('when no photo can be read the empty draft is not left open', (tester) async {
