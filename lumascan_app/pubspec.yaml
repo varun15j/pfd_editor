@@ -59,6 +59,17 @@ dependencies:
   http: ^1.6.0
   open_filex: ^5.0.0
 
+# build/3_10: share_plus with one iOS 16.4 SDK constant guarded so Xcode 14.2 can build it.
+dependency_overrides:
+  share_plus:
+    path: third_party/share_plus
+  # Xcode 14.2 (Swift 5.7) needs explicit self in a closure.
+  file_picker_darwin:
+    path: third_party/file_picker_darwin
+  # Same, plus switch expressions (Swift 5.9) rewritten as closures.
+  camera_avfoundation:
+    path: third_party/camera_avfoundation
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

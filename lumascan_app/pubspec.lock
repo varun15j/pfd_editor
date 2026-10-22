@@ -90,12 +90,11 @@ packages:
     source: hosted
     version: "0.7.2"
   camera_avfoundation:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: camera_avfoundation
-      sha256: "843247230a583e04742ea1434ce3f91e536760922fab67c72ce46aa34fac3e9d"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/camera_avfoundation"
+      relative: true
+    source: path
     version: "0.10.3"
   camera_platform_interface:
     dependency: transitive
@@ -258,12 +257,11 @@ packages:
     source: hosted
     version: "13.1.0"
   file_picker_darwin:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: file_picker_darwin
-      sha256: "51aef9f4c80449c736e7cc02198675fda73689f0bd45a84da642cfeab0250d46"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/file_picker_darwin"
+      relative: true
+    source: path
     version: "2.1.2"
   file_picker_linux:
     dependency: transitive
@@ -939,10 +937,9 @@ packages:
   share_plus:
     dependency: "direct main"
     description:
-      name: share_plus
-      sha256: db40767f130189d53f3ae8a6393c217ff4a492da1baff718a9873679c0c00224
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/share_plus"
+      relative: true
+    source: path
     version: "13.3.1"
   share_plus_platform_interface:
     dependency: transitive
