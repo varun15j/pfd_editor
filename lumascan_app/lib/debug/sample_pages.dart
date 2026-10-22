@@ -80,6 +80,14 @@ const oddsBookSamples = SampleSet(
 /// Every bundled set, in the order they are offered.
 const sampleSets = [mathSamples, bookSamples, oddsBookSamples];
 
+/// Every bundled photo in one document: the math revision pages, the book
+/// pages and the odds book pages.
+final allSamples = SampleSet(
+  title: 'Add all sample pages',
+  subtitle: 'All ${sampleSets.fold<int>(0, (n, s) => n + s.assets.length)} math, book and odds book photos in one document',
+  assets: [for (final set in sampleSets) ...set.assets],
+);
+
 /// The math revision photos (the first set).
 final samplePageAssets = mathSamples.assets;
 

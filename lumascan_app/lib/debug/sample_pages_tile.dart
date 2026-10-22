@@ -58,7 +58,7 @@ class _SamplePagesTileState extends ConsumerState<SamplePagesTile> {
     contentPadding: widget.contentPadding,
     leading: _adding
         ? const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2))
-        : Icon(widget.set != mathSamples ? Icons.menu_book_outlined : Icons.collections_outlined),
+        : Icon(widget.set == mathSamples ? Icons.collections_outlined : Icons.menu_book_outlined),
     title: Text(widget.set.title),
     subtitle: Text(widget.set.subtitle),
     onTap: _adding ? null : _add,
