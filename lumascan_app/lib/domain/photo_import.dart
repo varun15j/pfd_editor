@@ -16,7 +16,9 @@ class PickedPhoto {
 /// Opens the system photo picker for several images (C2).
 abstract interface class PhotoPicker {
   /// Returns the picked photos, or an empty list when the user cancels.
-  Future<List<PickedPhoto>> pick();
+  /// [fromFiles] opens the file browser (Files on iOS, the document picker
+  /// on Android) instead of the photo gallery.
+  Future<List<PickedPhoto>> pick({bool fromFiles = false});
 }
 
 /// Checks that a photo can be decoded and finds the page in it.

@@ -11,11 +11,16 @@ import '../pages/scan_controller.dart';
 
 /// Picks photos, lets the user set their order, and adds them to the end of
 /// the draft. Returns true when pages were added.
-Future<bool> importPhotosFlow(BuildContext context, WidgetRef ref, {VoidCallback? onAdding}) async {
+Future<bool> importPhotosFlow(
+  BuildContext context,
+  WidgetRef ref, {
+  VoidCallback? onAdding,
+  bool fromFiles = false,
+}) async {
   final messenger = ScaffoldMessenger.of(context);
   final List<PickedPhoto> picked;
   try {
-    picked = await ref.read(photoPickerProvider).pick();
+    picked = await ref.read(photoPickerProvider).pick(fromFiles: fromFiles);
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text('Could not open your photos ($e)')));
     return false;

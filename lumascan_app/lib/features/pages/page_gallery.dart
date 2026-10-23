@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../../domain/models.dart';
+import 'add_page_tile.dart';
 import 'adding_progress.dart';
 import 'page_actions.dart';
 import 'page_image.dart';
@@ -10,7 +11,8 @@ import 'scan_controller.dart';
 
 /// Gallery layout for the Pages screen: a grid of page thumbnails with the
 /// page number under each. Tap a page for its actions; long-press and drag
-/// it onto another page to move it there.
+/// it onto another page to move it there. After the last page, an empty
+/// "Add a new page" tile opens the camera.
 class PageGallery extends ConsumerWidget {
   const PageGallery({super.key, required this.pages});
 
@@ -29,16 +31,29 @@ class PageGallery extends ConsumerWidget {
         crossAxisSpacing: 12,
         childAspectRatio: 0.62,
       ),
-      itemCount: pages.length + pending,
+      // The add tile waits until pages being added have arrived.
+      itemCount: pages.length + pending + (adding == null ? 1 : 0),
       itemBuilder: (context, i) {
         if (i < pages.length) return _GalleryTile(key: ValueKey(pages[i].id), index: i, page: pages[i]);
+        if (adding == null) {
+          return const Column(
+            key: ValueKey('add-page'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: AddPageTile()),
+              SizedBox(height: 6),
+              // Keeps the tile the same height as the pages beside it.
+              Text('', style: TextStyle(fontWeight: FontWeight.w600)),
+            ],
+          );
+        }
         final number = i + 1;
         return Column(
           key: ValueKey('adding-$i'),
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: PagePlaceholder(number: number, state: adding!.stateOf(i - pages.length)),
+              child: PagePlaceholder(number: number, state: adding.stateOf(i - pages.length)),
             ),
             const SizedBox(height: 6),
             Text(

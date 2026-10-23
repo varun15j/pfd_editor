@@ -9,9 +9,13 @@ class FakePhotoPicker implements PhotoPicker {
   List<PickedPhoto> photos;
   int picks = 0;
 
+  /// Whether the last pick was from files rather than the gallery.
+  bool? lastFromFiles;
+
   @override
-  Future<List<PickedPhoto>> pick() async {
+  Future<List<PickedPhoto>> pick({bool fromFiles = false}) async {
     picks++;
+    lastFromFiles = fromFiles;
     return photos;
   }
 }
