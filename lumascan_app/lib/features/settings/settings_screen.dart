@@ -11,7 +11,9 @@ import '../../domain/app_settings.dart';
 import '../../domain/models.dart';
 import '../cloud/accounts_screen.dart';
 import '../onboarding/onboarding_screen.dart';
+import '../../domain/ocr_languages.dart';
 import 'about_section.dart';
+import 'ocr_language_screen.dart';
 import 'storage_section.dart';
 
 /// Settings tab: preferences for new scans and saves, appearance, storage,
@@ -77,6 +79,16 @@ class SettingsScreen extends ConsumerWidget {
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _choosePattern(context, settings.fileNamePattern, controller.setFileNamePattern),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Text recognition language'),
+            subtitle: Text(
+              '${OcrLanguage.of(ref.watch(ocrLanguageProvider)).label}. Used when text is read from pages; '
+              'text already read is kept.',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const OcrLanguageScreen())),
           ),
           const SizedBox(height: Space.xl),
           const _Header('Appearance'),

@@ -49,7 +49,7 @@ class _Ocr implements OcrEngine, OcrLayoutEngine {
   Future<String> recognize(ScanPage page, {required String languageCode}) async => '';
 
   @override
-  Future<String> recognizeFile(String path) async => '';
+  Future<String> recognizeFile(String path, {String languageCode = 'en'}) async => '';
 }
 
 void main() {
