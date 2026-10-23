@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/cunning_scanner_service.dart';
 import '../data/library_store.dart';
 import '../data/mlkit_vision.dart';
+import '../data/routed_ocr_engine.dart';
+import '../data/tesseract_ocr.dart';
 import '../data/page_store.dart';
 import '../data/photo_import_services.dart';
 import '../data/plugin_batch_camera.dart';
 import '../debug/image_profiler.dart';
+import '../domain/models.dart';
 import '../domain/ocr.dart';
 import '../domain/photo_import.dart';
 import '../domain/plan.dart';
@@ -63,12 +66,17 @@ final photoAnalyzerProvider = Provider<PhotoAnalyzer>(
 );
 
 /// On-device text recognition. It reads each page as rendered with its crop
-/// and filter, at a size that keeps small print legible.
-final ocrEngineProvider = Provider<OcrEngine>(
-  (ref) => MlKitOcrEngine(
-    imageFor: (page) async => (await ref.read(renderServiceProvider).render(page, maxDimension: 2400)).path,
-  ),
-);
+/// and filter, at a size that keeps small print legible: ML Kit for Latin and
+/// Devanagari, Tesseract for the other Indian scripts.
+final ocrEngineProvider = Provider<OcrEngine>((ref) {
+  Future<String> imageFor(ScanPage page) async =>
+      (await ref.read(renderServiceProvider).render(page, maxDimension: 2400)).path;
+  return RoutedOcrEngine(
+    fallback: MlKitOcrEngine(imageFor: imageFor),
+    special: TesseractOcrEngine(imageFor: imageFor),
+    handles: TesseractOcrEngine.handles,
+  );
+});
 
 /// On-device QR reading for the camera's QR mode.
 final qrReaderProvider = Provider<QrReader>((ref) {

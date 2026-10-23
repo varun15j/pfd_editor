@@ -6,6 +6,7 @@ import '../data/app_settings_store.dart';
 import '../data/ui_prefs_store.dart';
 import '../domain/app_settings.dart';
 import '../domain/models.dart';
+import '../domain/ocr_languages.dart';
 import '../domain/plan.dart';
 import '../domain/ui_prefs.dart';
 import 'providers.dart';
@@ -68,6 +69,8 @@ class AppSettingsController extends Notifier<AppSettings> {
   /// Debug builds: behave as [plan], or as the real plan when null.
   void setDebugPlan(AppPlan? plan) => _set(state.copyWith(debugPlan: plan));
 
+  void setOcrLanguage(String code) => _set(state.copyWith(ocrLanguage: code));
+
   void _set(AppSettings settings) {
     _changed = true;
     state = settings;
@@ -79,6 +82,14 @@ class AppSettingsController extends Notifier<AppSettings> {
 /// Completes once the saved Settings choices are read, so the first screen
 /// is not picked from the defaults.
 final appSettingsReadyProvider = FutureProvider<void>((ref) => ref.read(appSettingsProvider.notifier).loaded);
+
+/// Language code text recognition reads: the one picked in Settings, or
+/// English when that is an Indian language and the plan does not include it.
+final ocrLanguageProvider = Provider<String>((ref) {
+  final picked = OcrLanguage.of(ref.watch(appSettingsProvider.select((s) => s.ocrLanguage)));
+  if (picked.script == OcrScript.latin || ref.watch(planIncludesProvider(PlanFeature.indianOcr))) return picked.code;
+  return 'en';
+});
 
 /// Light, dark or follow the system.
 final themeModeProvider = Provider<ThemeMode>((ref) => ref.watch(appSettingsProvider.select((s) => s.themeMode)));

@@ -8,11 +8,14 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 
 import '../domain/models.dart';
 import '../domain/ocr.dart';
+import '../domain/ocr_languages.dart';
 import '../domain/qr_reader.dart';
 import '../features/batch_capture/camera_frame.dart';
 
-/// Text recognition with ML Kit, on the device. The Latin-script model ships
-/// with the app, so nothing is downloaded and pages never leave the phone.
+/// Text recognition with ML Kit, on the device. The Latin and Devanagari
+/// models ship with the app, so nothing is downloaded and pages never leave
+/// the phone. Devanagari's model also reads Latin text, so English words in
+/// a Hindi or Marathi page are kept.
 class MlKitOcrEngine implements OcrEngine, OcrLayoutEngine {
   MlKitOcrEngine({required this.imageFor});
 
@@ -20,48 +23,57 @@ class MlKitOcrEngine implements OcrEngine, OcrLayoutEngine {
   /// file ML Kit can read.
   final Future<String> Function(ScanPage page) imageFor;
 
-  TextRecognizer? _recognizer;
-
-  /// Languages written in the Latin script, which the bundled model reads.
-  static const _latin = {
-    'en': 'English', 'de': 'German', 'fr': 'French', 'es': 'Spanish', 'it': 'Italian', //
-    'pt': 'Portuguese', 'nl': 'Dutch', 'sv': 'Swedish', 'da': 'Danish', 'no': 'Norwegian',
-    'fi': 'Finnish', 'pl': 'Polish', 'cs': 'Czech', 'tr': 'Turkish', 'id': 'Indonesian',
-  };
+  final _recognizers = <TextRecognitionScript, TextRecognizer>{};
 
   static bool get _supportedPlatform => Platform.isAndroid || Platform.isIOS;
 
+  /// The bundled model that reads [script], or null when none does.
+  static TextRecognitionScript? modelFor(OcrScript script) => switch (script) {
+    OcrScript.latin => TextRecognitionScript.latin,
+    OcrScript.devanagari => TextRecognitionScript.devanagiri,
+    _ => null,
+  };
+
+  /// Why [languageCode] cannot be read, or null when it can.
+  static String? unsupportedReason(String languageCode) {
+    final language = OcrLanguage.byCode(languageCode);
+    if (language == null) return 'This language is not supported yet. English, Hindi and Marathi are.';
+    if (modelFor(language.script) != null) return null;
+    return 'Reading ${language.name} (${language.script.label} script) is not available on this device yet. '
+        'English, Hindi, Marathi and other languages in the Latin or Devanagari script are.';
+  }
+
   @override
   Future<OcrCapability> capability(String languageCode) async {
-    final language = _latin[languageCode];
+    final name = OcrLanguage.byCode(languageCode)?.name ?? languageCode;
     if (!_supportedPlatform) {
       return OcrCapability(
         readiness: OcrReadiness.unavailable,
-        language: language ?? languageCode,
+        language: name,
         reason: 'Text recognition runs on Android and iOS only.',
       );
     }
-    if (language == null) {
-      return OcrCapability(
-        readiness: OcrReadiness.unavailable,
-        language: languageCode,
-        reason: 'This language is not supported yet. Latin-script languages such as English are.',
-      );
-    }
-    return OcrCapability(readiness: OcrReadiness.ready, language: language);
+    final reason = unsupportedReason(languageCode);
+    if (reason != null) return OcrCapability(readiness: OcrReadiness.unavailable, language: name, reason: reason);
+    return OcrCapability(readiness: OcrReadiness.ready, language: name);
+  }
+
+  TextRecognizer _recognizerFor(String languageCode) {
+    final model = modelFor(OcrLanguage.of(languageCode).script) ?? TextRecognitionScript.latin;
+    return _recognizers[model] ??= TextRecognizer(script: model);
   }
 
   @override
   Future<void> prepare(String languageCode) async {}
 
   @override
-  Future<String> recognize(ScanPage page, {required String languageCode}) async => recognizeFile(await imageFor(page));
+  Future<String> recognize(ScanPage page, {required String languageCode}) async =>
+      recognizeFile(await imageFor(page), languageCode: languageCode);
 
   @override
   Future<OcrLayout> recognizeLayout(ScanPage page, {required String languageCode}) async {
     final path = await imageFor(page);
-    final recognizer = _recognizer ??= TextRecognizer(script: TextRecognitionScript.latin);
-    final result = await recognizer.processImage(InputImage.fromFilePath(path));
+    final result = await _recognizerFor(languageCode).processImage(InputImage.fromFilePath(path));
     final buffer = await ui.ImmutableBuffer.fromUint8List(await File(path).readAsBytes());
     final descriptor = await ui.ImageDescriptor.encoded(buffer);
     final w = descriptor.width.toDouble(), h = descriptor.height.toDouble();
@@ -93,9 +105,8 @@ class MlKitOcrEngine implements OcrEngine, OcrLayoutEngine {
   }
 
   @override
-  Future<String> recognizeFile(String path) async {
-    final recognizer = _recognizer ??= TextRecognizer(script: TextRecognitionScript.latin);
-    final result = await recognizer.processImage(InputImage.fromFilePath(path));
+  Future<String> recognizeFile(String path, {String languageCode = 'en'}) async {
+    final result = await _recognizerFor(languageCode).processImage(InputImage.fromFilePath(path));
     return result.text;
   }
 }
