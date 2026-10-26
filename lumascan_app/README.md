@@ -74,3 +74,7 @@ If the user denies the camera, the app explains why it is needed and offers **Tr
 - Native builds were not run here. Analysis and all Dart tests pass, but the build machine could not download the Android SDK, so the first `flutter run` on a device is the real check of the Gradle and Xcode setup.
 - Filter quality has been checked against synthetic images in the tests, not a corpus of real phone captures. `docs/document.md` §14 calls for golden-image tests on real documents before shipping.
 - The custom camera surface (ADR-008, milestone M7), OCR and annotations are out of scope for this flow.
+
+## Edge detection and camera-preview test samples
+
+See [the open-source algorithm comparison and preview implementation](docs/edge-detection-research.md). The developer sample menu includes eight synthetic colour/B&W edge cases alongside the existing real handwritten and book photographs.

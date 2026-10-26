@@ -77,8 +77,24 @@ const oddsBookSamples = SampleSet(
   ],
 );
 
+/// Deterministic synthetic scenes with independent known page corners.
+const edgeSamples = SampleSet(
+  title: 'Add edge test pages',
+  subtitle: '8 synthetic colour and B&W scenes for edge detection',
+  assets: [
+    'sample_photos/edge_cases/white_on_dark.png',
+    'sample_photos/edge_cases/black_on_light.png',
+    'sample_photos/edge_cases/yellow_paper.png',
+    'sample_photos/edge_cases/pink_paper.png',
+    'sample_photos/edge_cases/blue_paper.png',
+    'sample_photos/edge_cases/green_paper.png',
+    'sample_photos/edge_cases/multicolour_form.png',
+    'sample_photos/edge_cases/equal_luma_colour.png',
+  ],
+);
+
 /// Every bundled set, in the order they are offered.
-const sampleSets = [mathSamples, bookSamples, oddsBookSamples];
+const sampleSets = [mathSamples, bookSamples, oddsBookSamples, edgeSamples];
 
 /// The math revision photos (the first set).
 final samplePageAssets = mathSamples.assets;

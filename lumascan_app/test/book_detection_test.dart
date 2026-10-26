@@ -1,9 +1,15 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/debug/sample_pages.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/imaging/page_detector.dart';
 import 'package:lumascan/imaging/rgb_image.dart';
+import 'package:lumascan/features/batch_capture/camera_frame.dart';
+
+import 'support/preview_frames.dart';
 
 CropQuad _q(double a, double b, double c, double d, double e, double f, double g, double h) =>
     CropQuad(NormPoint(a, b), NormPoint(c, d), NormPoint(e, f), NormPoint(g, h));
@@ -79,22 +85,35 @@ void main() {
   // Before the colour-seeded mask, edge rating and centre preference
   // (2026-10-07) the mean was 0.54, with 2 of 20 photos at 0.85 or better.
   test('the page is found in the book photos, at the photo and the preview size', () async {
-    for (final (size, work, minArea) in [(640, 320, 0.1), (200, 160, 0.2)]) {
+    final report = <Map<String, Object>>[];
+    for (final (size, work, minArea, format) in [
+      (640, 320, 0.1, 'photo'),
+      (200, 160, 0.2, 'rgb'),
+      (480, 160, 0.2, 'bgra'),
+      (480, 160, 0.2, 'nv21'),
+    ]) {
       var sum = 0.0, good = 0;
       final scores = <String>[];
       for (final asset in bookSamples.assets) {
         final name = asset.split('/').last.substring(0, 2);
         final photo = RgbImage.decode((await rootBundle.load(asset)).buffer.asUint8List(), maxDimension: size);
-        final quad = detectPageQuad(photo, workSize: work, minArea: minArea);
+        final quad = switch (format) {
+          'bgra' => analyzeFrame(bgraFrame(photo)).quad,
+          'nv21' => analyzeFrame(nv21Frame(photo)).quad,
+          _ => detectPageQuad(photo, workSize: work, minArea: minArea),
+        };
         final iou = quad == null ? 0.0 : _marked[name]!.map((m) => _iou(quad, m)).reduce((a, b) => a > b ? a : b);
         sum += iou;
         if (iou >= 0.85) good++;
         scores.add('$name:${iou.toStringAsFixed(2)}');
       }
       final mean = sum / bookSamples.assets.length;
+      report.add({'format': format, 'mean_iou': mean, 'good_at_085': good, 'scores': scores});
       expect(mean, greaterThanOrEqualTo(0.8), reason: 'size $size: ${scores.join(' ')}');
       expect(good, greaterThanOrEqualTo(8), reason: 'size $size: ${scores.join(' ')}');
     }
+    final output = File('build/edge_detection/book_preview.json')..parent.createSync(recursive: true);
+    output.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(report));
   });
 
   test('on the Basic plan the old detector runs, which is less accurate on books', () async {
