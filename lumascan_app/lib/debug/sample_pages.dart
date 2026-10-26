@@ -77,8 +77,38 @@ const oddsBookSamples = SampleSet(
   ],
 );
 
+/// Made-up photos for testing page edge detection, in `sample_photos/edge/`:
+/// colour pages, black-and-white pages and open books on different surfaces,
+/// built from real page content by `tool/make_edge_samples.py`, so the page
+/// corners are known exactly (`sample_photos/edge/corners.json`).
+const edgeSamples = SampleSet(
+  title: 'Add edge test pages',
+  subtitle: '19 colour, black and white and book pages, auto-cropped, for testing edge detection',
+  assets: [
+    'sample_photos/edge/c01_colour_page_dark_wood.jpg',
+    'sample_photos/edge/c02_colour_page_beige_table.jpg',
+    'sample_photos/edge/c03_pink_paper_concrete.jpg',
+    'sample_photos/edge/c04_yellow_paper_light_wood.jpg',
+    'sample_photos/edge/c05_blue_form_blue_cloth.jpg',
+    'sample_photos/edge/c06_colour_page_carpet_perspective.jpg',
+    'sample_photos/edge/c07_colour_page_black_desk_turned.jpg',
+    'sample_photos/edge/b01_bw_paper_black_desk.jpg',
+    'sample_photos/edge/b02_bw_paper_concrete_shadow.jpg',
+    'sample_photos/edge/b03_bw_paper_white_bedsheet.jpg',
+    'sample_photos/edge/b04_bw_paper_fingers_wood.jpg',
+    'sample_photos/edge/b05_bw_narrow_slip_black_desk.jpg',
+    'sample_photos/edge/b06_bw_paper_carpet_grey_photo.jpg',
+    'sample_photos/edge/b07_colour_page_wood_grey_photo.jpg',
+    'sample_photos/edge/k01_colour_book_spread_wood.jpg',
+    'sample_photos/edge/k02_bw_book_spread_cloth.jpg',
+    'sample_photos/edge/k03_colour_book_one_page_thumb.jpg',
+    'sample_photos/edge/k04_bw_book_one_page_dark.jpg',
+    'sample_photos/edge/k05_bw_book_spread_grey_photo.jpg',
+  ],
+);
+
 /// Every bundled set, in the order they are offered.
-const sampleSets = [mathSamples, bookSamples, oddsBookSamples];
+const sampleSets = [mathSamples, bookSamples, oddsBookSamples, edgeSamples];
 
 /// The math revision photos (the first set).
 final samplePageAssets = mathSamples.assets;

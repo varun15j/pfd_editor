@@ -130,6 +130,7 @@ class DebugPanel extends StatelessWidget {
                 SamplePagesTile(onStart: onClose),
                 SamplePagesTile(set: bookSamples, onStart: onClose),
                 SamplePagesTile(set: oddsBookSamples, onStart: onClose),
+                SamplePagesTile(set: edgeSamples, onStart: onClose),
                 const Divider(),
                 SwitchListTile(
                   title: const Text('Profile image loading'),
