@@ -179,23 +179,58 @@ void main() {
 
   test('a camera preview frame is analysed fast enough for live outlines', () async {
     final frames = [
-      for (final a in [...bookSamples.assets.take(6), ...edgeSamples.assets.take(6)]) await _load(a, 200, grey: true),
+      for (final a in [...bookSamples.assets.take(6), ...edgeSamples.assets.take(6)]) await _load(a, 200),
     ];
     for (final f in frames) {
       detectPageQuad(f, workSize: 160, minArea: 0.2);
     }
-    final times = <int>[];
+    final times = <int>[], reference = <int>[];
     for (var round = 0; round < 3; round++) {
       for (final f in frames) {
         final watch = Stopwatch()..start();
         detectPageQuad(f, workSize: 160, minArea: 0.2);
         times.add(watch.elapsedMicroseconds);
+        watch.reset();
+        _referenceWork();
+        reference.add(watch.elapsedMicroseconds);
       }
     }
-    times.sort();
-    // About 19 ms here on 2026-10-26 (62 ms before the row sums and the
-    // two-pass filters). The bound is loose, for slow CI machines; it
-    // catches a step back to whole-mask rescoring, not small changes.
-    expect(times[times.length ~/ 2], lessThan(60000), reason: 'median ${times[times.length ~/ 2]} us');
+    int median(List<int> v) => (v..sort())[v.length ~/ 2];
+    final ratio = median(times) / median(reference);
+    // Timed against a fixed pass over a frame-sized image, so the limit
+    // holds on a fast cloud machine and a slower PC alike (a fixed 60 ms
+    // failed on Varun's PC at 86 ms). On 2026-10-26 a colour frame took
+    // about 10 reference passes (25 ms in the cloud); before the row sums
+    // and two-pass filters it took about 3 times as long.
+    expect(ratio, lessThan(16), reason: 'median ${median(times)} us, reference ${median(reference)} us');
   });
+}
+
+/// A fixed amount of pixel work, about what one mask step costs: a 3 x 3
+/// sum over a 160 x 213 image, ten times.
+int _referenceWork() {
+  const w = 160, h = 213;
+  final v = Uint8List(w * h);
+  for (var i = 0; i < v.length; i++) {
+    v[i] = i * 31 & 255;
+  }
+  var total = 0;
+  for (var round = 0; round < 10; round++) {
+    for (var y = 1; y < h - 1; y++) {
+      for (var x = 1; x < w - 1; x++) {
+        final i = y * w + x;
+        total +=
+            v[i - w - 1] +
+            v[i - w] +
+            v[i - w + 1] +
+            v[i - 1] +
+            v[i] +
+            v[i + 1] +
+            v[i + w - 1] +
+            v[i + w] +
+            v[i + w + 1];
+      }
+    }
+  }
+  return total;
 }
