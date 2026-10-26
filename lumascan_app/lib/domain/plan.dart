@@ -29,7 +29,13 @@ enum PlanFeature {
   /// PDF to Word: a saved PDF, a PDF from the device or the pages of a scan
   /// become a Word (.docx) file. Offered in Export, Tools and the Library
   /// menu. Word to PDF stays on every plan.
-  word(AppPlan.pro);
+  word(AppPlan.pro),
+
+  /// Auto mask: on-device OCR finds Aadhaar, VID, PAN and other ID numbers on
+  /// a page and hides all but their last four characters. Drawing a mask by
+  /// hand stays on every plan, because hiding your own ID number is basic
+  /// privacy (Varun, 2026-10-26).
+  autoMask(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 

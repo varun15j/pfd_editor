@@ -6,25 +6,39 @@ import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 
 import '../domain/models.dart';
+import '../pdf_edit/annotations.dart';
 import 'filters.dart';
 import 'geometry.dart';
+import 'masking.dart';
 import 'rgb_image.dart';
 import 'stage_times.dart';
 
 /// Render pipeline from LLD section 7:
 /// decode → orientation → perspective warp → quarter turns → filter →
-/// brightness and contrast → encode.
+/// brightness and contrast → masks → encode.
+///
+/// [masks] are burned into the pixels last (see [burnMasks]). Exports, OCR
+/// and saved thumbnails pass the page's masks; on-screen previews do not, so
+/// a mask can still be moved or removed while editing.
 ///
 /// [times], when given, gets the time spent in each step.
-RgbImage renderRecipe(Uint8List original, EditRecipe recipe, {int? maxDimension, StageTimes? times}) {
+RgbImage renderRecipe(
+  Uint8List original,
+  EditRecipe recipe, {
+  int? maxDimension,
+  StageTimes? times,
+  Iterable<MaskAnnotation> masks = const [],
+}) {
   final t = times ?? StageTimes();
   var image = RgbImage.decode(original, maxDimension: maxDimension, times: t);
   image = t.time('crop', () => rotateQuarterTurns(warpPerspective(image, recipe.crop), recipe.quarterTurns));
   image = t.time('filter', () => applyFilter(image, recipe.filter));
-  return t.time(
+  image = t.time(
     'adjust',
     () => adjustBrightnessContrast(image, brightness: recipe.brightness, contrast: recipe.contrast),
   );
+  if (masks.isNotEmpty) t.time('mask', () => burnMasks(image, masks));
+  return image;
 }
 
 class RenderedImage {
@@ -48,11 +62,12 @@ Future<RenderedImage> renderToFile({
   required String outPath,
   required int maxDimension,
   int quality = 85,
+  List<MaskAnnotation> masks = const [],
 }) {
   return Isolate.run(() {
     final t = StageTimes();
     final bytes = t.time('read', () => File(originalPath).readAsBytesSync());
-    final image = renderRecipe(bytes, recipe, maxDimension: maxDimension, times: t);
+    final image = renderRecipe(bytes, recipe, maxDimension: maxDimension, times: t, masks: masks);
     _writeJpg(image, outPath, quality, t);
     return RenderedImage(outPath, image.width, image.height, sourceBytes: bytes.length, stageMicros: t.micros);
   });

@@ -83,7 +83,12 @@ class PdfExporter {
 // Isolate entry points are top-level so their closures capture only the
 // arguments, never the exporter or the caller's progress callback.
 Future<_PageImage> _renderInIsolate(ScanPage page, ExportQuality q) => Isolate.run(() {
-  final rendered = renderRecipe(File(page.originalPath).readAsBytesSync(), page.recipe, maxDimension: q.maxDimension);
+  final rendered = renderRecipe(
+    File(page.originalPath).readAsBytesSync(),
+    page.recipe,
+    maxDimension: q.maxDimension,
+    masks: masksIn(page.annotations),
+  );
   return _PageImage(rendered.encodeJpg(quality: q.jpegQuality), rendered.width, rendered.height, page.annotations);
 });
 

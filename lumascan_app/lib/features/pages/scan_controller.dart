@@ -492,12 +492,17 @@ class ScanController extends Notifier<ScanState> {
     return page != null && page.annotations.isNotEmpty && _changesGeometry(page.recipe, recipe);
   }
 
-  /// Replaces the marks on [pageId]. One undo step.
+  /// Replaces the marks on [pageId]. One undo step. When a mask is added or
+  /// moved, text read from the page earlier is dropped, since it may hold the
+  /// number the mask now hides; reading the page again skips masked parts.
   void setAnnotations(String pageId, List<Annotation> annotations) {
     final page = state.pageById(pageId);
     if (page == null) return;
+    final before = masksIn(page.annotations).map((m) => m.toJson().toString()).toSet();
+    final masksGrew = masksIn(annotations).any((m) => !before.contains(m.toJson().toString()));
     _commit([
-      for (final p in state.pages) p.id == pageId ? p.copyWith(annotations: List.unmodifiable(annotations)) : p,
+      for (final p in state.pages)
+        p.id == pageId ? p.copyWith(annotations: List.unmodifiable(annotations), clearText: masksGrew) : p,
     ]);
   }
 

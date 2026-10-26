@@ -22,6 +22,12 @@ class HelpScreen extends StatelessWidget {
           'Everything can be undone from the top of the screen.',
     ),
     (
+      'Hiding an Aadhaar or ID number',
+      'In Markup, choose Mask and drag over the part to hide. On Pro, Auto mask ID numbers finds Aadhaar, VID, PAN and other '
+          'ID numbers for you and hides all but the last four characters. A mask is burned into the saved PDF or JPG, so what '
+          'it covers cannot be read from the file.',
+    ),
+    (
       'Saving and sending',
       'Save PDF asks for a name, page size and quality, and shows the size. After saving, Send shares the PDF or a smaller copy. '
           'The PDF stays in your Library either way.',
