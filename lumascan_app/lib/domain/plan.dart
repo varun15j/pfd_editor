@@ -35,8 +35,3 @@ enum PlanFeature {
 
   final AppPlan minimum;
 }
-
-/// The plan every user is on until purchases exist. Billing will replace
-/// this with the plan the store reports; until then, change it here to try
-/// a plan in any build, or switch plans from the debug panel in debug builds.
-const purchasedPlan = AppPlan.basic;

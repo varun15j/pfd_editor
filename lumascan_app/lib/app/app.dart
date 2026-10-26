@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../debug/debug_panel.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import 'preferences.dart';
+import 'purchases.dart';
 import 'shell.dart';
 import 'theme.dart';
 
@@ -34,6 +35,8 @@ class StartGate extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Starts listening to the app store and restores the plan at app start.
+    ref.listen(purchasesProvider, (_, _) {});
     final ready = ref.watch(appSettingsReadyProvider);
     if (!ready.hasValue) return const Scaffold(body: SizedBox.shrink());
     final seen = ref.watch(appSettingsProvider.select((s) => s.onboardingSeen));

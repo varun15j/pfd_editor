@@ -9,6 +9,7 @@ import '../domain/models.dart';
 import '../domain/plan.dart';
 import '../domain/ui_prefs.dart';
 import 'providers.dart';
+import 'purchases.dart';
 
 final appSettingsStoreProvider = Provider<AppSettingsStore>((ref) => AppSettingsStore(ref.watch(pageStoreProvider)));
 
@@ -122,11 +123,12 @@ class UiPrefsController extends Notifier<UiPrefs> {
   }
 }
 
-/// The plan the app behaves as: the real one, or in debug builds the one
-/// picked in the debug panel.
+/// The plan the app behaves as: the one paid for in the store
+/// ([purchasedPlanProvider]), or in debug builds the one picked in the debug
+/// panel.
 final planProvider = Provider<AppPlan>((ref) {
   final picked = kDebugMode ? ref.watch(appSettingsProvider.select((s) => s.debugPlan)) : null;
-  return picked ?? purchasedPlan;
+  return picked ?? ref.watch(purchasedPlanProvider);
 });
 
 /// Whether the current plan includes [feature].

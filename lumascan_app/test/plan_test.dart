@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
+import 'package:lumascan/app/purchases.dart';
 import 'package:lumascan/data/photo_import_services.dart';
 import 'package:lumascan/debug/plan_switcher_tile.dart';
 import 'package:lumascan/domain/app_settings.dart';
 import 'package:lumascan/domain/plan.dart';
+import 'package:lumascan/domain/purchases.dart';
 
 import 'support/memory_stores.dart';
 
@@ -17,10 +19,6 @@ void main() {
     expect(AppPlan.basic.includes(PlanFeature.smartScan), isFalse);
     expect(AppPlan.pro.includes(PlanFeature.smartScan), isTrue);
     expect(AppPlan.gold.includes(PlanFeature.smartScan), isTrue, reason: 'Gold has everything Pro has');
-  });
-
-  test('until purchases exist, everyone is on Basic', () {
-    expect(purchasedPlan, AppPlan.basic);
   });
 
   test('the debug plan is saved with the settings, and an unknown one is ignored', () {
@@ -35,12 +33,18 @@ void main() {
     late ProviderContainer container;
 
     setUp(() {
-      container = ProviderContainer(overrides: [appSettingsStoreProvider.overrideWithValue(MemoryAppSettingsStore())]);
+      container = ProviderContainer(
+        overrides: [
+          appSettingsStoreProvider.overrideWithValue(MemoryAppSettingsStore()),
+          purchaseServiceProvider.overrideWithValue(NoStorePurchaseService()),
+          planCacheStoreProvider.overrideWithValue(MemoryPlanCacheStore()),
+        ],
+      );
       addTearDown(container.dispose);
     });
 
     test('follows the real plan until a debug plan is picked', () {
-      expect(container.read(planProvider), purchasedPlan);
+      expect(container.read(planProvider), AppPlan.basic, reason: 'nothing bought');
       expect(container.read(planIncludesProvider(PlanFeature.smartScan)), isFalse);
 
       container.read(appSettingsProvider.notifier).setDebugPlan(AppPlan.pro);
@@ -48,7 +52,7 @@ void main() {
       expect(container.read(planIncludesProvider(PlanFeature.smartScan)), isTrue);
 
       container.read(appSettingsProvider.notifier).setDebugPlan(null);
-      expect(container.read(planProvider), purchasedPlan);
+      expect(container.read(planProvider), AppPlan.basic, reason: 'nothing bought');
     });
   });
 
