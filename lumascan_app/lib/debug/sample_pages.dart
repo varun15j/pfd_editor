@@ -107,8 +107,42 @@ const edgeSamples = SampleSet(
   ],
 );
 
+/// Camera photos of a colour textbook (NCERT Class 6 Social Science) open on
+/// a wooden desk, in `sample_photos/colour_book/`, taken with the LumaScan
+/// camera on the CPH2661 (OnePlus) on 26 October 2026: the facing page in
+/// view, pens, a pencil case, a laptop, a hand or an arm over some pages,
+/// two blurred page turns.
+const colourBookSamples = SampleSet(
+  title: 'Add colour book pages',
+  subtitle: '22 photos of an open colour textbook, auto-cropped, for testing edge detection',
+  assets: [
+    'sample_photos/colour_book/01_letter_to_student.jpg',
+    'sample_photos/colour_book/02_your_journey.jpg',
+    'sample_photos/colour_book/03_page_turning_hand.jpg',
+    'sample_photos/colour_book/04_constitution_preamble.jpg',
+    'sample_photos/colour_book/05_textbook_team.jpg',
+    'sample_photos/colour_book/06_why_social_science.jpg',
+    'sample_photos/colour_book/07_city_photo.jpg',
+    'sample_photos/colour_book/08_cultural_heritage.jpg',
+    'sample_photos/colour_book/09_map_components.jpg',
+    'sample_photos/colour_book/10_map_symbols.jpg',
+    'sample_photos/colour_book/11_globe_chessboard.jpg',
+    'sample_photos/colour_book/12_globe_shadow.jpg',
+    'sample_photos/colour_book/13_globe_arm_over.jpg',
+    'sample_photos/colour_book/14_globe_longitudes.jpg',
+    'sample_photos/colour_book/15_globe_left_page.jpg',
+    'sample_photos/colour_book/16_globe_hand_blur.jpg',
+    'sample_photos/colour_book/17_festivals_photos.jpg',
+    'sample_photos/colour_book/18_ellora_caves.jpg',
+    'sample_photos/colour_book/19_ellora_think.jpg',
+    'sample_photos/colour_book/20_schools_of_thought.jpg',
+    'sample_photos/colour_book/21_great_bath.jpg',
+    'sample_photos/colour_book/22_india_bharat_chapter.jpg',
+  ],
+);
+
 /// Every bundled set, in the order they are offered.
-const sampleSets = [mathSamples, bookSamples, oddsBookSamples, edgeSamples];
+const sampleSets = [mathSamples, bookSamples, oddsBookSamples, edgeSamples, colourBookSamples];
 
 /// The math revision photos (the first set).
 final samplePageAssets = mathSamples.assets;

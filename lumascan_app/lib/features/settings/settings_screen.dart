@@ -136,6 +136,7 @@ class SettingsScreen extends ConsumerWidget {
             const SamplePagesTile(set: bookSamples, contentPadding: EdgeInsets.zero),
             const SamplePagesTile(set: oddsBookSamples, contentPadding: EdgeInsets.zero),
             const SamplePagesTile(set: edgeSamples, contentPadding: EdgeInsets.zero),
+            const SamplePagesTile(set: colourBookSamples, contentPadding: EdgeInsets.zero),
           ],
           const SizedBox(height: Space.xl),
           const AboutSection(),

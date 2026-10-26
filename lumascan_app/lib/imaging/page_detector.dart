@@ -64,7 +64,9 @@ CropQuad? detectPageQuad(RgbImage src, {int workSize = 320, double minArea = 0.1
     ..._outlines(work.paperMask(), w, h, central: smart ? const [false, true] : const [false]),
     if (smart) ..._outlines(work.seededMask(), w, h, central: const [true]),
     if (smart) ..._outlines(work.backgroundMask(), w, h, central: const [true]),
-    if (smart) ..._outlines(work.edgeMask(), w, h, central: const [true]),
+    // Edge outlines can close round a hand or a photo on the page too;
+    // only page-like ones, with corners near square, are kept.
+    if (smart) ..._outlines(work.edgeMask(), w, h, central: const [true]).where((q) => _squareCorners(q, src)),
   }..removeWhere((q) => !q.isValid(minArea: minArea) || !_pageShaped(q, src));
   if (candidates.isEmpty) return null;
   final CropQuad quad;
@@ -116,6 +118,26 @@ bool _pageShaped(CropQuad q, RgbImage src) {
   final across = (dist(q.tl, q.tr) + dist(q.bl, q.br)) / 2;
   final down = (dist(q.tl, q.bl) + dist(q.tr, q.br)) / 2;
   return math.min(across, down) >= _minPageAspect * math.max(across, down);
+}
+
+/// A corner of an edge outline may be at most this far from square, as the
+/// cosine of its angle (0.6: between 53 and 127 degrees).
+const _maxCornerCos = 0.6;
+
+/// Whether every corner of [q] is near square, as a rectangle seen at an
+/// angle keeps them. Open-source scanners reject outlines by the spread of
+/// their angles the same way. Only edge outlines are held to it: a page
+/// running off the frame, found by the other masks, can have a cut corner.
+bool _squareCorners(CropQuad q, RgbImage src) {
+  final p = q.points;
+  for (var k = 0; k < 4; k++) {
+    final a = p[(k + 3) % 4], b = p[k], c = p[(k + 1) % 4];
+    final ux = (a.x - b.x) * src.width, uy = (a.y - b.y) * src.height;
+    final vx = (c.x - b.x) * src.width, vy = (c.y - b.y) * src.height;
+    final cos = (ux * vx + uy * vy) / math.max(1e-9, math.sqrt((ux * ux + uy * uy) * (vx * vx + vy * vy)));
+    if (cos.abs() > _maxCornerCos) return false;
+  }
+  return true;
 }
 
 /// Paper is close to grey; skin, wood and coloured covers are not.
