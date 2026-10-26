@@ -86,7 +86,11 @@ class PluginBatchCamera implements BatchCamera {
             height: image.height,
             bytesPerRow: plane.bytesPerRow,
             bytes: plane.bytes,
-            pixels: image.format.group == ImageFormatGroup.bgra8888 ? FramePixels.bgra : FramePixels.luma,
+            pixels: switch (image.format.group) {
+              ImageFormatGroup.bgra8888 => FramePixels.bgra,
+              ImageFormatGroup.nv21 => FramePixels.nv21,
+              _ => FramePixels.luma,
+            },
             rotation: rotation,
           ),
         );

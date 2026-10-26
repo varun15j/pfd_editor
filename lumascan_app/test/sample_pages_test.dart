@@ -43,7 +43,7 @@ void main() {
 
   test('the 20 book photos are bundled at 1080 x 1920 and copy for import', () async {
     expect(bookSamples.assets, hasLength(20));
-    expect(sampleSets, [mathSamples, bookSamples, oddsBookSamples]);
+    expect(sampleSets, [mathSamples, bookSamples, oddsBookSamples, edgeSamples]);
     for (final asset in bookSamples.assets) {
       final photo = RgbImage.decode((await rootBundle.load(asset)).buffer.asUint8List());
       expect((photo.width, photo.height), (1080, 1920), reason: asset);

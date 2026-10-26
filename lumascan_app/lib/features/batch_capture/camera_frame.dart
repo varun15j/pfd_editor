@@ -19,13 +19,15 @@ enum FramePixels {
   /// which is what Android sends.
   luma,
 
+  /// Packed Android NV21: Y followed by interleaved V,U at half resolution.
+  nv21,
+
   /// Four bytes per pixel, blue first: what iOS sends.
   bgra,
 }
 
-/// One preview frame, as the camera sends it. Only the brightness is used:
-/// page edges and QR codes both show in it, and it is the cheapest part of a
-/// frame to copy.
+/// One preview frame, as the camera sends it. Colour is sampled only at the
+/// small detection resolution; QR reading can still use the Y plane alone.
 @immutable
 class CameraFrame {
   const CameraFrame({
@@ -53,7 +55,7 @@ class CameraFrame {
   /// Brightness at full frame size, row by row with no padding, as NV21 and
   /// NV12 expect for their first plane.
   Uint8List luma() {
-    if (pixels == FramePixels.luma && bytesPerRow == width) return bytes.sublist(0, width * height);
+    if (pixels != FramePixels.bgra && bytesPerRow == width) return bytes.sublist(0, width * height);
     final out = Uint8List(width * height);
     for (var y = 0; y < height; y++) {
       final row = y * bytesPerRow;
@@ -65,23 +67,33 @@ class CameraFrame {
   }
 
   int _lumaAt(int row, int x) {
-    if (pixels == FramePixels.luma) return bytes[row + x];
+    if (pixels != FramePixels.bgra) return bytes[row + x];
     final i = row + x * 4;
     return (bytes[i] * 29 + bytes[i + 1] * 150 + bytes[i + 2] * 77) >> 8;
   }
 
   /// A small grey copy, upright, at most [size] pixels on its long side.
   RgbImage uprightGray({int size = 200}) {
+    return _upright(size: size, colour: false);
+  }
+
+  /// Retains chroma for equal-brightness page/background boundaries. Converts
+  /// only sampled pixels, never a full camera-sized RGB allocation.
+  RgbImage uprightRgb({int size = 200}) => _upright(size: size, colour: true);
+
+  RgbImage _upright({required int size, required bool colour}) {
     final scale = size / math.max(width, height);
-    final w = math.max(8, (width * math.min(1.0, scale)).round());
-    final h = math.max(8, (height * math.min(1.0, scale)).round());
+    final w = math.max(1, (width * math.min(1.0, scale)).round());
+    final h = math.max(1, (height * math.min(1.0, scale)).round());
     final turned = rotation % 180 != 0;
     final out = RgbImage(turned ? h : w, turned ? w : h);
     final fx = width / w, fy = height / h;
     for (var y = 0; y < h; y++) {
-      final row = (y * fy).floor() * bytesPerRow;
+      final sy = (y * fy).floor();
+      final row = sy * bytesPerRow;
       for (var x = 0; x < w; x++) {
-        final v = _lumaAt(row, (x * fx).floor());
+        final sx = (x * fx).floor();
+        final v = _lumaAt(row, sx);
         final (ox, oy) = switch (rotation % 360) {
           90 => (h - 1 - y, x),
           180 => (w - 1 - x, h - 1 - y),
@@ -89,9 +101,27 @@ class CameraFrame {
           _ => (x, y),
         };
         final o = (oy * out.width + ox) * 3;
-        out.data[o] = v;
-        out.data[o + 1] = v;
-        out.data[o + 2] = v;
+        if (colour && pixels == FramePixels.bgra) {
+          final i = row + sx * 4;
+          out.data[o] = bytes[i + 2];
+          out.data[o + 1] = bytes[i + 1];
+          out.data[o + 2] = bytes[i];
+        } else if (colour && pixels == FramePixels.nv21) {
+          final uv = bytesPerRow * height + (sy ~/ 2) * bytesPerRow + (sx ~/ 2) * 2;
+          // Some camera backends expose Y only. Keep detection working if
+          // chroma is absent instead of reading past the supplied buffer.
+          if (uv + 1 < bytes.length) {
+            final cr = bytes[uv] - 128, cb = bytes[uv + 1] - 128;
+            final yy = math.max(0, v - 16) * 298;
+            out.data[o] = ((yy + 409 * cr + 128) >> 8).clamp(0, 255);
+            out.data[o + 1] = ((yy - 100 * cb - 208 * cr + 128) >> 8).clamp(0, 255);
+            out.data[o + 2] = ((yy + 516 * cb + 128) >> 8).clamp(0, 255);
+          } else {
+            out.data[o] = out.data[o + 1] = out.data[o + 2] = v;
+          }
+        } else {
+          out.data[o] = out.data[o + 1] = out.data[o + 2] = v;
+        }
       }
     }
     return out;
@@ -119,8 +149,10 @@ class FrameAnalysis {
 
 /// Pure Dart, so it can run in an isolate.
 FrameAnalysis analyzeFrame(CameraFrame frame, {bool smart = true}) {
-  final gray = frame.uprightGray();
-  final quad = detectPageQuad(gray, workSize: 160, minArea: 0.2, smart: smart);
+  final preview = smart ? frame.uprightRgb() : frame.uprightGray();
+  final quad = detectPageQuad(preview, workSize: 160, minArea: 0.2, smart: smart);
+  // Tracking signatures and the low-light gate retain their original Y-plane semantics.
+  final gray = smart ? frame.uprightGray() : preview;
   return FrameAnalysis(
     quad: quad,
     signature: quad == null ? null : pageSignature(gray, quad),

@@ -9,9 +9,9 @@ import 'rgb_image.dart';
 /// no page-like region stands out.
 ///
 /// Pure Dart, so it runs the same in tests, in an isolate and on both
-/// platforms. On device the live scanner still comes from the native document
-/// scanner; this is for imported photos and as a starting quad for manual
-/// crop.
+/// platforms. Used by the custom camera preview, imported photos and as a
+/// starting quad for manual crop. The optional platform scanner has its own
+/// native detector.
 ///
 /// The photo is shrunk to [workSize] on its long edge, then:
 /// 1. Two masks of what may be the page are made: pixels that look like
@@ -572,8 +572,18 @@ List<(double, double)> _convexHull(List<(double, double)> points) {
 /// (paper inside) - [_backgroundPenalty] x (background inside). Pulls a
 /// corner off a neighbouring page or a strip of floor the hull bridged over.
 List<(double, double)> _refine(Uint8List mask, int w, int h, List<(double, double)> start) {
+  // Every trial uses the same binary mask. Row prefix sums make each filled
+  // scanline an O(1) query instead of rescanning all of its pixels for every
+  // corner move. The integer objective and tie-breaking remain identical.
+  final rows = Uint32List((w + 1) * h);
+  for (var y = 0; y < h; y++) {
+    final row = y * (w + 1);
+    for (var x = 0; x < w; x++) {
+      rows[row + x + 1] = rows[row + x] + (mask[y * w + x] == 1 ? 1 : 0);
+    }
+  }
   final q = [...start];
-  var best = _quadScore(mask, w, h, q);
+  var best = _quadScore(rows, w, h, q);
   for (var step = 8.0; step >= 1; step /= 2) {
     var improved = true;
     while (improved) {
@@ -584,7 +594,7 @@ List<(double, double)> _refine(Uint8List mask, int w, int h, List<(double, doubl
           final moved = ((p.$1 + dx * step).clamp(0.0, w - 1.0), (p.$2 + dy * step).clamp(0.0, h - 1.0));
           if (moved == p) continue;
           final trial = [...q]..[k] = moved;
-          final score = _quadScore(mask, w, h, trial);
+          final score = _quadScore(rows, w, h, trial);
           if (score > best) {
             best = score;
             q[k] = moved;
@@ -599,7 +609,7 @@ List<(double, double)> _refine(Uint8List mask, int w, int h, List<(double, doubl
 
 const _backgroundPenalty = 2;
 
-int _quadScore(Uint8List mask, int w, int h, List<(double, double)> q) {
+int _quadScore(Uint32List rows, int w, int h, List<(double, double)> q) {
   var minY = h, maxY = 0;
   for (final p in q) {
     minY = math.min(minY, p.$2.floor());
@@ -619,10 +629,11 @@ int _quadScore(Uint8List mask, int w, int h, List<(double, double)> q) {
       }
     }
     if (left > right) continue;
-    final row = y * w;
-    for (var x = math.max(0, left.ceil()); x <= math.min(w - 1, right.floor()); x++) {
-      score += mask[row + x] == 1 ? 1 : -_backgroundPenalty;
-    }
+    final first = math.max(0, left.ceil()), last = math.min(w - 1, right.floor());
+    if (first > last) continue;
+    final row = y * (w + 1);
+    final paper = rows[row + last + 1] - rows[row + first];
+    score += (1 + _backgroundPenalty) * paper - _backgroundPenalty * (last - first + 1);
   }
   return score;
 }
