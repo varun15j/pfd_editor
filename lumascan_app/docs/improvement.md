@@ -19,7 +19,7 @@ The five that matter most in India, where LumaScan can be better than every lega
 | --- | --- | --- | --- | --- |
 | 1 | ID card mode | Front and back of an Aadhaar, PAN or licence card captured one after the other and laid out on one A4 page, ready to print. | M | Basic (free) |
 | 2 | Compress to a target size | "Make this under 200 KB / 500 KB / 1 MB" for government portals, picking quality and resolution automatically and showing the real size. The pieces exist in `PdfShrinker`, which only has fixed quality levels. | M | Pro |
-| 3 | Hindi and Indian-language OCR | Devanagari, Tamil, Telugu, Bengali and the other ML Kit scripts, downloaded on demand. Today OCR is Latin script only. | M | Pro |
+| 3 | Hindi and Indian-language OCR | **In progress in PR #62** (ML Kit Devanagari plus Tesseract for other Indic scripts, offline). Listed here so it is not started twice. | M | Pro |
 | 4 | Lock a document and the app | A password on a saved PDF, plus fingerprint or face unlock for the app and for a locked folder. Genius Scan and Zoho both charge for this. | M | Pro |
 | 5 | Split a PDF, and extract pages | Split one PDF into several by page range, or pull pages out into a new file. Merging exists; splitting does not. | M | Pro |
 
@@ -57,6 +57,7 @@ Worth saying in the store listing: scanning with auto crop and filters, batch ca
 ## Notes on choosing
 
 - The study's view was that the free tier must stay watermark-free and ad-free, because every legal rival in India is.
+- #3 is already being built in PR #62, so the open picks among the first five are #1, #2, #4 and #5.
 - #1 to #5 are all on-device work with no running cost, so they fit Pro cleanly and can ship without the backend.
 - #12, #14 and #17 all wait on the P1 backend, so they belong in one later release rather than one at a time.
 - #13, #10, #11 and #21 cost money per use, so they need Gold and a usage cap.
