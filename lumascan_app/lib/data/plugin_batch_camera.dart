@@ -58,7 +58,8 @@ class PluginBatchCamera implements BatchCamera {
       _preset(_resolution),
       enableAudio: false,
       // The preview frames' format; photos are JPEG either way. NV21 starts
-      // with the brightness plane, and BGRA is what iOS streams natively.
+      // with the brightness plane and then has the colour; BGRA is what iOS
+      // streams natively.
       imageFormatGroup: Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888,
     );
     try {
@@ -86,7 +87,12 @@ class PluginBatchCamera implements BatchCamera {
             height: image.height,
             bytesPerRow: plane.bytesPerRow,
             bytes: plane.bytes,
-            pixels: image.format.group == ImageFormatGroup.bgra8888 ? FramePixels.bgra : FramePixels.luma,
+            pixels: switch (image.format.group) {
+              ImageFormatGroup.bgra8888 => FramePixels.bgra,
+              // One plane, brightness then colour (camera_android_camerax).
+              ImageFormatGroup.nv21 when image.planes.length == 1 => FramePixels.nv21,
+              _ => FramePixels.luma,
+            },
             rotation: rotation,
           ),
         );

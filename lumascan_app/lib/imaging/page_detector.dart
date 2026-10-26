@@ -25,6 +25,12 @@ import 'rgb_image.dart';
 ///    (a white page with a coloured header, a pink and blue form). This mask
 ///    takes in every band, where the other two find only the white band or
 ///    the band in the middle.
+///    A fourth is what lies inside closed outlines of strong edges, as
+///    open-source OpenCV document scanners find a page: the print is wiped
+///    out by a grey closing, edges are traced with Canny-style hysteresis,
+///    and whatever the frame border cannot reach without crossing an edge is
+///    inside. It finds a page under a shadow or on a surface of its own
+///    shade, where the other three split it or lose it.
 /// 2. Each mask is eroded to cut thin bridges to other pages and fingers,
 ///    one region is kept (the largest, or the one nearest the middle), and
 ///    it is grown back.
@@ -58,6 +64,7 @@ CropQuad? detectPageQuad(RgbImage src, {int workSize = 320, double minArea = 0.1
     ..._outlines(work.paperMask(), w, h, central: smart ? const [false, true] : const [false]),
     if (smart) ..._outlines(work.seededMask(), w, h, central: const [true]),
     if (smart) ..._outlines(work.backgroundMask(), w, h, central: const [true]),
+    if (smart) ..._outlines(work.edgeMask(), w, h, central: const [true]),
   }..removeWhere((q) => !q.isValid(minArea: minArea) || !_pageShaped(q, src));
   if (candidates.isEmpty) return null;
   final CropQuad quad;
@@ -274,6 +281,101 @@ class _Work {
     return _close(mask, w, h);
   }
 
+  /// What lies inside closed outlines of strong edges, the way open-source
+  /// OpenCV document scanners find a page (a grey closing that wipes out
+  /// the print, then edges, then the outermost closed contours), without
+  /// OpenCV. Brightness alone misses a page under a shadow or on a surface
+  /// of its own brightness; the step in brightness or colour at its edge is
+  /// still there. Null when the photo has too few edges to close anything.
+  Uint8List? edgeMask() {
+    // Close the brightness: print is dark and thin on light paper, so a
+    // maximum then a minimum over a window wider than a text line wipes it
+    // out, while the page's own edge stays where it is.
+    final r = math.max(2, (math.min(w, h) / _printRadiusShare).round());
+    final closed = _minFilter(_maxFilter(luma, w, h, r), w, h, r);
+    // Colour is read smoothed, so it gives the page's hue, not its pictures.
+    final rg = _boxBlur(redGreen, w, h, 2), yb = _boxBlur(yellowBlue, w, h, 2);
+    final strength = Uint8List(w * h);
+    for (var y = 1; y < h - 1; y++) {
+      for (var x = 1; x < w - 1; x++) {
+        final i = y * w + x;
+        final g = _sobel(closed, i, w) + _edgeColourWeight * (_sobel(rg, i, w) + _sobel(yb, i, w));
+        strength[i] = g.round().clamp(0, 255);
+      }
+    }
+    // Hysteresis, as Canny does: a strong edge pixel starts an edge, which
+    // then runs on through weaker pixels, so a page edge that fades where
+    // the page and the surface are nearly the same shade stays closed.
+    final cut = math.max(_minEdgeStrength, _otsu(strength));
+    final low = math.max(_minEdgeStrength ~/ 2, cut ~/ 2);
+    var edges = Uint8List(w * h);
+    final trail = Int32List(w * h);
+    var n = 0;
+    for (var i = 0; i < w * h; i++) {
+      if (strength[i] > cut) {
+        edges[i] = 1;
+        trail[n++] = i;
+      }
+    }
+    while (n > 0) {
+      final i = trail[--n];
+      final x = i % w, y = i ~/ w;
+      for (var dy = -1; dy <= 1; dy++) {
+        for (var dx = -1; dx <= 1; dx++) {
+          final xx = x + dx, yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+          final j = yy * w + xx;
+          if (edges[j] == 0 && strength[j] > low) {
+            edges[j] = 1;
+            trail[n++] = j;
+          }
+        }
+      }
+    }
+    // Bridge small breaks in an edge, such as a finger or a fold across it.
+    edges = _dilate(_dilate(edges, w, h), w, h);
+    // Everything the frame border reaches without crossing an edge is
+    // outside; the rest is inside some closed outline.
+    final outside = Uint8List(w * h);
+    final stack = Int32List(w * h);
+    var top = 0;
+    void push(int i) {
+      if (edges[i] == 0 && outside[i] == 0) {
+        outside[i] = 1;
+        stack[top++] = i;
+      }
+    }
+
+    for (var x = 0; x < w; x++) {
+      push(x);
+      push((h - 1) * w + x);
+    }
+    for (var y = 0; y < h; y++) {
+      push(y * w);
+      push(y * w + w - 1);
+    }
+    while (top > 0) {
+      final i = stack[--top];
+      final x = i % w, y = i ~/ w;
+      if (x > 0) push(i - 1);
+      if (x < w - 1) push(i + 1);
+      if (y > 0) push(i - w);
+      if (y < h - 1) push(i + w);
+    }
+    var inside = Uint8List(w * h);
+    var count = 0;
+    for (var i = 0; i < w * h; i++) {
+      if (outside[i] == 0) {
+        inside[i] = 1;
+        count++;
+      }
+    }
+    if (count < w * h * 0.05) return null;
+    // Undo the bridging, so the outline sits on the edge, not beyond it.
+    inside = _erode(_erode(inside, w, h), w, h);
+    return inside;
+  }
+
   /// How much [quad] looks like the page being scanned: strong contrast
   /// across its edges (paper on one side, background on the other), close
   /// to the middle of the frame, and a page-like share of it.
@@ -384,6 +486,83 @@ const _minEdge = 6.0;
 /// frame is common, so it is neither a strong nor a missing edge.
 const _borderEdge = 30.0;
 
+/// Print radius as a share of the short side of the work image: wider than
+/// a line of text at the distance pages are photographed from.
+const _printRadiusShare = 60;
+
+/// Weight of colour steps, against brightness steps, in the edge strength.
+const _edgeColourWeight = 1.5;
+
+/// Edge strength below which nothing counts as an edge, however plain the
+/// photo.
+const _minEdgeStrength = 12;
+
+Uint8List _maxFilter(Uint8List v, int w, int h, int r) => _rankFilter(v, w, h, r, max: true);
+Uint8List _minFilter(Uint8List v, int w, int h, int r) => _rankFilter(v, w, h, r, max: false);
+
+/// Maximum or minimum over a (2r+1) square window, as a row pass and a
+/// column pass.
+Uint8List _rankFilter(Uint8List v, int w, int h, int r, {required bool max}) {
+  int pick(int a, int b) => max ? (a > b ? a : b) : (a < b ? a : b);
+  final rows = Uint8List(w * h), out = Uint8List(w * h);
+  for (var y = 0; y < h; y++) {
+    for (var x = 0; x < w; x++) {
+      var m = v[y * w + x];
+      for (var k = math.max(0, x - r); k <= math.min(w - 1, x + r); k++) {
+        m = pick(m, v[y * w + k]);
+      }
+      rows[y * w + x] = m;
+    }
+  }
+  for (var y = 0; y < h; y++) {
+    for (var x = 0; x < w; x++) {
+      var m = rows[y * w + x];
+      for (var k = math.max(0, y - r); k <= math.min(h - 1, y + r); k++) {
+        m = pick(m, rows[k * w + x]);
+      }
+      out[y * w + x] = m;
+    }
+  }
+  return out;
+}
+
+/// Gradient size at pixel [i] (not on the border) of [v], a row-major image
+/// [w] wide, by the Sobel operator, scaled to the step's height.
+double _sobel(List<int> v, int i, int w) {
+  final a = v[i - w - 1], b = v[i - w], c = v[i - w + 1];
+  final d = v[i - 1], f = v[i + 1];
+  final g = v[i + w - 1], k = v[i + w], l = v[i + w + 1];
+  final gx = c + 2 * f + l - a - 2 * d - g;
+  final gy = g + 2 * k + l - a - 2 * b - c;
+  return math.sqrt((gx * gx + gy * gy).toDouble()) / 4;
+}
+
+/// Mean over a (2r+1) square window, as a row pass and a column pass.
+Int16List _boxBlur(Int16List v, int w, int h, int r) {
+  final rows = Int32List(w * h), out = Int16List(w * h);
+  for (var y = 0; y < h; y++) {
+    for (var x = 0; x < w; x++) {
+      var sum = 0;
+      final x0 = math.max(0, x - r), x1 = math.min(w - 1, x + r);
+      for (var k = x0; k <= x1; k++) {
+        sum += v[y * w + k];
+      }
+      rows[y * w + x] = sum * 64 ~/ (x1 - x0 + 1);
+    }
+  }
+  for (var y = 0; y < h; y++) {
+    final y0 = math.max(0, y - r), y1 = math.min(h - 1, y + r);
+    for (var x = 0; x < w; x++) {
+      var sum = 0;
+      for (var k = y0; k <= y1; k++) {
+        sum += rows[k * w + x];
+      }
+      out[y * w + x] = sum ~/ ((y1 - y0 + 1) * 64);
+    }
+  }
+  return out;
+}
+
 /// Fills print and small gaps in a mask: two steps of dilation, then two of
 /// erosion.
 Uint8List _close(Uint8List m, int w, int h) {
@@ -430,28 +609,23 @@ Uint8List _dilate(Uint8List m, int w, int h) => _morph(m, w, h, erode: false);
 /// One step of 3x3 erosion or dilation. Pixels outside the image count as
 /// paper when eroding, so a page cut off by the frame keeps its edge.
 Uint8List _morph(Uint8List m, int w, int h, {required bool erode}) {
-  final out = Uint8List(w * h);
+  // A 3x3 square is a 3-wide row pass then a 3-tall column pass.
+  final keep = erode ? 0 : 1;
+  final rows = Uint8List(w * h), out = Uint8List(w * h);
   for (var y = 0; y < h; y++) {
+    final row = y * w;
     for (var x = 0; x < w; x++) {
-      var hit = erode ? 1 : 0;
-      for (var dy = -1; dy <= 1 && hit == (erode ? 1 : 0); dy++) {
-        final yy = y + dy;
-        if (yy < 0 || yy >= h) continue;
-        for (var dx = -1; dx <= 1; dx++) {
-          final xx = x + dx;
-          if (xx < 0 || xx >= w) continue;
-          final v = m[yy * w + xx];
-          if (erode && v == 0) {
-            hit = 0;
-            break;
-          }
-          if (!erode && v == 1) {
-            hit = 1;
-            break;
-          }
-        }
-      }
-      out[y * w + x] = hit;
+      final i = row + x;
+      rows[i] = (m[i] == keep || (x > 0 && m[i - 1] == keep) || (x < w - 1 && m[i + 1] == keep)) ? keep : 1 - keep;
+    }
+  }
+  for (var y = 0; y < h; y++) {
+    final row = y * w;
+    for (var x = 0; x < w; x++) {
+      final i = row + x;
+      out[i] = (rows[i] == keep || (y > 0 && rows[i - w] == keep) || (y < h - 1 && rows[i + w] == keep))
+          ? keep
+          : 1 - keep;
     }
   }
   return out;
@@ -573,7 +747,8 @@ List<(double, double)> _convexHull(List<(double, double)> points) {
 /// corner off a neighbouring page or a strip of floor the hull bridged over.
 List<(double, double)> _refine(Uint8List mask, int w, int h, List<(double, double)> start) {
   final q = [...start];
-  var best = _quadScore(mask, w, h, q);
+  final sums = _rowSums(mask, w, h);
+  var best = _quadScore(sums, w, h, q);
   for (var step = 8.0; step >= 1; step /= 2) {
     var improved = true;
     while (improved) {
@@ -584,7 +759,7 @@ List<(double, double)> _refine(Uint8List mask, int w, int h, List<(double, doubl
           final moved = ((p.$1 + dx * step).clamp(0.0, w - 1.0), (p.$2 + dy * step).clamp(0.0, h - 1.0));
           if (moved == p) continue;
           final trial = [...q]..[k] = moved;
-          final score = _quadScore(mask, w, h, trial);
+          final score = _quadScore(sums, w, h, trial);
           if (score > best) {
             best = score;
             q[k] = moved;
@@ -599,7 +774,25 @@ List<(double, double)> _refine(Uint8List mask, int w, int h, List<(double, doubl
 
 const _backgroundPenalty = 2;
 
-int _quadScore(Uint8List mask, int w, int h, List<(double, double)> q) {
+/// Running sums along each row of the mask's score (1 for paper, minus
+/// [_backgroundPenalty] for background), w + 1 per row, so the score of any
+/// run of a row is one subtraction.
+Int32List _rowSums(Uint8List mask, int w, int h) {
+  final sums = Int32List((w + 1) * h);
+  for (var y = 0; y < h; y++) {
+    var run = 0;
+    final row = y * w, at = y * (w + 1);
+    for (var x = 0; x < w; x++) {
+      run += mask[row + x] == 1 ? 1 : -_backgroundPenalty;
+      sums[at + x + 1] = run;
+    }
+  }
+  return sums;
+}
+
+/// Paper inside quad [q] less [_backgroundPenalty] times the background
+/// inside it, from the [_rowSums] of the mask.
+int _quadScore(Int32List sums, int w, int h, List<(double, double)> q) {
   var minY = h, maxY = 0;
   for (final p in q) {
     minY = math.min(minY, p.$2.floor());
@@ -618,11 +811,10 @@ int _quadScore(Uint8List mask, int w, int h, List<(double, double)> q) {
         right = math.max(right, x2);
       }
     }
-    if (left > right) continue;
-    final row = y * w;
-    for (var x = math.max(0, left.ceil()); x <= math.min(w - 1, right.floor()); x++) {
-      score += mask[row + x] == 1 ? 1 : -_backgroundPenalty;
-    }
+    final x0 = math.max(0, left.ceil()), x1 = math.min(w - 1, right.floor());
+    if (left > right || x0 > x1) continue;
+    final at = y * (w + 1);
+    score += sums[at + x1 + 1] - sums[at + x0];
   }
   return score;
 }

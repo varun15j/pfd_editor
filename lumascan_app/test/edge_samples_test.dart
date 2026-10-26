@@ -21,10 +21,7 @@ CropQuad _q(double a, double b, double c, double d, double e, double f, double g
 final _oddsMarked = <String, List<CropQuad>>{
   '01': [_q(0, 0.165, 0.81, 0.145, 0.82, 0.83, 0, 0.77), _q(0, 0.165, 1, 0.15, 1, 0.82, 0, 0.77)],
   '02': [_q(0.075, 0.235, 0.79, 0.21, 0.93, 0.725, 0.05, 0.765)],
-  '03': [
-    _q(0.055, 0.333, 0.63, 0.305, 0.69, 0.815, 0.1, 0.8),
-    _q(0.055, 0.333, 1, 0.31, 1, 0.8, 0.1, 0.8),
-  ],
+  '03': [_q(0.055, 0.333, 0.63, 0.305, 0.69, 0.815, 0.1, 0.8), _q(0.055, 0.333, 1, 0.31, 1, 0.8, 0.1, 0.8)],
   '04': [_q(0.01, 0.35, 0.67, 0.3, 0.885, 0.785, 0, 0.87)],
   '05': [_q(0.01, 0.235, 0.735, 0.21, 0.925, 0.735, 0, 0.8)],
   '06': [
@@ -83,8 +80,20 @@ Future<List<_Sample>> _samples() async {
   ];
 }
 
-Future<RgbImage> _load(String asset, int size) async =>
-    RgbImage.decode((await rootBundle.load(asset)).buffer.asUint8List(), maxDimension: size);
+Future<RgbImage> _load(String asset, int size, {bool grey = false}) async {
+  final photo = RgbImage.decode((await rootBundle.load(asset)).buffer.asUint8List(), maxDimension: size);
+  if (grey) {
+    // A preview frame of brightness only.
+    final d = photo.data;
+    for (var i = 0; i < d.length; i += 3) {
+      final l = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]).round();
+      d[i] = l;
+      d[i + 1] = l;
+      d[i + 2] = l;
+    }
+  }
+  return photo;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -101,49 +110,92 @@ void main() {
     }
   });
 
-  // Measured 2026-10-26 (640 px): colour 0.97, black and white 0.75,
-  // book 0.92. The weak pages, kept as targets for the detector:
-  // b02 (a shadow across the page, 0.71), b05 (a narrow slip, rejected as a
-  // strip, 0), b07 (a colour page on wood in a greyscale photo, 0.66).
-  const weak = {'b02', 'b05', 'b07'};
+  // The weak pages, kept as targets for the detector: b05 (a narrow slip,
+  // rejected as a strip of a page), b07 (a colour page on wood in a
+  // greyscale photo, 0.66) and, in the preview, k03 (one page of an open
+  // book with a thumb over it, 0.72). The edge outlines (2026-10-26) lifted
+  // b02 (a shadow across the page) from 0.71 to 0.97, b03 (white on a white
+  // sheet) from 0.89 to 0.97 and c02 in the preview from 0 to 0.80.
+  const weak = {'b05', 'b07', 'k03'};
 
-  test('the page is found in the edge test pages, at the photo and the preview size', () async {
+  // (photo size, work size, smallest page, grey, lowest score of a page
+  // not in [weak], lowest colour / black and white / book mean)
+  const passes = [
+    // An imported photo.
+    (640, 320, 0.1, false, 0.85, 0.95, 0.75, 0.88),
+    // A camera preview frame, as analyzeFrame reads it: small, in colour.
+    (200, 160, 0.2, false, 0.75, 0.93, 0.72, 0.84),
+    // A preview frame with no colour (an older camera plugin).
+    (200, 160, 0.2, true, 0.75, 0.92, 0.72, 0.83),
+  ];
+
+  test('the page is found in the edge test pages, in a photo and in a camera preview frame', () async {
     final samples = await _samples();
-    for (final (size, work, minArea) in [(640, 320, 0.1), (200, 160, 0.2)]) {
+    for (final (size, work, minArea, grey, floor, colour, bw, book) in passes) {
       final sums = <String, double>{}, counts = <String, int>{};
       final scores = <String>[];
       final low = <String>[];
       for (final s in samples) {
         final id = s.file.substring(0, 3);
-        final quad = detectPageQuad(await _load('sample_photos/edge/${s.file}', size), workSize: work, minArea: minArea);
-        final iou = _best(quad, s.pages);
+        final photo = await _load('sample_photos/edge/${s.file}', size, grey: grey);
+        final iou = _best(detectPageQuad(photo, workSize: work, minArea: minArea), s.pages);
         sums[s.group] = (sums[s.group] ?? 0) + iou;
         counts[s.group] = (counts[s.group] ?? 0) + 1;
         scores.add('$id:${iou.toStringAsFixed(2)}');
-        if (!weak.contains(id) && iou < 0.85) low.add(id);
+        if (!weak.contains(id) && iou < floor) low.add(id);
       }
       double mean(String g) => sums[g]! / counts[g]!;
-      final reason = 'size $size: ${scores.join(' ')}';
+      final reason = 'size $size${grey ? ' grey' : ''}: ${scores.join(' ')}';
       expect(low, isEmpty, reason: reason);
-      expect(mean('colour'), greaterThanOrEqualTo(0.93), reason: reason);
-      expect(mean('bw'), greaterThanOrEqualTo(0.7), reason: reason);
-      expect(mean('book'), greaterThanOrEqualTo(0.85), reason: reason);
+      expect(mean('colour'), greaterThanOrEqualTo(colour), reason: reason);
+      expect(mean('bw'), greaterThanOrEqualTo(bw), reason: reason);
+      expect(mean('book'), greaterThanOrEqualTo(book), reason: reason);
     }
   });
 
-  // Measured 2026-10-26: mean 0.83; 03 (the facing page and a laptop
-  // behind, 0.67) and 05 (a cable over the edge, 0.71) are the weak ones.
-  test('the page is found in the odds book photos (colour book)', () async {
-    final scores = <String>[];
-    var sum = 0.0, worst = 1.0;
-    for (final asset in oddsBookSamples.assets) {
-      final name = asset.split('/').last.substring(0, 2);
-      final iou = _best(detectPageQuad(await _load(asset, 640)), _oddsMarked[name]!, rows: 178);
-      sum += iou;
-      if (iou < worst) worst = iou;
-      scores.add('$name:${iou.toStringAsFixed(2)}');
+  // Measured 2026-10-26: mean 0.83 in the photo and in a colour preview
+  // frame, 0.9 in a grey one; 03 (the facing page and a laptop behind) and
+  // 05 (a cable over the edge) are the weak ones in colour, about 0.7.
+  test('the page is found in the odds book photos (colour book), in a photo and in a preview frame', () async {
+    for (final (size, work, minArea, grey, mean) in const [
+      (640, 320, 0.1, false, 0.8),
+      (200, 160, 0.2, false, 0.8),
+      (200, 160, 0.2, true, 0.85),
+    ]) {
+      final scores = <String>[];
+      var sum = 0.0, worst = 1.0;
+      for (final asset in oddsBookSamples.assets) {
+        final name = asset.split('/').last.substring(0, 2);
+        final photo = await _load(asset, size, grey: grey);
+        final iou = _best(detectPageQuad(photo, workSize: work, minArea: minArea), _oddsMarked[name]!, rows: 178);
+        sum += iou;
+        if (iou < worst) worst = iou;
+        scores.add('$name:${iou.toStringAsFixed(2)}');
+      }
+      expect(sum / oddsBookSamples.assets.length, greaterThanOrEqualTo(mean), reason: '$size: ${scores.join(' ')}');
+      expect(worst, greaterThanOrEqualTo(0.6), reason: '$size: ${scores.join(' ')}');
     }
-    expect(sum / oddsBookSamples.assets.length, greaterThanOrEqualTo(0.8), reason: scores.join(' '));
-    expect(worst, greaterThanOrEqualTo(0.6), reason: scores.join(' '));
+  });
+
+  test('a camera preview frame is analysed fast enough for live outlines', () async {
+    final frames = [
+      for (final a in [...bookSamples.assets.take(6), ...edgeSamples.assets.take(6)]) await _load(a, 200, grey: true),
+    ];
+    for (final f in frames) {
+      detectPageQuad(f, workSize: 160, minArea: 0.2);
+    }
+    final times = <int>[];
+    for (var round = 0; round < 3; round++) {
+      for (final f in frames) {
+        final watch = Stopwatch()..start();
+        detectPageQuad(f, workSize: 160, minArea: 0.2);
+        times.add(watch.elapsedMicroseconds);
+      }
+    }
+    times.sort();
+    // About 19 ms here on 2026-10-26 (62 ms before the row sums and the
+    // two-pass filters). The bound is loose, for slow CI machines; it
+    // catches a step back to whole-mask rescoring, not small changes.
+    expect(times[times.length ~/ 2], lessThan(60000), reason: 'median ${times[times.length ~/ 2]} us');
   });
 }

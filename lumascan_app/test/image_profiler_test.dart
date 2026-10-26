@@ -216,8 +216,8 @@ void main() {
     setUp(() => profiler = ImageProfiler(store: MemoryProfileStore(), available: true));
 
     Future<void> pump(WidgetTester tester, Widget home) async {
-      // Tall enough for the whole panel.
-      tester.view.physicalSize = const Size(1080, 2400);
+      // Tall enough for the whole panel, with its four sample sets.
+      tester.view.physicalSize = const Size(1080, 2800);
       tester.view.devicePixelRatio = 2.6;
       addTearDown(tester.view.reset);
       final store = PageStore(rootDir: () async => Directory.systemTemp);
