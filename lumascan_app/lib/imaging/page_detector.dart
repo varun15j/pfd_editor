@@ -274,14 +274,28 @@ class _Work {
       return list[list.length ~/ 2];
     }
 
-    final l0 = median(ring.map((i) => luma[i]));
-    final rg0 = median(ring.map((i) => redGreen[i]));
-    final yb0 = median(ring.map((i) => yellowBlue[i]));
+    // The surface is the most common colour along the border, not the
+    // median: pens, a laptop, a hand or the book itself can cover much of
+    // the ring. Colour is binned by hue only, since light falls off across
+    // a desk far more than its colour changes.
+    final bins = <int, int>{};
+    int bin(int i) => ((redGreen[i] + 256) ~/ _hueBin) * 1000 + (yellowBlue[i] + 256) ~/ _hueBin;
+    for (final i in ring) {
+      bins.update(bin(i), (n) => n + 1, ifAbsent: () => 1);
+    }
+    final top = bins.entries.reduce((a, b) => b.value > a.value ? b : a).key;
+    final surface = [
+      for (final i in ring)
+        if ((bin(i) ~/ 1000 - top ~/ 1000).abs() <= 1 && (bin(i) % 1000 - top % 1000).abs() <= 1) i,
+    ];
+    final l0 = median(surface.map((i) => luma[i]));
+    final rg0 = median(surface.map((i) => redGreen[i]));
+    final yb0 = median(surface.map((i) => yellowBlue[i]));
     final distance = Uint8List(w * h);
     for (var i = 0; i < w * h; i++) {
-      final dl = (luma[i] - l0).abs();
+      final dl = (luma[i] - l0).abs() * _surfaceLumaWeight;
       final dc = 2 * ((redGreen[i] - rg0).abs() + (yellowBlue[i] - yb0).abs());
-      distance[i] = (dl + dc).clamp(0, 255);
+      distance[i] = (dl + dc).round().clamp(0, 255);
     }
     final cut = _otsu(distance).clamp(_minBackgroundCut, _maxBackgroundCut);
     // The ring must be mostly one surface for its colour to mean anything.
@@ -492,6 +506,15 @@ const _minColourCut = 14, _maxColourCut = 60;
 
 /// Bounds on the colour distance that still counts as the background.
 const _minBackgroundCut = 18, _maxBackgroundCut = 70;
+
+/// Width of a hue bin, in red-green and yellow-blue steps, when finding the
+/// most common colour along the frame border.
+const _hueBin = 6;
+
+/// Weight of brightness, against colour, in the distance from the surface:
+/// light falls off across a desk, and a shadow darkens it, without
+/// changing its colour much.
+const _surfaceLumaWeight = 0.6;
 
 /// Share of the border ring that must be one surface to read the
 /// background from it.

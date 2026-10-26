@@ -112,8 +112,8 @@ void main() {
 
   // The weak pages, kept as targets for the detector: b05 (a narrow slip,
   // rejected as a strip of a page), b07 (a colour page on wood in a
-  // greyscale photo, 0.66) and, in the preview, k03 (one page of an open
-  // book with a thumb over it, 0.72). The edge outlines (2026-10-26) lifted
+  // greyscale photo, 0.66) and k03 (one page of an open book with a thumb
+  // over it, about 0.8 since the surface is read by its most common hue). The edge outlines (2026-10-26) lifted
   // b02 (a shadow across the page) from 0.71 to 0.97, b03 (white on a white
   // sheet) from 0.89 to 0.97 and c02 in the preview from 0 to 0.80.
   const weak = {'b05', 'b07', 'k03'};
