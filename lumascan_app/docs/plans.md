@@ -65,6 +65,15 @@ The Save sheet suggests a name from the text on the first page instead of the da
 
 Library search also finds documents by the text inside them, and each match found in the text shows the words around it under the document's name. On Pro and Gold the Library reads every saved PDF in the background, one at a time: a PDF with a text layer gives its text at once, and pages that are pictures are read with on-device OCR (`DocumentTextReader`). The text is kept in `library/text-index.json` (`DocumentTextStore`), at most 60,000 characters per document, and a document is read again when it changes. While documents are still being read, the Library says how many are left. On Basic the search box says "Search by name", nothing is read, and a search with no matches mentions that Pro searches the text too.
 
+## Book page fix (`PlanFeature.bookFix`, Pro and Gold)
+
+Pages taken in Book mode on Pro and Gold get `EditRecipe.bookFix`, and Crop has a **Flatten book page** switch for any page (locked on Basic, opening the upgrade pop-up). When it is set, the render pipeline runs `fixBookPage` (`lib/imaging/book_fix.dart`) right after the perspective crop:
+
+- **Curve flattening.** The page is cut into 28 vertical strips; the ink in each strip (its lines of text) is matched with the strip beside it in four bands from top to bottom, which gives how far each strip moved up or down. Those shifts are smoothed with a cubic across the page and undone, so lines come out straight. It does nothing when it is not sure: no regular lines of text, too few strips matching, a bend under 0.5% or over 10% of the page height.
+- **Finger removal.** Skin-coloured patches in the outer 18% of the page that come in from the left, right or bottom edge are painted with the colour of the paper around them. Patches in the middle of the page, along most of a side (a desk, a cover) or over 8% of the page are kept.
+
+Splitting a spread into two pages stays on every plan. Tuned on the 20 book photos (Settings > Developer > Add book pages); it takes about 0.1 to 0.2 s per page at 1400 px.
+
 ## Which plan the app uses
 
 - The real plan is `purchasedPlanProvider` (`lib/app/purchases.dart`): the plan the app store says this account paid for. It starts on the last plan the store reported (saved in `settings/plan.json`, Basic the first time), then asks the store at every start. Buying, restore and the store setup are in `docs/in-app-purchases.md`.

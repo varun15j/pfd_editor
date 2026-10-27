@@ -349,6 +349,7 @@ class ScanController extends Notifier<ScanState> {
     String? replacing,
     bool plain = false,
     DocumentFilter? filter,
+    bool bookFix = false,
   }) async {
     final pages = await addCaptureSplit(
       photoPath,
@@ -356,19 +357,22 @@ class ScanController extends Notifier<ScanState> {
       replacing: replacing,
       plain: plain,
       filter: filter,
+      bookFix: bookFix,
     );
     return pages?.first;
   }
 
   /// Like [addCapture], but makes one page per crop in [crops], all sharing
   /// the one photo (Book mode: the left and the right page of a spread).
-  /// With [replacing], the new pages take that page's place.
+  /// With [replacing], the new pages take that page's place. [bookFix]
+  /// flattens the pages and removes fingers (Book mode on Pro and Gold).
   Future<List<ScanPage>?> addCaptureSplit(
     String photoPath,
     List<CropQuad> crops, {
     String? replacing,
     bool plain = false,
     DocumentFilter? filter,
+    bool bookFix = false,
   }) {
     final result = _captureIo.then((_) async {
       if (!ref.mounted) return null;
@@ -376,11 +380,12 @@ class ScanController extends Notifier<ScanState> {
       try {
         final id = store.newId();
         final original = await store.adoptOriginal(photoPath, id);
-        final recipe = plain
+        final base = plain
             ? const EditRecipe()
             : filter == null
             ? _newPageRecipe
             : EditRecipe(filter: filter);
+        final recipe = bookFix ? base.copyWith(bookFix: true) : base;
         final added = [
           for (var i = 0; i < crops.length; i++)
             ScanPage(
@@ -504,7 +509,8 @@ class ScanController extends Notifier<ScanState> {
   static ScanPage _withRecipe(ScanPage page, EditRecipe recipe) =>
       page.copyWith(recipe: recipe, annotations: _changesGeometry(page.recipe, recipe) ? const [] : page.annotations);
 
-  static bool _changesGeometry(EditRecipe a, EditRecipe b) => a.crop != b.crop || a.quarterTurns != b.quarterTurns;
+  static bool _changesGeometry(EditRecipe a, EditRecipe b) =>
+      a.crop != b.crop || a.quarterTurns != b.quarterTurns || a.bookFix != b.bookFix;
 
   /// True when saving [recipe] on [pageId] would remove marks, so the screen
   /// can say so.
