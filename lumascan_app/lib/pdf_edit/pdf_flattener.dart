@@ -3,7 +3,9 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../app/app_info.dart';
 import '../domain/models.dart';
+import '../imaging/masking.dart';
 import 'annotations.dart';
 
 /// A page ready to be written: the rendered source page as JPEG plus the
@@ -20,18 +22,21 @@ class FlattenPage {
 /// Writes a new PDF with the `pdf` package (ADR-011): each page keeps its
 /// original size in points, shows the rendered source page, and has its
 /// annotations drawn as vector marks on top (ADR-013, flattened at export).
+/// Masks are also burned into the page picture, so nothing under them is
+/// left in the file.
 Future<Uint8List> buildEditedPdf(List<FlattenPage> pages, {String? title}) {
   if (pages.isEmpty) throw ArgumentError('A PDF needs at least one page');
-  final doc = pw.Document(title: title, creator: 'LumaScan');
+  final doc = pw.Document(title: title, creator: appName);
   for (final page in pages) {
     final w = page.widthPt, h = page.heightPt;
+    final jpeg = burnMasksIntoJpeg(page.jpeg, masksIn(page.annotations));
     doc.addPage(
       pw.Page(
         pageFormat: PdfPageFormat(w, h),
         margin: pw.EdgeInsets.zero,
         build: (_) => pw.Stack(
           children: [
-            pw.Positioned.fill(child: pw.Image(pw.MemoryImage(page.jpeg), fit: pw.BoxFit.fill)),
+            pw.Positioned.fill(child: pw.Image(pw.MemoryImage(jpeg), fit: pw.BoxFit.fill)),
             ...markWidgets(page.annotations, w, h),
           ],
         ),
@@ -91,6 +96,15 @@ void _paintMarks(PdfGraphics canvas, PdfPoint size, List<Annotation> annotations
           bw * SignatureAnnotation.strokeFraction,
           (p) => PdfPoint(left + p.x * bw, size.y - (top + p.y * bh)),
         );
+      case MaskAnnotation():
+        // Already burned into the picture; the vector box keeps its edges
+        // sharp at any zoom.
+        canvas
+          ..saveContext()
+          ..setFillColor(_pdfColor(a.color))
+          ..drawRect(a.left * size.x, size.y - a.bottom * size.y, a.width * size.x, a.height * size.y)
+          ..fillPath()
+          ..restoreContext();
       case TextAnnotation():
         break; // Drawn as a text widget so it uses real PDF text.
     }

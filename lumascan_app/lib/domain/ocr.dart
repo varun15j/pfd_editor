@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../app/app_info.dart';
 import 'models.dart';
 
 /// Whether text recognition can run for a language on this device.
@@ -52,7 +53,7 @@ class UnavailableOcrEngine implements OcrEngine {
   Future<OcrCapability> capability(String languageCode) async => const OcrCapability(
     readiness: OcrReadiness.unavailable,
     language: 'English',
-    reason: 'Text recognition is not available in this version of LumaScan yet. Your pages are not affected.',
+    reason: 'Text recognition is not available in this version of $appName yet. Your pages are not affected.',
   );
 
   @override
@@ -79,9 +80,20 @@ class OcrBox {
   final double bottom;
 }
 
-/// One line of text on a page.
+/// One line of text on a page. [words] are its words with their own boxes,
+/// when the engine reports them (Auto mask uses them to place a mask
+/// exactly).
 class OcrLine extends OcrBox {
-  const OcrLine({required super.text, required super.left, required super.top, required super.right, required super.bottom});
+  const OcrLine({
+    required super.text,
+    required super.left,
+    required super.top,
+    required super.right,
+    required super.bottom,
+    this.words = const [],
+  });
+
+  final List<OcrBox> words;
 }
 
 /// A block of text and where it sits on the page. [lines] are the lines in
@@ -114,4 +126,10 @@ class OcrLayout {
 /// the parts of a page it could not read as pictures.
 abstract interface class OcrLayoutEngine {
   Future<OcrLayout> recognizeLayout(ScanPage page, {required String languageCode});
+}
+
+/// An engine that can also read the layout of a photo file as it is, for
+/// Table to Excel, where the photo never becomes a page of a scan.
+abstract interface class OcrFileLayoutEngine {
+  Future<OcrLayout> recognizeLayoutFile(String path);
 }

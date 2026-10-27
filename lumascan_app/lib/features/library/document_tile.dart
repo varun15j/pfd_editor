@@ -9,7 +9,7 @@ import '../../domain/library.dart';
 import '../../domain/plan.dart';
 import '../../ui/state_views.dart';
 
-enum DocumentMenuAction { rename, move, tags, share, textPdf, word, split, delete }
+enum DocumentMenuAction { rename, move, tags, share, password, textPdf, word, split, delete }
 
 /// First-page thumbnail on a white page, or a PDF icon when there is none.
 class DocumentThumbnail extends StatelessWidget {
@@ -136,6 +136,17 @@ class _DocumentInteraction {
         PopupMenuItem(
           value: DocumentMenuAction.share,
           child: ListTile(leading: Icon(Icons.ios_share), title: Text('Share')),
+        ),
+        PopupMenuItem(
+          value: DocumentMenuAction.password,
+          child: ListTile(
+            leading: const Icon(Icons.lock_outline),
+            title: const Text('Add password'),
+            // Shown to everyone; on Basic it opens the upgrade pop-up.
+            trailing: ProviderScope.containerOf(menuContext).read(planIncludesProvider(PlanFeature.password))
+                ? null
+                : const PremiumBadge(label: 'Pro'),
+          ),
         ),
         PopupMenuItem(
           value: DocumentMenuAction.textPdf,

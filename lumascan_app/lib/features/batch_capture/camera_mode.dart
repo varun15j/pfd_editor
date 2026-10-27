@@ -4,6 +4,10 @@ enum CameraMode {
   /// One page per photo, cropped to the page found in it.
   docs('Docs', 'Take photo', 'Tap the shutter for each page'),
 
+  /// Opens ID card mode, which has its own camera for the front and back of
+  /// a card. Picking it closes this camera; it takes no photo here.
+  idCard('ID', 'Open ID card mode', 'Front and back of a card on one page'),
+
   /// An open book: one photo makes a left and a right page.
   book('Book', 'Capture left and right book pages', 'Align the book spine with the line'),
 
@@ -13,7 +17,7 @@ enum CameraMode {
 
   /// Like Docs, and the text on each page is read in the background so it
   /// can be copied or searched.
-  ocrDoc('OCR Doc', 'Capture page for text recognition', 'Fill the frame with the page'),
+  ocrDoc('OCR', 'Capture page for text recognition', 'Fill the frame with the page'),
 
   /// Reads a QR code. Nothing is opened without asking.
   qr('QR', 'Scan QR code', 'Place the QR code in the frame'),
@@ -32,7 +36,7 @@ enum CameraMode {
   final String guidance;
 
   /// Modes whose photos become pages of the document.
-  bool get addsPages => this != text && this != qr;
+  bool get addsPages => this != text && this != qr && this != idCard;
 
   /// Modes where auto capture can take the photo once a page is steady.
   bool get canAutoCapture => this == docs || this == book || this == ocrDoc;

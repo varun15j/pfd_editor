@@ -243,12 +243,19 @@ void main() {
 
       await tester.dragFrom(const Offset(4, 300), const Offset(250, 0));
       await tester.pumpAndSettle();
+      // Below the sample sets, which may fill the first screen.
+      await tester.scrollUntilVisible(
+        find.text('Profile image loading'),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
       expect(find.text('Profile image loading'), findsOneWidget);
 
       await tester.tap(find.text('Profile image loading'));
       await tester.pumpAndSettle();
       expect(profiler.enabled, isTrue);
 
+      await tester.scrollUntilVisible(find.byTooltip('Close'), -200, scrollable: find.byType(Scrollable).last);
       await tester.tap(find.byTooltip('Close'));
       await tester.pumpAndSettle();
       expect(find.text('Profile image loading'), findsNothing);

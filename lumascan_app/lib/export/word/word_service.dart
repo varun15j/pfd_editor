@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import '../../data/page_store.dart';
 import '../../domain/models.dart';
 import '../../imaging/page_renderer.dart';
+import '../../pdf_edit/annotations.dart';
 import '../../pdf_edit/pdf_saver.dart';
 import 'docx_reader.dart';
 import 'docx_to_pdf.dart';
@@ -145,6 +146,7 @@ class WordService {
             outPath: p.join(temp.path, 'p$i.jpg'),
             maxDimension: pictureSize,
             quality: pictureQuality,
+            masks: masksIn(page.annotations).toList(),
           );
           final w = rendered.width, h = rendered.height;
           final scale = _a4LongSidePt / math.max(w, h);

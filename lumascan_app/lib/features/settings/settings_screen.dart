@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/app_info.dart';
 import '../../app/preferences.dart';
 import '../../app/theme.dart';
 import '../../debug/image_profiler.dart';
@@ -101,7 +102,7 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Share anonymous usage data'),
             subtitle: const Text(
               'Which features are used and where the app fails. Never your documents, pages or file names. '
-              'LumaScan works the same either way.',
+              '$appName works the same either way.',
             ),
             value: settings.analytics ?? false,
             onChanged: controller.setAnalytics,
@@ -135,6 +136,8 @@ class SettingsScreen extends ConsumerWidget {
             const SamplePagesTile(contentPadding: EdgeInsets.zero),
             const SamplePagesTile(set: bookSamples, contentPadding: EdgeInsets.zero),
             const SamplePagesTile(set: oddsBookSamples, contentPadding: EdgeInsets.zero),
+            const SamplePagesTile(set: edgeSamples, contentPadding: EdgeInsets.zero),
+            const SamplePagesTile(set: colourBookSamples, contentPadding: EdgeInsets.zero),
           ],
           const SizedBox(height: Space.xl),
           const AboutSection(),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../domain/scanner_service.dart';
+import '../id_card/id_card_type_screen.dart';
 import '../pdf_editor/open_pdf.dart';
 import '../word/word_actions.dart';
 
@@ -40,6 +41,12 @@ class CreateSheet extends StatelessWidget {
       'Import photos',
       'Turn photos of pages into a PDF',
       (context, ref) => scanThenReview(context, ref, ScanSource.gallery),
+    ),
+    (
+      Icons.badge_outlined,
+      'ID copy',
+      'Both sides of an ID card on one A4 page',
+      (context, ref) => openIdCardStudio(context),
     ),
     (Icons.edit_document, 'Edit a PDF', 'Add text, drawings or a signature', pickAndEditPdf),
     (

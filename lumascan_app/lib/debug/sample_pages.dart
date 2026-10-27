@@ -77,8 +77,72 @@ const oddsBookSamples = SampleSet(
   ],
 );
 
+/// Made-up photos for testing page edge detection, in `sample_photos/edge/`:
+/// colour pages, black-and-white pages and open books on different surfaces,
+/// built from real page content by `tool/make_edge_samples.py`, so the page
+/// corners are known exactly (`sample_photos/edge/corners.json`).
+const edgeSamples = SampleSet(
+  title: 'Add edge test pages',
+  subtitle: '19 colour, black and white and book pages, auto-cropped, for testing edge detection',
+  assets: [
+    'sample_photos/edge/c01_colour_page_dark_wood.jpg',
+    'sample_photos/edge/c02_colour_page_beige_table.jpg',
+    'sample_photos/edge/c03_pink_paper_concrete.jpg',
+    'sample_photos/edge/c04_yellow_paper_light_wood.jpg',
+    'sample_photos/edge/c05_blue_form_blue_cloth.jpg',
+    'sample_photos/edge/c06_colour_page_carpet_perspective.jpg',
+    'sample_photos/edge/c07_colour_page_black_desk_turned.jpg',
+    'sample_photos/edge/b01_bw_paper_black_desk.jpg',
+    'sample_photos/edge/b02_bw_paper_concrete_shadow.jpg',
+    'sample_photos/edge/b03_bw_paper_white_bedsheet.jpg',
+    'sample_photos/edge/b04_bw_paper_fingers_wood.jpg',
+    'sample_photos/edge/b05_bw_narrow_slip_black_desk.jpg',
+    'sample_photos/edge/b06_bw_paper_carpet_grey_photo.jpg',
+    'sample_photos/edge/b07_colour_page_wood_grey_photo.jpg',
+    'sample_photos/edge/k01_colour_book_spread_wood.jpg',
+    'sample_photos/edge/k02_bw_book_spread_cloth.jpg',
+    'sample_photos/edge/k03_colour_book_one_page_thumb.jpg',
+    'sample_photos/edge/k04_bw_book_one_page_dark.jpg',
+    'sample_photos/edge/k05_bw_book_spread_grey_photo.jpg',
+  ],
+);
+
+/// Camera photos of a colour textbook (NCERT Class 6 Social Science) open on
+/// a wooden desk, in `sample_photos/colour_book/`, taken with the LumaScan
+/// camera on the CPH2661 (OnePlus) on 26 October 2026: the facing page in
+/// view, pens, a pencil case, a laptop, a hand or an arm over some pages,
+/// two blurred page turns.
+const colourBookSamples = SampleSet(
+  title: 'Add colour book pages',
+  subtitle: '22 photos of an open colour textbook, auto-cropped, for testing edge detection',
+  assets: [
+    'sample_photos/colour_book/01_letter_to_student.jpg',
+    'sample_photos/colour_book/02_your_journey.jpg',
+    'sample_photos/colour_book/03_page_turning_hand.jpg',
+    'sample_photos/colour_book/04_constitution_preamble.jpg',
+    'sample_photos/colour_book/05_textbook_team.jpg',
+    'sample_photos/colour_book/06_why_social_science.jpg',
+    'sample_photos/colour_book/07_city_photo.jpg',
+    'sample_photos/colour_book/08_cultural_heritage.jpg',
+    'sample_photos/colour_book/09_map_components.jpg',
+    'sample_photos/colour_book/10_map_symbols.jpg',
+    'sample_photos/colour_book/11_globe_chessboard.jpg',
+    'sample_photos/colour_book/12_globe_shadow.jpg',
+    'sample_photos/colour_book/13_globe_arm_over.jpg',
+    'sample_photos/colour_book/14_globe_longitudes.jpg',
+    'sample_photos/colour_book/15_globe_left_page.jpg',
+    'sample_photos/colour_book/16_globe_hand_blur.jpg',
+    'sample_photos/colour_book/17_festivals_photos.jpg',
+    'sample_photos/colour_book/18_ellora_caves.jpg',
+    'sample_photos/colour_book/19_ellora_think.jpg',
+    'sample_photos/colour_book/20_schools_of_thought.jpg',
+    'sample_photos/colour_book/21_great_bath.jpg',
+    'sample_photos/colour_book/22_india_bharat_chapter.jpg',
+  ],
+);
+
 /// Every bundled set, in the order they are offered.
-const sampleSets = [mathSamples, bookSamples, oddsBookSamples];
+const sampleSets = [mathSamples, bookSamples, oddsBookSamples, edgeSamples, colourBookSamples];
 
 /// The math revision photos (the first set).
 final samplePageAssets = mathSamples.assets;

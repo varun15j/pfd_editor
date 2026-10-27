@@ -3,27 +3,35 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/preferences.dart';
 import '../../app/providers.dart';
+import '../../domain/id_masking.dart';
 import '../../domain/models.dart';
+import '../../domain/ocr.dart';
+import '../../domain/plan.dart';
 import '../../imaging/page_renderer.dart';
 import '../../imaging/render_service.dart';
 import '../../pdf_edit/annotations.dart';
+import '../../ui/upgrade_dialog.dart';
 import '../pages/scan_controller.dart';
 import '../pdf_editor/annotation_layer.dart';
-import '../pdf_editor/signature_pad_screen.dart';
+import '../signatures/sign_sheet.dart';
 import 'markup_actions.dart';
 import 'markup_canvas.dart';
 import 'markup_style.dart';
 import 'markup_toolbar.dart';
 
-/// Pen, highlighter, text, eraser and signature on a scanned page. It uses the
+/// Pen, highlighter, text, mask, eraser and signature on a scanned page. It uses the
 /// same overlay and toolbar as the PDF editor. Marks are kept on the screen
 /// until Done, so leaving with Back never changes the page, and Done is one
 /// undo step in the draft.
 class MarkupScreen extends ConsumerStatefulWidget {
-  const MarkupScreen({super.key, required this.pageId});
+  const MarkupScreen({super.key, required this.pageId, this.initialTool = EditorTool.pen});
 
   final String pageId;
+
+  /// The tool selected when the screen opens: Mask from ID card mode.
+  final EditorTool initialTool;
 
   @override
   ConsumerState<MarkupScreen> createState() => _MarkupScreenState();
@@ -34,8 +42,9 @@ class _MarkupScreenState extends ConsumerState<MarkupScreen> {
   Future<RenderedImage>? _image;
   List<Annotation>? _marks;
   final _undo = <List<Annotation>>[];
-  EditorTool _tool = EditorTool.pen;
+  late EditorTool _tool = widget.initialTool;
   MarkupStyle _style = const MarkupStyle();
+  bool _autoMasking = false;
 
   /// True once something changed since the screen opened.
   bool get _dirty => _undo.isNotEmpty;
@@ -115,20 +124,57 @@ class _MarkupScreenState extends ConsumerState<MarkupScreen> {
   }
 
   Future<void> _addSignature(EditorPage page) async {
-    final strokes = await SignaturePadScreen.show(context);
-    if (strokes == null || !mounted) return;
-    final signature = SignatureAnnotation.fromPadStrokes(
-      id: _newId(),
-      strokes: strokes,
-      color: 0xFF14213D,
-      pageAspect: page.aspect,
-    );
-    if (signature == null) return;
-    _change([..._marks!, signature]);
+    final mark = await chooseSignatureOrStamp(context, ref, newId: _newId, pageAspect: page.aspect);
+    if (mark == null || !mounted) return;
+    _change([..._marks!, mark]);
     setState(() => _tool = EditorTool.select);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('Drag the signature into place. Tap it to resize or delete.')));
+      ..showSnackBar(const SnackBar(content: Text('Drag it into place. Tap it to resize or delete.')));
+  }
+
+  /// Reads the page on the device and masks every ID number found, leaving
+  /// the last four characters. The masks are ordinary marks: they can be
+  /// moved, resized or removed, and Undo takes them all back at once.
+  Future<void> _autoMask(ScanPage page) async {
+    if (!await ensurePlan(context, ref, PlanFeature.autoMask, what: 'Auto mask')) return;
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    void say(String text) => messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
+    final engine = ref.read(ocrEngineProvider);
+    final capability = await engine.capability('en');
+    if (engine is! OcrLayoutEngine || capability.readiness == OcrReadiness.unavailable) {
+      say(capability.reason ?? 'ID numbers cannot be found on this device. Drag over a number to mask it.');
+      return;
+    }
+    setState(() => _autoMasking = true);
+    try {
+      // Read the page with the masks already placed, so they are not found
+      // again.
+      final layout = await (engine as OcrLayoutEngine).recognizeLayout(
+        page.copyWith(annotations: _marks),
+        languageCode: 'en',
+      );
+      if (!mounted) return;
+      final found = const IdNumberFinder().find(layout);
+      if (found.isEmpty) {
+        say('No ID numbers found. Drag over a number to mask it by hand.');
+        return;
+      }
+      _change([
+        ..._marks!,
+        for (final m in found)
+          MaskAnnotation(id: _newId(), left: m.left, top: m.top, right: m.right, bottom: m.bottom, label: m.kind.label),
+      ]);
+      final kinds = {for (final m in found) m.kind.label}.join(', ');
+      say('Masked ${found.length} ${found.length == 1 ? 'number' : 'numbers'} ($kinds). Check the page before sharing.');
+    } catch (_) {
+      if (mounted) say('Could not read the page. Drag over a number to mask it by hand.');
+    } finally {
+      if (mounted) setState(() => _autoMasking = false);
+    }
   }
 
   void _done() {
@@ -209,6 +255,9 @@ class _MarkupScreenState extends ConsumerState<MarkupScreen> {
                   style: _style,
                   onStyle: (v) => setState(() => _style = v),
                   onSignature: () => _addSignature(editorPage),
+                  onAutoMask: () => _autoMask(page),
+                  autoMaskLocked: !ref.watch(planIncludesProvider(PlanFeature.autoMask)),
+                  autoMaskBusy: _autoMasking,
                 ),
               ],
             );
