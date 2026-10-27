@@ -26,6 +26,10 @@ Basic scans the original way: white-paper detection only, the page found in each
 
 OCR turns a draft, a saved document or any PDF of photos into a PDF of real text, with pictures kept as images (`docs/ocr-text-pdf.md`). On Basic the buttons are visible and open the upgrade pop-up (`ensurePlan` in `lib/ui/upgrade_dialog.dart`).
 
+## Compress to a target size (`PlanFeature.targetSize`, Pro and Gold)
+
+The Send PDF sheet has **Fit under a size** with 200 KB, 500 KB, 1 MB and 2 MB, for upload forms such as government portals. `PdfShrinker.makeUnder` renders the saved PDF at steps of `CompressionStep.ladder` (2000 px at quality 85 down to 480 px at quality 30), measures each copy and keeps the sharpest one that fits, in at most five tries. A kilobyte counts as 1000 bytes, so the copy fits forms that count either way. A PDF already under the limit is sent as it is. When even the smallest step is too big (many pages), the sheet shows the smallest size and a second tap sends it anyway. The copy is rendered from the saved PDF, so anything burned into it (masks, signatures, drawings) stays; text in the copy cannot be selected. On Basic the option shows a Pro badge and opens the upgrade pop-up.
+
 ## Which plan the app uses
 
 - `purchasedPlan` in `lib/domain/plan.dart` is the one config variable. It is `AppPlan.basic` until billing exists; billing will replace it with the plan the store reports. Change it there to try a plan in any build.
