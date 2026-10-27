@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/app_info.dart';
 import '../../app/theme.dart';
 import '../../ui/file_size.dart';
 import 'library_pick_screen.dart';
@@ -44,7 +45,7 @@ class MergeScreen extends ConsumerWidget {
             ListTile(
               leading: const Icon(Icons.folder_outlined),
               title: const Text('From Library'),
-              subtitle: const Text('PDFs you saved in LumaScan'),
+              subtitle: const Text('PDFs you saved in $appName'),
               onTap: () => Navigator.pop(sheet, true),
             ),
             ListTile(

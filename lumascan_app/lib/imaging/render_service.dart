@@ -7,6 +7,7 @@ import '../data/page_store.dart';
 import '../debug/image_profiler.dart';
 import '../debug/profile_sample.dart';
 import '../domain/models.dart';
+import '../pdf_edit/annotations.dart';
 import 'native_decode.dart';
 import 'page_renderer.dart';
 import 'render_queue.dart';
@@ -36,13 +37,24 @@ class RenderService extends ChangeNotifier {
   /// cropped thumbnail still has enough pixels.
   static const smallSourceSize = 640;
 
-  Future<RenderedImage> render(ScanPage page, {EditRecipe? recipe, int maxDimension = previewSize}) {
-    final r = recipe ?? page.recipe;
+  Future<RenderedImage> render(ScanPage page, {EditRecipe? recipe, int maxDimension = previewSize}) =>
+      _render(page, recipe ?? page.recipe, maxDimension, const []);
+
+  /// The page with its masks painted into the picture, for text recognition,
+  /// so a hidden ID number is never read. [render] leaves them out, because
+  /// the editor draws them as boxes that can still be moved.
+  Future<RenderedImage> renderMasked(ScanPage page, {int maxDimension = previewSize}) {
+    final masks = masksIn(page.annotations).toList();
+    return _render(page, page.recipe, maxDimension, masks);
+  }
+
+  Future<RenderedImage> _render(ScanPage page, EditRecipe r, int maxDimension, List<MaskAnnotation> masks) {
     // The working preview already is the upright, uncropped page.
-    if (r == const EditRecipe() && maxDimension >= previewSize) {
+    if (r == const EditRecipe() && maxDimension >= previewSize && masks.isEmpty) {
       return workingCopies(page).then((w) => w.preview);
     }
-    final key = '${page.id}|${r.cacheKey}|$maxDimension';
+    final maskKey = [for (final m in masks) '${m.left},${m.top},${m.right},${m.bottom},${m.color}'].join(';');
+    final key = '${page.id}|${r.cacheKey}|$maxDimension${masks.isEmpty ? '' : '|m:$maskKey'}';
     _queue.bump(key);
     return _cache
         .putIfAbsent(key, () async {
@@ -60,6 +72,7 @@ class RenderService extends ChangeNotifier {
               recipe: r,
               outPath: out,
               maxDimension: maxDimension,
+              masks: masks,
             );
             _profile(
               maxDimension <= thumbnailSize ? ProfileKind.thumbnail : ProfileKind.preview,

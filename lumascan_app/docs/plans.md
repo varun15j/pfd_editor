@@ -6,8 +6,8 @@ Added 2026-10-07. Code: `lib/domain/plan.dart`, `planProvider` and `planIncludes
 
 | Plan | Price | Includes |
 | --- | --- | --- |
-| Basic | free | everything in the app today |
-| Pro | paid | Basic, plus smart scanning and text PDF (below) |
+| Basic | free | everything in the app today; exported PDFs carry a small "Scanned with LumaScan" mark |
+| Pro | paid | Basic, plus smart scanning, text PDF, auto mask, no watermark and page numbers (below) |
 | Gold | paid | everything in Pro, plus Gold features (none defined yet) |
 
 A plan includes a feature when it is at least the feature's lowest plan (`AppPlan.includes`). So Gold always has what Pro has.
@@ -25,6 +25,25 @@ Basic scans the original way: white-paper detection only, the page found in each
 ## Text PDF (`PlanFeature.textPdf`, Pro and Gold)
 
 OCR turns a draft, a saved document or any PDF of photos into a PDF of real text, with pictures kept as images (`docs/ocr-text-pdf.md`). On Basic the buttons are visible and open the upgrade pop-up (`ensurePlan` in `lib/ui/upgrade_dialog.dart`).
+
+## Auto mask (`PlanFeature.autoMask`, Pro and Gold)
+
+On-device OCR finds Aadhaar, VID, PAN, voter ID, passport and driving licence numbers on a page and hides all but their last four characters (`docs/id-masking.md`). Drawing a mask by hand is on every plan, including Basic, because hiding your own ID number is basic privacy (Varun, 2026-10-26).
+
+## Watermark and page numbers (`PlanFeature.noWatermark`, `PlanFeature.pageNumbers`, Pro and Gold)
+
+Decided by Varun on 2026-10-27.
+
+- **Basic**: every scan PDF saved from the export sheet, and every ID card copy, has "Scanned with LumaScan" in small grey text at the bottom right of each page. The text is `exportWatermark` in `lib/app/app_info.dart`, built from `appName`, so renaming the app renames the mark. The export sheet says so under the quality choices.
+- **Pro and Gold**: no mark. The export sheet has a **Page numbers** switch that prints "2 / 5" at the bottom centre of each page. On Basic the switch shows "Page numbers · Pro" and opens the upgrade pop-up.
+- On A4 and Letter the text sits in the page margin. A page that fits its image has no margin, so the text gets a small white backing over the scan.
+- Not marked: text PDFs (Pro only, so never Basic), JPG export, PDFs saved from the PDF editor, merged and compressed PDFs, and Word files. These can follow if Varun wants Basic to mark them too.
+
+Code: `ExportOptions.watermark` and `ExportOptions.pageNumbers` in `lib/export/pdf_exporter.dart`; the sheet decides both from the plan.
+
+## The app's name
+
+`appName` in `lib/app/app_info.dart` is the one place the name is set. Every screen, the PDF creator field, the watermark and the Android launcher label (read by `android/app/build.gradle.kts`) follow it. iOS reads its home-screen name and camera notes from `APP_DISPLAY_NAME` in `ios/Flutter/AppName.xcconfig`; `test/app_name_test.dart` fails if that differs from `appName`, or if a screen spells the name out instead of using `appName`.
 
 ## Compress to a target size (`PlanFeature.targetSize`, Pro and Gold)
 

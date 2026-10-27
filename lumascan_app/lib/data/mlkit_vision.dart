@@ -13,7 +13,7 @@ import '../features/batch_capture/camera_frame.dart';
 
 /// Text recognition with ML Kit, on the device. The Latin-script model ships
 /// with the app, so nothing is downloaded and pages never leave the phone.
-class MlKitOcrEngine implements OcrEngine, OcrLayoutEngine {
+class MlKitOcrEngine implements OcrEngine, OcrLayoutEngine, OcrFileLayoutEngine {
   MlKitOcrEngine({required this.imageFor});
 
   /// The page as rendered with its crop, rotation and filter, as an image
@@ -58,8 +58,11 @@ class MlKitOcrEngine implements OcrEngine, OcrLayoutEngine {
   Future<String> recognize(ScanPage page, {required String languageCode}) async => recognizeFile(await imageFor(page));
 
   @override
-  Future<OcrLayout> recognizeLayout(ScanPage page, {required String languageCode}) async {
-    final path = await imageFor(page);
+  Future<OcrLayout> recognizeLayout(ScanPage page, {required String languageCode}) async =>
+      recognizeLayoutFile(await imageFor(page));
+
+  @override
+  Future<OcrLayout> recognizeLayoutFile(String path) async {
     final recognizer = _recognizer ??= TextRecognizer(script: TextRecognitionScript.latin);
     final result = await recognizer.processImage(InputImage.fromFilePath(path));
     final buffer = await ui.ImmutableBuffer.fromUint8List(await File(path).readAsBytes());
@@ -86,6 +89,17 @@ class MlKitOcrEngine implements OcrEngine, OcrLayoutEngine {
                     top: unit(l.boundingBox.top, h),
                     right: unit(l.boundingBox.right, w),
                     bottom: unit(l.boundingBox.bottom, h),
+                    words: [
+                      for (final e in l.elements)
+                        if (e.text.trim().isNotEmpty)
+                          OcrBox(
+                            text: e.text,
+                            left: unit(e.boundingBox.left, w),
+                            top: unit(e.boundingBox.top, h),
+                            right: unit(e.boundingBox.right, w),
+                            bottom: unit(e.boundingBox.bottom, h),
+                          ),
+                    ],
                   ),
             ],
           ),

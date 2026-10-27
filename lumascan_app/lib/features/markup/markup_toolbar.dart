@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../ui/compact_action_button.dart';
+import '../../ui/state_views.dart';
 import '../pdf_editor/annotation_layer.dart';
 import 'markup_style.dart';
 
@@ -17,6 +18,9 @@ class MarkupToolbar extends StatefulWidget {
     required this.style,
     required this.onStyle,
     this.onSignature,
+    this.onAutoMask,
+    this.autoMaskLocked = false,
+    this.autoMaskBusy = false,
   });
 
   final List<EditorTool> tools;
@@ -27,6 +31,16 @@ class MarkupToolbar extends StatefulWidget {
 
   /// Adds a Sign button after the tools when set.
   final VoidCallback? onSignature;
+
+  /// Shows "Auto mask ID numbers" with the Mask tool when set.
+  final VoidCallback? onAutoMask;
+
+  /// Auto mask is not in the plan: the button shows a Pro badge and opens
+  /// the upgrade pop-up.
+  final bool autoMaskLocked;
+
+  /// Auto mask is reading the page.
+  final bool autoMaskBusy;
 
   @override
   State<MarkupToolbar> createState() => _MarkupToolbarState();
@@ -112,6 +126,7 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
                     ],
                   ),
                 ),
+              if (widget.tool == EditorTool.mask) _maskRow(context),
               LayoutBuilder(
                 builder: (context, constraints) => SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -145,6 +160,45 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _maskRow(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final onAutoMask = widget.onAutoMask;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Drag over a number to hide it. Masks are burned into the saved file.',
+            style: text.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+          if (onAutoMask != null) ...[
+            const SizedBox(height: 6),
+            FilledButton.tonalIcon(
+              onPressed: widget.autoMaskBusy ? null : onAutoMask,
+              icon: widget.autoMaskBusy
+                  ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.badge_outlined),
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      widget.autoMaskBusy ? 'Looking for ID numbers' : 'Auto mask ID numbers',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (widget.autoMaskLocked) ...[const SizedBox(width: 8), const PremiumBadge(label: 'Pro')],
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

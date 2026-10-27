@@ -9,10 +9,10 @@ import '../markup/markup_actions.dart';
 import '../markup/markup_canvas.dart';
 import '../markup/markup_style.dart';
 import '../markup/markup_toolbar.dart';
+import '../signatures/sign_sheet.dart';
 import 'annotation_layer.dart';
 import 'organize_pages_screen.dart';
 import 'save_pdf_sheet.dart';
-import 'signature_pad_screen.dart';
 
 /// Builds the image of one source page, sized by its parent.
 typedef PageImageBuilder = Widget Function(EditorPage page, {bool thumbnail});
@@ -22,7 +22,7 @@ enum PdfEditorEntry {
   /// Just the editor, in View mode.
   edit,
 
-  /// Opens the signature pad on the first page.
+  /// Opens the Sign sheet on the first page.
   sign,
 
   /// Opens the page organizer.
@@ -151,20 +151,13 @@ class _PdfEditorScreenState extends ConsumerState<PdfEditorScreen> {
   }
 
   Future<void> _addSignature(EditorPage page) async {
-    final strokes = await SignaturePadScreen.show(context);
-    if (strokes == null || !mounted) return;
-    final signature = SignatureAnnotation.fromPadStrokes(
-      id: _controller.newId(),
-      strokes: strokes,
-      color: 0xFF14213D,
-      pageAspect: page.aspect,
-    );
-    if (signature == null) return;
-    _controller.addAnnotation(page.id, signature);
+    final mark = await chooseSignatureOrStamp(context, ref, newId: _controller.newId, pageAspect: page.aspect);
+    if (mark == null || !mounted) return;
+    _controller.addAnnotation(page.id, mark);
     setState(() => _tool = EditorTool.select);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('Drag the signature into place. Tap it to resize or delete.')));
+      ..showSnackBar(const SnackBar(content: Text('Drag it into place. Tap it to resize or delete.')));
   }
 
   Future<void> _organize() async {

@@ -1,3 +1,10 @@
+// The app's name comes from appName in lib/app/app_info.dart, the one place
+// it is set, so the launcher label always matches the name inside the app.
+val appName: String = Regex("""const appName = '([^']+)';""")
+    .find(rootProject.file("../lib/app/app_info.dart").readText())
+    ?.groupValues?.get(1)
+    ?: error("appName not found in lib/app/app_info.dart")
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -32,6 +39,7 @@ android {
         // OneDrive sign-in returns to the app through this scheme. It must
         // match CloudConfig.microsoftRedirectUri (lib/app/cloud_config.dart).
         manifestPlaceholders["appAuthRedirectScheme"] = "com.mobi.scanner"
+        manifestPlaceholders["appName"] = appName
     }
 
     buildTypes {
