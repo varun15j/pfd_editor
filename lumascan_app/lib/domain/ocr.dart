@@ -79,9 +79,20 @@ class OcrBox {
   final double bottom;
 }
 
-/// One line of text on a page.
+/// One line of text on a page. [words] are its words with their own boxes,
+/// when the engine reports them (Auto mask uses them to place a mask
+/// exactly).
 class OcrLine extends OcrBox {
-  const OcrLine({required super.text, required super.left, required super.top, required super.right, required super.bottom});
+  const OcrLine({
+    required super.text,
+    required super.left,
+    required super.top,
+    required super.right,
+    required super.bottom,
+    this.words = const [],
+  });
+
+  final List<OcrBox> words;
 }
 
 /// A block of text and where it sits on the page. [lines] are the lines in

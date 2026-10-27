@@ -11,6 +11,7 @@ import '../domain/ocr.dart';
 import '../imaging/ocr_figures.dart';
 
 import '../imaging/page_renderer.dart';
+import '../pdf_edit/annotations.dart';
 import '../imaging/rgb_image.dart';
 
 /// One page for the text PDF: its recipe, what was read and where.
@@ -105,7 +106,12 @@ class OcrPdfBuilder {
 
 /// What goes on one page, with each piece's place. Public for tests.
 PageDraft pageDraft(OcrPdfPage p, {bool keepLayout = false}) {
-  final image = renderRecipe(File(p.page.originalPath).readAsBytesSync(), p.page.recipe, maxDimension: 1600);
+  final image = renderRecipe(
+    File(p.page.originalPath).readAsBytesSync(),
+    p.page.recipe,
+    maxDimension: 1600,
+    masks: masksIn(p.page.annotations),
+  );
   final aspect = image.height / image.width;
   final blocks = p.layout?.blocks ?? const <OcrBlock>[];
   if (blocks.isEmpty && p.text.trim().isEmpty) return PageDraft(aspect, [_picture(0, 0, 1, 1, image)]);

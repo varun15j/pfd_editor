@@ -239,12 +239,15 @@ class ScanPage {
   /// read. Kept with the page so it can be copied later.
   final String? text;
 
-  ScanPage copyWith({EditRecipe? recipe, List<Annotation>? annotations, String? text}) => ScanPage(
+  /// [clearText] forgets the read text, for when it may show something a
+  /// new mask hides.
+  ScanPage copyWith({EditRecipe? recipe, List<Annotation>? annotations, String? text, bool clearText = false}) =>
+      ScanPage(
         id: id,
         originalPath: originalPath,
         recipe: recipe ?? this.recipe,
         annotations: annotations ?? this.annotations,
-        text: text ?? this.text,
+        text: clearText ? null : text ?? this.text,
       );
 
   /// [originalPath] is stored by file name only, because the app's private

@@ -7,6 +7,7 @@ import '../domain/library.dart';
 import '../domain/models.dart';
 import '../domain/scan_document.dart';
 import '../imaging/page_renderer.dart';
+import '../pdf_edit/annotations.dart';
 import 'page_store.dart';
 
 /// Reads and writes the library index (`library/index.json`) and document
@@ -51,6 +52,7 @@ class LibraryStore {
         outPath: path.join(dir.path, '$docId.jpg'),
         maxDimension: thumbnailSize,
         quality: 75,
+        masks: masksIn(page.annotations).toList(),
       );
       return out.path;
     } catch (_) {

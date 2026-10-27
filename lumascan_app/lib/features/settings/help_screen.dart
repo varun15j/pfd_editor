@@ -22,6 +22,20 @@ class HelpScreen extends StatelessWidget {
           'Everything can be undone from the top of the screen.',
     ),
     (
+      'Hiding an Aadhaar or ID number',
+      'In Markup, choose Mask and drag over the part to hide. On Pro, Auto mask ID numbers finds Aadhaar, VID, PAN and other '
+          'ID numbers for you and hides all but the last four characters. A mask is burned into the saved PDF or JPG, so what '
+          'it covers cannot be read from the file.',
+    ),
+    (
+      'Copying an ID card',
+      'In Tools, choose ID Card (or tap + and choose ID copy). Pick ID Card for both sides, Single Side or Passport, then '
+          'Make it now. Take the front, then the back; each side is cropped to the card. On the review page, tap a side to '
+          'crop, rotate, take it again or hide a number, and Add Watermark prints a purpose such as "For bank KYC only" '
+          'across each side. The card prints at its real size on A4 or Letter. LumaScan copies your card; it does not '
+          'check or verify it.',
+    ),
+    (
       'Saving and sending',
       'Save PDF asks for a name, page size and quality, and shows the size. After saving, Send shares the PDF or a smaller copy. '
           'The PDF stays in your Library either way.',

@@ -26,6 +26,10 @@ Basic scans the original way: white-paper detection only, the page found in each
 
 OCR turns a draft, a saved document or any PDF of photos into a PDF of real text, with pictures kept as images (`docs/ocr-text-pdf.md`). On Basic the buttons are visible and open the upgrade pop-up (`ensurePlan` in `lib/ui/upgrade_dialog.dart`).
 
+## Auto mask (`PlanFeature.autoMask`, Pro and Gold)
+
+On-device OCR finds Aadhaar, VID, PAN, voter ID, passport and driving licence numbers on a page and hides all but their last four characters (`docs/id-masking.md`). Drawing a mask by hand is on every plan, including Basic, because hiding your own ID number is basic privacy (Varun, 2026-10-26).
+
 ## Which plan the app uses
 
 - `purchasedPlan` in `lib/domain/plan.dart` is the one config variable. It is `AppPlan.basic` until billing exists; billing will replace it with the plan the store reports. Change it there to try a plan in any build.

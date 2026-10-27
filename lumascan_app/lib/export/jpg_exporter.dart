@@ -5,11 +5,14 @@ import 'package:path/path.dart' as p;
 import '../data/page_store.dart';
 import '../domain/models.dart';
 import '../imaging/page_renderer.dart';
+import '../pdf_edit/annotations.dart';
 
 /// Saves the pages of a scan as JPG files, one per page, with their crop,
 /// rotation and filter, in a folder of their own under the exports folder:
-/// `exports/2026-10-11 Scan/2026-10-11 Scan 01.jpg`. Marks are drawn only in
-/// PDFs. The page images of the scan are not changed.
+/// `exports/2026-10-11 Scan/2026-10-11 Scan 01.jpg`. Pen, text and signature
+/// marks are drawn only in PDFs, but masks are burned into the JPGs too, so a
+/// hidden ID number never leaves the app. The page images of the scan are not
+/// changed.
 class JpgExporter {
   JpgExporter(this._files, {this.maxDimension = 4096, this.quality = 90});
 
@@ -37,6 +40,7 @@ class JpgExporter {
           outPath: out,
           maxDimension: maxDimension,
           quality: quality,
+          masks: masksIn(pages[i].annotations).toList(),
         );
         files.add(File(rendered.path));
         onProgress?.call(i + 1, pages.length);

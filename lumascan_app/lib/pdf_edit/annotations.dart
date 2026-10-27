@@ -19,6 +19,7 @@ sealed class Annotation {
     'ink' => InkAnnotation.fromJson(json),
     'text' => TextAnnotation.fromJson(json),
     'signature' => SignatureAnnotation.fromJson(json),
+    'mask' => MaskAnnotation.fromJson(json),
     final other => throw FormatException('Unknown annotation type: $other'),
   };
 
@@ -236,6 +237,102 @@ class SignatureAnnotation extends Annotation {
     );
   }
 }
+
+/// A solid box that hides part of a page, such as the first eight digits of
+/// an Aadhaar number. Unlike other marks it is burned into the page pixels
+/// at export, so the hidden part cannot be recovered from the PDF or JPG.
+class MaskAnnotation extends Annotation {
+  const MaskAnnotation({
+    required String id,
+    required this.left,
+    required this.top,
+    required this.right,
+    required this.bottom,
+    this.color = black,
+    this.label,
+  }) : super(id);
+
+  static const black = 0xFF000000;
+
+  /// Smallest side of a mask, as a fraction of the page.
+  static const minSide = 0.005;
+
+  final double left;
+  final double top;
+  final double right;
+  final double bottom;
+  final int color;
+
+  /// What was hidden when Auto mask found it, such as "Aadhaar number".
+  /// Null for a box drawn by hand.
+  final String? label;
+
+  double get width => right - left;
+  double get height => bottom - top;
+
+  /// The box spanned by two corners in any order, kept on the page.
+  static MaskAnnotation between(String id, NormPoint a, NormPoint b, {int color = black}) {
+    final p = a.clamp(), q = b.clamp();
+    return MaskAnnotation(
+      id: id,
+      left: p.x < q.x ? p.x : q.x,
+      top: p.y < q.y ? p.y : q.y,
+      right: p.x < q.x ? q.x : p.x,
+      bottom: p.y < q.y ? q.y : p.y,
+      color: color,
+    );
+  }
+
+  bool get isTooSmall => width < minSide || height < minSide;
+
+  bool contains(NormPoint p) => p.x >= left && p.x <= right && p.y >= top && p.y <= bottom;
+
+  /// Moved by [dx], [dy] and kept on the page.
+  MaskAnnotation movedBy(double dx, double dy) {
+    final x = (left + dx).clamp(0.0, 1.0 - width), y = (top + dy).clamp(0.0, 1.0 - height);
+    return MaskAnnotation(id: id, left: x, top: y, right: x + width, bottom: y + height, color: color, label: label);
+  }
+
+  /// Grown or shrunk by [factor] around its centre, kept on the page.
+  MaskAnnotation scaledBy(double factor) {
+    final cx = (left + right) / 2, cy = (top + bottom) / 2;
+    final hw = (width * factor / 2).clamp(minSide, 0.5), hh = (height * factor / 2).clamp(minSide, 0.5);
+    return MaskAnnotation(
+      id: id,
+      left: (cx - hw).clamp(0.0, 1.0),
+      top: (cy - hh).clamp(0.0, 1.0),
+      right: (cx + hw).clamp(0.0, 1.0),
+      bottom: (cy + hh).clamp(0.0, 1.0),
+      color: color,
+      label: label,
+    );
+  }
+
+  @override
+  Map<String, Object?> toJson() => {
+    'type': 'mask',
+    'id': id,
+    'left': left,
+    'top': top,
+    'right': right,
+    'bottom': bottom,
+    'color': color,
+    if (label != null) 'label': label,
+  };
+
+  static MaskAnnotation fromJson(Map<String, Object?> json) => MaskAnnotation(
+    id: json['id']! as String,
+    left: (json['left']! as num).toDouble(),
+    top: (json['top']! as num).toDouble(),
+    right: (json['right']! as num).toDouble(),
+    bottom: (json['bottom']! as num).toDouble(),
+    color: (json['color'] as num?)?.toInt() ?? black,
+    label: json['label'] as String?,
+  );
+}
+
+/// The mask boxes among [annotations].
+Iterable<MaskAnnotation> masksIn(List<Annotation> annotations) => annotations.whereType<MaskAnnotation>();
 
 /// One page of the document being edited. [sourcePage] is the 1-based page
 /// number in the untouched source PDF; reordering and deleting only change

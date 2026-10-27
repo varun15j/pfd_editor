@@ -13,9 +13,19 @@ import '../pdf_edit/annotations.dart';
 import '../pdf_edit/pdf_flattener.dart';
 
 class ExportOptions {
-  const ExportOptions({this.pageSize = PdfPageSize.a4, this.quality = ExportQuality.medium, this.fileName});
+  const ExportOptions({
+    this.pageSize = PdfPageSize.a4,
+    this.quality = ExportQuality.medium,
+    this.fileName,
+    this.fitImageDpi = 150,
+  });
 
   final PdfPageSize pageSize;
+
+  /// With [PdfPageSize.fitImage], how many pixels make an inch of page. An
+  /// ID copy is composed at 200 dpi and passes that, so its cards print at
+  /// their real size.
+  final int fitImageDpi;
   final ExportQuality quality;
   final String? fileName;
 }
@@ -52,7 +62,7 @@ class PdfExporter {
       onProgress?.call(i + 1, snapshot.length + 1);
     }
 
-    final bytes = await _buildPdfInIsolate(images, options.pageSize);
+    final bytes = await _buildPdfInIsolate(images, options.pageSize, options.fitImageDpi);
     onProgress?.call(snapshot.length + 1, snapshot.length + 1);
 
     final name = options.fileName ?? defaultFileName(DateTime.now());
@@ -83,14 +93,19 @@ class PdfExporter {
 // Isolate entry points are top-level so their closures capture only the
 // arguments, never the exporter or the caller's progress callback.
 Future<_PageImage> _renderInIsolate(ScanPage page, ExportQuality q) => Isolate.run(() {
-  final rendered = renderRecipe(File(page.originalPath).readAsBytesSync(), page.recipe, maxDimension: q.maxDimension);
+  final rendered = renderRecipe(
+    File(page.originalPath).readAsBytesSync(),
+    page.recipe,
+    maxDimension: q.maxDimension,
+    masks: masksIn(page.annotations),
+  );
   return _PageImage(rendered.encodeJpg(quality: q.jpegQuality), rendered.width, rendered.height, page.annotations);
 });
 
-Future<Uint8List> _buildPdfInIsolate(List<_PageImage> images, PdfPageSize size) =>
-    Isolate.run(() => _buildPdf(images, size));
+Future<Uint8List> _buildPdfInIsolate(List<_PageImage> images, PdfPageSize size, int dpi) =>
+    Isolate.run(() => _buildPdf(images, size, dpi: dpi));
 
-Future<Uint8List> _buildPdf(List<_PageImage> images, PdfPageSize size) {
+Future<Uint8List> _buildPdf(List<_PageImage> images, PdfPageSize size, {int dpi = 150}) {
   final doc = pw.Document(title: 'Scanned document', creator: 'LumaScan');
   for (final image in images) {
     final mem = pw.MemoryImage(image.jpeg);
@@ -99,8 +114,8 @@ Future<Uint8List> _buildPdf(List<_PageImage> images, PdfPageSize size) {
     final double margin;
     switch (size) {
       case PdfPageSize.fitImage:
-        // 150 dpi equivalent keeps the physical size sensible.
-        format = PdfPageFormat(image.width * 72 / 150, image.height * 72 / 150);
+        // [dpi] (150 unless asked otherwise) keeps the physical size sensible.
+        format = PdfPageFormat(image.width * 72 / dpi, image.height * 72 / dpi);
         margin = 0;
       case PdfPageSize.a4:
         format = landscape ? PdfPageFormat.a4.landscape : PdfPageFormat.a4;
@@ -147,7 +162,8 @@ Future<Uint8List> buildPdfFromJpegs(
   List<(Uint8List, int, int)> pages,
   PdfPageSize size, {
   List<List<Annotation>> annotations = const [],
+  int dpi = 150,
 }) => _buildPdf([
   for (var i = 0; i < pages.length; i++)
     _PageImage(pages[i].$1, pages[i].$2, pages[i].$3, i < annotations.length ? annotations[i] : const []),
-], size);
+], size, dpi: dpi);
