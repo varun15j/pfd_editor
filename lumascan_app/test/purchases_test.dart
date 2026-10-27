@@ -179,6 +179,11 @@ void main() {
 
   group('paywall', () {
     Future<ProviderContainer> pumpPaywall(WidgetTester tester, {AppPlan? highlight}) async {
+      // A tall screen, so every plan card and the buttons under the feature
+      // lists are built without scrolling.
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
       final container = makeContainer();
       await tester.pumpWidget(
         UncontrolledProviderScope(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../app/app_info.dart';
 import '../../app/purchases.dart';
 import '../../app/store_config.dart';
 import '../../app/theme.dart';
@@ -56,7 +57,7 @@ class PaywallScreen extends ConsumerWidget {
           if (!state.available)
             _Note(
               icon: Icons.storefront_outlined,
-              text: 'Plans cannot be bought on this device. Install LumaScan from Google Play or the App Store to buy Pro or Gold.',
+              text: 'Plans cannot be bought on this device. Install $appName from Google Play or the App Store to buy Pro or Gold.',
             )
           else if (state.offers.isEmpty && state.offersFailed)
             _Note(
@@ -201,6 +202,14 @@ class _PlanCard extends StatelessWidget {
     PlanFeature.smartScan => 'Smart scanning: better page detection and auto crop',
     PlanFeature.textPdf => 'Text PDF: searchable text from scans',
     PlanFeature.word => 'PDF to Word',
+    PlanFeature.autoMask => 'Auto mask: hide ID numbers on a page',
+    PlanFeature.noWatermark => 'No "Scanned with" mark on exported PDFs',
+    PlanFeature.pageNumbers => 'Page numbers on exported PDFs',
+    PlanFeature.signatureLibrary => 'Saved signatures, initials and date stamps',
+    PlanFeature.tableToExcel => 'Table to Excel: a photo of a table becomes a spreadsheet',
+    PlanFeature.targetSize => 'Compress a PDF to fit under a size',
+    PlanFeature.password => 'Password-protected PDFs',
+    PlanFeature.splitPdf => 'Split a PDF and extract pages',
   };
 }
 
