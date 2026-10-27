@@ -35,7 +35,12 @@ enum PlanFeature {
   /// a page and hides all but their last four characters. Drawing a mask by
   /// hand stays on every plan, because hiding your own ID number is basic
   /// privacy (Varun, 2026-10-26).
-  autoMask(AppPlan.pro);
+  autoMask(AppPlan.pro),
+
+  /// Signature library: signatures and initials saved once and placed again
+  /// with a tap, plus date and name stamps, in the PDF editor and Markup.
+  /// Drawing a one-off signature stays on every plan.
+  signatureLibrary(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 

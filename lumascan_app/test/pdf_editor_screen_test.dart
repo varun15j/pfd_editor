@@ -150,7 +150,11 @@ void main() {
     await tester.ensureVisible(find.text('Sign'));
     await tester.tap(find.text('Sign'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Draw a new signature'));
+    await tester.pumpAndSettle();
     expect(find.text('Draw your signature'), findsOneWidget);
+    // Basic cannot save it to the library.
+    expect(find.text('Save for next time'), findsNothing);
     await tester.drag(find.byType(Signature), const Offset(120, 30));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Add'));
@@ -171,9 +175,10 @@ void main() {
     expect(moved.left, lessThan(before));
   });
 
-  testWidgets('entry sign opens the signature pad at once', (tester) async {
+  testWidgets('entry sign opens the Sign sheet at once', (tester) async {
     await pumpEditor(tester, entry: PdfEditorEntry.sign);
-    expect(find.byType(Signature), findsOneWidget);
+    expect(find.text('Draw a new signature'), findsOneWidget);
+    expect(find.text('Date stamp'), findsOneWidget);
   });
 
   testWidgets('entry organize opens the page organizer at once', (tester) async {

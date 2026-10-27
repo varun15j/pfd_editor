@@ -27,7 +27,7 @@ The five that matter most in India, where LumaScan can be better than every lega
 
 | # | Feature | What it is | Effort | Plan |
 | --- | --- | --- | --- | --- |
-| 6 | Signature library | Signatures and initials saved once and reused, instead of drawing each time. Also a date and name stamp. | S | Basic (free) |
+| 6 | Signature library (built 2026-10-27) | Signatures and initials saved once and reused, instead of drawing each time. Also a date and name stamp. Built as a Sign sheet in the PDF editor and Markup; drawing a one-off signature stays free. | M | Pro |
 | 7 | Auto file naming | A name suggested from the text on the page (invoice number, date, title), instead of "Scan 2026-10-26". Genius Scan calls it smart rename. | M | Pro |
 | 8 | Searchable library | Search inside the text of saved documents, not only their names, folders and tags. Needs OCR text kept in the index. | M | Pro |
 | 9 | Book mode, finished | Curve flattening and finger removal for photographed books. The two-page split exists; pages photographed from a thick book still curve. | L | Pro |

@@ -15,7 +15,7 @@ import '../../pdf_edit/annotations.dart';
 import '../../ui/upgrade_dialog.dart';
 import '../pages/scan_controller.dart';
 import '../pdf_editor/annotation_layer.dart';
-import '../pdf_editor/signature_pad_screen.dart';
+import '../signatures/sign_sheet.dart';
 import 'markup_actions.dart';
 import 'markup_canvas.dart';
 import 'markup_style.dart';
@@ -124,20 +124,13 @@ class _MarkupScreenState extends ConsumerState<MarkupScreen> {
   }
 
   Future<void> _addSignature(EditorPage page) async {
-    final strokes = await SignaturePadScreen.show(context);
-    if (strokes == null || !mounted) return;
-    final signature = SignatureAnnotation.fromPadStrokes(
-      id: _newId(),
-      strokes: strokes,
-      color: 0xFF14213D,
-      pageAspect: page.aspect,
-    );
-    if (signature == null) return;
-    _change([..._marks!, signature]);
+    final mark = await chooseSignatureOrStamp(context, ref, newId: _newId, pageAspect: page.aspect);
+    if (mark == null || !mounted) return;
+    _change([..._marks!, mark]);
     setState(() => _tool = EditorTool.select);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('Drag the signature into place. Tap it to resize or delete.')));
+      ..showSnackBar(const SnackBar(content: Text('Drag it into place. Tap it to resize or delete.')));
   }
 
   /// Reads the page on the device and masks every ID number found, leaving

@@ -1,11 +1,13 @@
 import 'package:lumascan/data/app_settings_store.dart';
 import 'package:lumascan/data/library_store.dart';
 import 'package:lumascan/data/page_store.dart';
+import 'package:lumascan/data/signature_library_store.dart';
 import 'package:lumascan/data/ui_prefs_store.dart';
 import 'package:lumascan/domain/app_settings.dart';
 import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/scan_document.dart';
+import 'package:lumascan/domain/signature_library.dart';
 import 'package:lumascan/domain/ui_prefs.dart';
 
 /// Library and draft stores kept in memory, for widget tests where real file
@@ -104,4 +106,16 @@ class MemoryAppSettingsStore extends AppSettingsStore {
 
   @override
   Future<void> save(AppSettings settings) async => this.settings = settings;
+}
+
+class MemorySignatureLibraryStore extends SignatureLibraryStore {
+  MemorySignatureLibraryStore([this.library = const SignatureLibrary()]) : super(PageStore());
+
+  SignatureLibrary library;
+
+  @override
+  Future<SignatureLibrary> load() async => library;
+
+  @override
+  Future<void> save(SignatureLibrary library) async => this.library = library;
 }
