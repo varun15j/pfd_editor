@@ -408,6 +408,9 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     }
   }
 
+  /// Book mode on Pro and Gold flattens the pages and removes fingers.
+  bool get _bookFix => ref.read(planIncludesProvider(PlanFeature.bookFix));
+
   /// [seen] is the page outline on the preview when the photo was taken.
   Future<ScanPage?> _save(String path, String? replacing, CameraMode mode, {bool auto = false, CropQuad? seen}) async {
     final List<ScanPage>? pages;
@@ -419,6 +422,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
         const [leftHalf, rightHalf],
         replacing: replacing,
         filter: _filter,
+        bookFix: _bookFix,
       );
     } else {
       final page = await _controller.addCapture(
@@ -426,6 +430,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
         replacing: replacing,
         plain: mode == CameraMode.photo,
         filter: _filter,
+        bookFix: mode == CameraMode.book && _bookFix,
       );
       pages = page == null ? null : [page];
     }

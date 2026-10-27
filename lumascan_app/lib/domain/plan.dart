@@ -85,7 +85,13 @@ enum PlanFeature {
   /// Library search inside documents: the text of every saved PDF is read
   /// on the device (its text layer, or OCR for scans) and searched along
   /// with names. Searching by name stays on every plan.
-  searchText(AppPlan.pro);
+  searchText(AppPlan.pro),
+
+  /// Book page fix: pages taken in Book mode are flattened where the book
+  /// curves towards the spine, and fingers holding it open are painted
+  /// over. Also a switch in Crop for any page. Splitting a spread into two
+  /// pages stays on every plan.
+  bookFix(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 

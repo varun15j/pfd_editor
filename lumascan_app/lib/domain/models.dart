@@ -149,6 +149,7 @@ class EditRecipe {
     this.filter = DocumentFilter.original,
     this.brightness = 0,
     this.contrast = 0,
+    this.bookFix = false,
   });
 
   final CropQuad crop;
@@ -162,6 +163,11 @@ class EditRecipe {
   final double brightness;
   final double contrast;
 
+  /// Book page fix (Pro): after the crop, the page's curve is flattened
+  /// and fingers holding it open are painted over. Set for pages taken in
+  /// Book mode on Pro and Gold, and by the switch in Crop.
+  final bool bookFix;
+
   bool get hasAdjustments => brightness != 0 || contrast != 0;
 
   EditRecipe copyWith({
@@ -170,6 +176,7 @@ class EditRecipe {
     DocumentFilter? filter,
     double? brightness,
     double? contrast,
+    bool? bookFix,
   }) =>
       EditRecipe(
         crop: crop ?? this.crop,
@@ -177,6 +184,7 @@ class EditRecipe {
         filter: filter ?? this.filter,
         brightness: brightness ?? this.brightness,
         contrast: contrast ?? this.contrast,
+        bookFix: bookFix ?? this.bookFix,
       );
 
   Map<String, Object?> toJson() => {
@@ -185,6 +193,7 @@ class EditRecipe {
         'filter': filter.id,
         if (brightness != 0) 'brightness': brightness,
         if (contrast != 0) 'contrast': contrast,
+        if (bookFix) 'bookFix': true,
       };
 
   static EditRecipe fromJson(Map<String, Object?> json) => EditRecipe(
@@ -193,12 +202,14 @@ class EditRecipe {
         filter: DocumentFilter.fromId(json['filter'] as String? ?? DocumentFilter.original.id),
         brightness: ((json['brightness'] as num?)?.toDouble() ?? 0).clamp(-1.0, 1.0),
         contrast: ((json['contrast'] as num?)?.toDouble() ?? 0).clamp(-1.0, 1.0),
+        bookFix: json['bookFix'] == true,
       );
 
   /// Stable key used to cache rendered derivatives.
   String get cacheKey {
     final q = crop.points.map((p) => '${p.x.toStringAsFixed(4)},${p.y.toStringAsFixed(4)}').join(';');
-    return '$q|$quarterTurns|${filter.id}|${brightness.toStringAsFixed(3)}|${contrast.toStringAsFixed(3)}';
+    return '$q|$quarterTurns|${filter.id}|${brightness.toStringAsFixed(3)}|${contrast.toStringAsFixed(3)}'
+        '${bookFix ? '|book' : ''}';
   }
 
   @override
@@ -208,10 +219,11 @@ class EditRecipe {
       other.quarterTurns == quarterTurns &&
       other.filter == filter &&
       other.brightness == brightness &&
-      other.contrast == contrast;
+      other.contrast == contrast &&
+      other.bookFix == bookFix;
 
   @override
-  int get hashCode => Object.hash(crop, quarterTurns, filter, brightness, contrast);
+  int get hashCode => Object.hash(crop, quarterTurns, filter, brightness, contrast, bookFix);
 }
 
 @immutable
