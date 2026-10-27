@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/app_info.dart';
 import '../../app/preferences.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
@@ -58,7 +59,7 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
         title: Text(
-          'LumaScan',
+          appName,
           style: text.titleLarge?.copyWith(color: c.success, fontWeight: FontWeight.w800),
         ),
         actions: [

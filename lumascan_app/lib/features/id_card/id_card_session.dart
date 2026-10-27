@@ -5,10 +5,13 @@ import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
+import '../../app/app_info.dart';
+import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../domain/id_copy.dart';
 import '../../domain/library.dart';
 import '../../domain/models.dart';
+import '../../domain/plan.dart';
 import '../../export/pdf_exporter.dart';
 import '../../imaging/id_copy_composer.dart';
 import '../../pdf_edit/pdf_saver.dart';
@@ -55,7 +58,11 @@ class IdCopyDraftNotifier extends Notifier<IdCopyDraft?> {
   /// Puts [pages] together on one sheet (1 to [maxCollagePictures]) and adds
   /// it as a new page at the end of the draft.
   Future<ScanPage> makeCollagePage(List<ScanPage> pages, {PdfPageSize paper = PdfPageSize.a4}) async {
-    final jpeg = await _compose(paper: paper, slots: collageSlots(pages.length, paper: paper), pages: pages);
+    final jpeg = await _compose(
+      paper: paper,
+      slots: collageSlots(pages.length, paper: paper),
+      pages: pages,
+    );
     return ref.read(scanControllerProvider.notifier).addMadePage(await _tempFile(jpeg));
   }
 
@@ -100,6 +107,8 @@ class IdCopyDraftNotifier extends Notifier<IdCopyDraft?> {
             fitImageDpi: composeDpi,
             quality: ExportQuality.high,
             fileName: PdfEditSaver.safeFileName(only == null ? name : '$name copy'),
+            // Basic exports carry the "Scanned with" mark, ID copies too.
+            watermark: ref.read(planIncludesProvider(PlanFeature.noWatermark)) ? null : exportWatermark,
           ),
         );
     await ref.read(libraryProvider.notifier).addScan(file, pages, type: ScanType.idCard);
@@ -113,18 +122,18 @@ class IdCopyDraftNotifier extends Notifier<IdCopyDraft?> {
 typedef SideImageMaker = Future<String> Function(ScanPage page);
 
 final sideImageMakerProvider = Provider<SideImageMaker>(
-  (ref) => (page) async => (await ref.read(renderServiceProvider).renderMasked(page)).path,
+  (ref) =>
+      (page) async => (await ref.read(renderServiceProvider).renderMasked(page)).path,
 );
 
 /// Lays out pictures on a sheet of paper (see [composePage]). Tests swap in
 /// one that does not need the GPU.
-typedef PageComposer =
-    Future<Uint8List> Function({
-      required Size paperMm,
-      required List<Rect> slots,
-      required List<String> imagePaths,
-      String? watermark,
-    });
+typedef PageComposer = Future<Uint8List> Function({
+  required Size paperMm,
+  required List<Rect> slots,
+  required List<String> imagePaths,
+  String? watermark,
+});
 
 final pageComposerProvider = Provider<PageComposer>(
   (ref) =>
@@ -137,4 +146,3 @@ final pageComposerProvider = Provider<PageComposer>(
 List<ScanPage?> sidePages(IdCopyDraft draft, ScanState scan) => [
   for (var i = 0; i < draft.type.sides; i++) i < draft.sideIds.length ? scan.pageById(draft.sideIds[i]) : null,
 ];
-

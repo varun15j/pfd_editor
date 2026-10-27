@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/app_info.dart';
 import '../../app/theme.dart';
 import '../../domain/cloud_storage.dart';
 import 'cloud_accounts.dart';
@@ -25,7 +26,7 @@ class AccountsScreen extends ConsumerWidget {
         children: [
           Text(
             'Connect cloud storage to import its PDF and Word files into your Library. '
-            'LumaScan only reads your files. It never uploads, changes or deletes anything in your accounts.',
+            '$appName only reads your files. It never uploads, changes or deletes anything in your accounts.',
             style: text.bodyMedium?.copyWith(color: c.muted),
           ),
           const SizedBox(height: Space.lg),
@@ -142,7 +143,7 @@ class _ProviderCardState extends ConsumerState<_ProviderCard> {
           builder: (context) => AlertDialog(
             title: Text('Disconnect $label?'),
             content: const Text(
-              'LumaScan forgets this account on this phone. Documents you already imported stay in your Library.',
+              '$appName forgets this account on this phone. Documents you already imported stay in your Library.',
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),

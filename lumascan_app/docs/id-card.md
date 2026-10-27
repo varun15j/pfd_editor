@@ -8,7 +8,7 @@ Phase 2 item 1 in [improvement.md](improvement.md). Free on every plan. The desi
 
 | Step | Screen | Code |
 | --- | --- | --- |
-| ID-01 | Tools > ID Card, or + > ID copy. Never opens the plain document camera. | `openIdCardStudio` |
+| ID-01 | Tools > ID Card, + > ID copy, or the ID mode next to Docs in the camera's mode strip (it closes the camera and opens the type picker; pages already taken stay on Home). Never opens the plain document camera. | `openIdCardStudio` |
 | ID-02 to ID-04 | Type picker: A4 paper example, description, Make it now, then Single Side / ID Card / Passport. Changing type only moves the green border and the example. | `IdCardTypeScreen` |
 | ID-05 | Camera: 3 × 3 grid, green corners around a card-shaped guide, "Front page" / "Back page", "1 of 2". Close, shutter, Import only. While the back is taken the front stays in view at the top left; tap it to retake the front. | `IdCardCaptureScreen` |
 | ID-06 | Review: black header with the editable title and Help, the white page with every side where it prints and page number 01, A4 / Letter and Actual size / Large, then Add Watermark, Edit, Filter and the green ✓. | `IdCardReviewScreen` |

@@ -9,7 +9,7 @@ Effort is rough developer time for one person, including tests:
 - **L** — a week or more
 - **XL** — more than two weeks, or needs the P1 backend
 
-Plan tier follows the study's suggestion: Basic free with no watermark and no ads, Pro (₹99/month, ₹599/year) for what runs on the phone, Gold (₹199/month, ₹1,299/year) for what has a running cost.
+Plan tier follows the study's suggestion, with one change Varun made on 2026-10-27: Basic is free with no ads, but its exported PDFs carry a small "Scanned with LumaScan" mark (#20); Pro (₹99/month, ₹599/year) for what runs on the phone, Gold (₹199/month, ₹1,299/year) for what has a running cost.
 
 ## 1. Pick these first
 
@@ -27,7 +27,7 @@ The five that matter most in India, where LumaScan can be better than every lega
 
 | # | Feature | What it is | Effort | Plan |
 | --- | --- | --- | --- | --- |
-| 6 | Signature library | Signatures and initials saved once and reused, instead of drawing each time. Also a date and name stamp. | S | Basic (free) |
+| 6 | Signature library (built 2026-10-27) | Signatures and initials saved once and reused, instead of drawing each time. Also a date and name stamp. Built as a Sign sheet in the PDF editor and Markup; drawing a one-off signature stays free. | M | Pro |
 | 7 | Auto file naming | A name suggested from the text on the page (invoice number, date, title), instead of "Scan 2026-10-26". Genius Scan calls it smart rename. | M | Pro |
 | 8 | Searchable library | Search inside the text of saved documents, not only their names, folders and tags. Needs OCR text kept in the index. | M | Pro |
 | 9 | Book mode, finished | Curve flattening and finger removal for photographed books. The two-page split exists; pages photographed from a thick book still curve. | L | Pro |
@@ -46,17 +46,17 @@ The five that matter most in India, where LumaScan can be better than every lega
 | 17 | Share a scan as a link | A link instead of a file, so WhatsApp does not re-compress it. Needs the backend. | XL | Gold |
 | 18 | Print | Print straight from the app through the system print service. | S | Basic (free) |
 | 19 | Sort and bulk actions in the library | Multi-select for move, tag, delete and share; sort by size and by page count. | S | Basic (free) |
-| 20 | Watermark and page numbers | A watermark, header, footer or page numbers added to an exported PDF. | M | Pro |
+| 20 | Watermark and page numbers (built 2026-10-27) | Basic exports carry "Scanned with LumaScan" at the foot of each page; Pro and Gold exports have no mark and can add page numbers ("2 / 5"). The name comes from `appName` in `lib/app/app_info.dart`. See [plans.md](plans.md). | M | Watermark: Basic. Page numbers and no watermark: Pro |
 | 21 | Scan to Excel from a photo of a table | A quicker path than #10: one photo, one spreadsheet. Built 2026-10-27 (Tools > Table to Excel): read with on-device ML Kit, so no cost per use and no usage cap. | L | Gold |
 | 22 | Import from WhatsApp and files, by share sheet | LumaScan appearing in the system share sheet, so a PDF or photo from another app comes straight in. | S | Basic (free) |
 
 ## What LumaScan already has that rivals charge for
 
-Worth saying in the store listing: scanning with auto crop and filters, batch capture and batch edit, markup and signing, PDF editing, merge, reorder, text PDF (OCR), PDF to Word, Word to PDF, JPG export, folders and tags, QR reading, book spread splitting, Aadhaar and ID masking, no watermark and no ads. The study found that every legal rival in India charges for at least some of these.
+Worth saying in the store listing: scanning with auto crop and filters, batch capture and batch edit, markup and signing, PDF editing, merge, reorder, text PDF (OCR), PDF to Word, Word to PDF, JPG export, folders and tags, QR reading, book spread splitting, Aadhaar and ID masking, and no ads. Since 2026-10-27 Basic PDFs carry a small "Scanned with LumaScan" mark, so "no watermark" is a Pro selling point, not a Basic one. The study found that every legal rival in India charges for at least some of these.
 
 ## Notes on choosing
 
-- The study's view was that the free tier must stay watermark-free and ad-free, because every legal rival in India is.
+- The study's view was that the free tier must stay watermark-free and ad-free, because every legal rival in India is. Varun decided on 2026-10-27 to put a small "Scanned with LumaScan" mark on Basic exports anyway, and to make removing it part of Pro.
 - #3 is already being built in PR #62, so the open picks among the first five are #1, #2, #4 and #5.
 - #1 to #5 are all on-device work with no running cost, so they fit Pro cleanly and can ship without the backend.
 - #12, #14 and #17 all wait on the P1 backend, so they belong in one later release rather than one at a time.

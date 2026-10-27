@@ -37,6 +37,19 @@ enum PlanFeature {
   /// privacy (Varun, 2026-10-26).
   autoMask(AppPlan.pro),
 
+  /// Exported PDFs without the "Scanned with" mark that Basic
+  /// prints at the foot of each page (Varun, 2026-10-27).
+  noWatermark(AppPlan.pro),
+
+  /// Page numbers ("2 / 5") at the foot of each page, offered as a switch
+  /// in the export sheet.
+  pageNumbers(AppPlan.pro),
+
+  /// Signature library: signatures and initials saved once and placed again
+  /// with a tap, plus date and name stamps, in the PDF editor and Markup.
+  /// Drawing a one-off signature stays on every plan.
+  signatureLibrary(AppPlan.pro),
+
   /// Table to Excel: one photo of a table becomes an Excel (.xlsx) file.
   /// The table is read with on-device OCR, so it costs nothing per use and
   /// needs no usage cap; it is Gold because rivals sell it at their top

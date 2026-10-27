@@ -4,6 +4,8 @@ import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../app/app_info.dart';
+
 /// Where the image-loading profile database lives.
 ///
 /// On Android it goes to the phone's shared Documents folder,
@@ -25,7 +27,7 @@ class ProfileLocation {
        _isAndroid = isAndroid ?? Platform.isAndroid;
 
   /// The shared Documents folder on Android's primary storage.
-  static const defaultSharedDir = '/storage/emulated/0/Documents/LumaScan/debug';
+  static const defaultSharedDir = '/storage/emulated/0/Documents/$appName/debug';
   static const fileName = 'image_profile.db';
 
   final String sharedDir;

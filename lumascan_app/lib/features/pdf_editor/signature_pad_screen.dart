@@ -1,13 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:signature/signature.dart';
 
-/// Full-screen signature pad (signature package, ADR-013). Pops with the
-/// drawn strokes in pad pixels, or null when cancelled.
-class SignaturePadScreen extends StatefulWidget {
-  const SignaturePadScreen({super.key});
+import '../../domain/signature_library.dart';
 
-  static Future<List<List<(double, double)>>?> show(BuildContext context) =>
-      Navigator.of(context).push(MaterialPageRoute(fullscreenDialog: true, builder: (_) => const SignaturePadScreen()));
+/// What the pad hands back: the drawn strokes in pad pixels, and whether to
+/// keep the mark in the signature library.
+typedef SignaturePadResult = ({List<List<(double, double)>> strokes, bool save});
+
+/// Full-screen signature pad (signature package, ADR-013). Pops with the
+/// drawn strokes, or null when cancelled.
+class SignaturePadScreen extends StatefulWidget {
+  const SignaturePadScreen({super.key, this.kind = SignatureKind.signature, this.offerSave = false});
+
+  /// A full signature or initials; only the wording changes.
+  final SignatureKind kind;
+
+  /// Shows "Save for next time" (on by default), for plans with the
+  /// signature library.
+  final bool offerSave;
+
+  static Future<SignaturePadResult?> show(
+    BuildContext context, {
+    SignatureKind kind = SignatureKind.signature,
+    bool offerSave = false,
+  }) => Navigator.of(context).push(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => SignaturePadScreen(kind: kind, offerSave: offerSave),
+    ),
+  );
 
   @override
   State<SignaturePadScreen> createState() => _SignaturePadScreenState();
@@ -20,6 +41,7 @@ class _SignaturePadScreenState extends State<SignaturePadScreen> {
     strokeCap: StrokeCap.round,
     strokeJoin: StrokeJoin.round,
   );
+  bool _save = true;
 
   @override
   void initState() {
@@ -41,7 +63,7 @@ class _SignaturePadScreenState extends State<SignaturePadScreen> {
     final strokes = [
       for (final s in _controller.pointsToStrokes(2)) [for (final p in s) (p.offset.dx, p.offset.dy)],
     ];
-    Navigator.pop(context, strokes);
+    Navigator.pop<SignaturePadResult>(context, (strokes: strokes, save: widget.offerSave && _save));
   }
 
   @override
@@ -49,7 +71,7 @@ class _SignaturePadScreenState extends State<SignaturePadScreen> {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Draw your signature'),
+        title: Text(widget.kind == SignatureKind.initials ? 'Draw your initials' : 'Draw your signature'),
         actions: [
           TextButton(onPressed: _controller.isEmpty ? null : _controller.clear, child: const Text('Clear')),
           const SizedBox(width: 4),
@@ -89,6 +111,14 @@ class _SignaturePadScreenState extends State<SignaturePadScreen> {
                   ),
                 ),
               ),
+              if (widget.offerSave)
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Save for next time'),
+                  subtitle: const Text('Kept on this phone only.'),
+                  value: _save,
+                  onChanged: (v) => setState(() => _save = v),
+                ),
               const SizedBox(height: 12),
               Text(
                 'This adds a picture of your signature. It is not a certificate-based digital signature.',
