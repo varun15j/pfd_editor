@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/preferences.dart';
+import '../../domain/models.dart';
 import '../../domain/plan.dart';
 import '../../domain/signature_library.dart';
 import '../../pdf_edit/annotations.dart';
