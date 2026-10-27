@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../app/app_info.dart';
 import '../../domain/scanner_service.dart';
 import '../batch_capture/batch_capture_screen.dart';
 import '../capture/photo_import_screen.dart';
@@ -61,9 +62,9 @@ Future<CameraGuideChoice?> showCameraPermissionGuide(BuildContext context, {requ
         title: const Text('Camera access needed'),
         content: Text(
           permanently
-              ? 'LumaScan uses the camera only to scan pages, and the pages stay on this device. '
+              ? '$appName uses the camera only to scan pages, and the pages stay on this device. '
                     'Camera access is turned off, so turn it on in Settings, or import photos of the pages instead.'
-              : 'LumaScan uses the camera only to scan pages, and the pages stay on this device. '
+              : '$appName uses the camera only to scan pages, and the pages stay on this device. '
                     'Allow camera access when asked, or import photos of the pages instead.',
         ),
         actions: [

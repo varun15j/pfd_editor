@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app/app_info.dart';
 import '../../app/theme.dart';
 
 /// Short answers to the questions people ask first. Plain text, works offline.
@@ -37,7 +38,7 @@ class HelpScreen extends StatelessWidget {
       'In Tools, choose ID Card (or tap + and choose ID copy). Pick ID Card for both sides, Single Side or Passport, then '
           'Make it now. Take the front, then the back; each side is cropped to the card. On the review page, tap a side to '
           'crop, rotate, take it again or hide a number, and Add Watermark prints a purpose such as "For bank KYC only" '
-          'across each side. The card prints at its real size on A4 or Letter. LumaScan copies your card; it does not '
+          'across each side. The card prints at its real size on A4 or Letter. $appName copies your card; it does not '
           'check or verify it.',
     ),
     (
@@ -90,7 +91,7 @@ class PrivacyScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(Space.page, Space.sm, Space.page, Space.xxl),
         children: [
           Text(
-            'Your scans and PDFs stay on this device. LumaScan has no account and does not upload anything. '
+            'Your scans and PDFs stay on this device. $appName has no account and does not upload anything. '
             'A file leaves your device only when you share it.',
             style: text.bodyLarge,
           ),

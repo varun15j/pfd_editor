@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../app/app_info.dart';
 import '../../app/theme.dart';
 import 'help_screen.dart';
 
@@ -44,12 +45,12 @@ class AboutSection extends ConsumerWidget {
           leading: const Icon(Icons.description_outlined),
           title: const Text('Open-source licences'),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () => showLicensePage(context: context, applicationName: 'LumaScan', applicationVersion: version),
+          onTap: () => showLicensePage(context: context, applicationName: appName, applicationVersion: version),
         ),
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.info_outline),
-          title: const Text('About LumaScan'),
+          title: const Text('About $appName'),
           subtitle: Text(
             version == null ? 'Version unavailable' : 'Version $version',
             style: TextStyle(color: c.muted),

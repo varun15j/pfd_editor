@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../app/app_info.dart';
 import '../data/page_store.dart';
 import '../domain/models.dart';
 import '../imaging/page_renderer.dart';
@@ -18,6 +19,8 @@ class ExportOptions {
     this.quality = ExportQuality.medium,
     this.fileName,
     this.fitImageDpi = 150,
+    this.watermark,
+    this.pageNumbers = false,
   });
 
   final PdfPageSize pageSize;
@@ -28,6 +31,23 @@ class ExportOptions {
   final int fitImageDpi;
   final ExportQuality quality;
   final String? fileName;
+
+  /// Small text at the foot of every page, such as [exportWatermark] on the
+  /// Basic plan. Null prints nothing.
+  final String? watermark;
+
+  /// Prints "2 / 5" at the foot of every page (Pro and Gold).
+  final bool pageNumbers;
+}
+
+/// What is printed at the foot of each page, besides the scan itself.
+class PageFooter {
+  const PageFooter({this.watermark, this.pageNumbers = false});
+
+  final String? watermark;
+  final bool pageNumbers;
+
+  bool get isEmpty => watermark == null && !pageNumbers;
 }
 
 class _PageImage {
@@ -62,7 +82,8 @@ class PdfExporter {
       onProgress?.call(i + 1, snapshot.length + 1);
     }
 
-    final bytes = await _buildPdfInIsolate(images, options.pageSize, options.fitImageDpi);
+    final footer = PageFooter(watermark: options.watermark, pageNumbers: options.pageNumbers);
+    final bytes = await _buildPdfInIsolate(images, options.pageSize, options.fitImageDpi, footer);
     onProgress?.call(snapshot.length + 1, snapshot.length + 1);
 
     final name = options.fileName ?? defaultFileName(DateTime.now());
@@ -102,12 +123,18 @@ Future<_PageImage> _renderInIsolate(ScanPage page, ExportQuality q) => Isolate.r
   return _PageImage(rendered.encodeJpg(quality: q.jpegQuality), rendered.width, rendered.height, page.annotations);
 });
 
-Future<Uint8List> _buildPdfInIsolate(List<_PageImage> images, PdfPageSize size, int dpi) =>
-    Isolate.run(() => _buildPdf(images, size, dpi: dpi));
+Future<Uint8List> _buildPdfInIsolate(List<_PageImage> images, PdfPageSize size, int dpi, PageFooter footer) =>
+    Isolate.run(() => _buildPdf(images, size, dpi: dpi, footer: footer));
 
-Future<Uint8List> _buildPdf(List<_PageImage> images, PdfPageSize size, {int dpi = 150}) {
-  final doc = pw.Document(title: 'Scanned document', creator: 'LumaScan');
-  for (final image in images) {
+Future<Uint8List> _buildPdf(
+  List<_PageImage> images,
+  PdfPageSize size, {
+  int dpi = 150,
+  PageFooter footer = const PageFooter(),
+}) {
+  final doc = pw.Document(title: 'Scanned document', creator: appName);
+  for (var i = 0; i < images.length; i++) {
+    final image = images[i];
     final mem = pw.MemoryImage(image.jpeg);
     final landscape = image.width > image.height;
     final PdfPageFormat format;
@@ -126,8 +153,11 @@ Future<Uint8List> _buildPdf(List<_PageImage> images, PdfPageSize size, {int dpi 
     }
     doc.addPage(
       pw.Page(
-        pageFormat: format,
-        margin: pw.EdgeInsets.all(margin),
+        pageTheme: pw.PageTheme(
+          pageFormat: format,
+          margin: pw.EdgeInsets.all(margin),
+          buildForeground: footer.isEmpty ? null : (_) => _footer(footer, i + 1, images.length),
+        ),
         build: (_) {
           if (image.annotations.isEmpty) return pw.Center(child: pw.Image(mem, fit: pw.BoxFit.contain));
           // The marks are normalized to the image, so draw them in a box the
@@ -157,13 +187,45 @@ Future<Uint8List> _buildPdf(List<_PageImage> images, PdfPageSize size, {int dpi 
   return doc.save();
 }
 
+/// The foot of a page: the page number in the middle and the watermark at
+/// the right, drawn over the whole page so they sit in the bottom margin of
+/// A4 and Letter. A page that fits its image has no margin, so each label
+/// gets a white backing to stay readable over the scan.
+pw.Widget _footer(PageFooter footer, int number, int total) {
+  const style = pw.TextStyle(fontSize: 7, color: PdfColors.grey700);
+  pw.Widget label(String text) => pw.Container(
+    padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+    decoration: const pw.BoxDecoration(
+      color: PdfColors.white,
+      borderRadius: pw.BorderRadius.all(pw.Radius.circular(2)),
+    ),
+    child: pw.Text(text, style: style),
+  );
+  return pw.Padding(
+    padding: const pw.EdgeInsets.fromLTRB(18, 0, 18, 4),
+    child: pw.Stack(
+      alignment: pw.Alignment.bottomCenter,
+      children: [
+        if (footer.pageNumbers) pw.Align(alignment: pw.Alignment.bottomCenter, child: label('$number / $total')),
+        if (footer.watermark != null) pw.Align(alignment: pw.Alignment.bottomRight, child: label(footer.watermark!)),
+      ],
+    ),
+  );
+}
+
 /// Test hook: builds a PDF from raw JPEG bytes.
 Future<Uint8List> buildPdfFromJpegs(
   List<(Uint8List, int, int)> pages,
   PdfPageSize size, {
   List<List<Annotation>> annotations = const [],
   int dpi = 150,
-}) => _buildPdf([
-  for (var i = 0; i < pages.length; i++)
-    _PageImage(pages[i].$1, pages[i].$2, pages[i].$3, i < annotations.length ? annotations[i] : const []),
-], size, dpi: dpi);
+  PageFooter footer = const PageFooter(),
+}) => _buildPdf(
+  [
+    for (var i = 0; i < pages.length; i++)
+      _PageImage(pages[i].$1, pages[i].$2, pages[i].$3, i < annotations.length ? annotations[i] : const []),
+  ],
+  size,
+  dpi: dpi,
+  footer: footer,
+);

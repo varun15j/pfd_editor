@@ -1,0 +1,4 @@
+// The iOS home-screen name and the camera notes in Info.plist. It must
+// match appName in lib/app/app_info.dart; test/app_name_test.dart fails
+// when the two differ.
+APP_DISPLAY_NAME = LumaScan

@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../app/app_info.dart';
 import '../data/page_store.dart';
 import '../domain/models.dart';
 import '../domain/ocr.dart';
@@ -119,7 +120,9 @@ PageDraft pageDraft(OcrPdfPage p, {bool keepLayout = false}) {
     // The photo of the page, as it was, on a white page. The recognized text
     // is set over it in a transparent layer at each line's place: it can be
     // searched and copied, and the photo shows through unchanged.
-    final lines = [for (final b in blocks) ...(b.lines.isEmpty ? [b] : b.lines)];
+    final lines = [
+      for (final b in blocks) ...(b.lines.isEmpty ? [b] : b.lines),
+    ];
     return PageDraft(aspect, [
       _picture(0, 0, 1, 1, image),
       for (final l in lines) TextPiece(l.text, top: l.top, left: l.left, bottom: l.bottom, right: l.right),
@@ -136,7 +139,7 @@ ImagePiece _picture(double top, double left, double bottom, double right, RgbIma
     ImagePiece(top, left, bottom, right, image.encodeJpg(quality: 80), image.width, image.height);
 
 Future<(Uint8List, int)> _document(List<(int, PageDraft)> pages, {required bool keepLayout}) async {
-  final doc = pw.Document(title: 'Recognized text', creator: 'LumaScan');
+  final doc = pw.Document(title: 'Recognized text', creator: appName);
   for (final (number, draft) in pages) {
     if (keepLayout) {
       doc.addPage(_placedPage(number, draft));
@@ -184,7 +187,11 @@ pw.Page _placedPage(int number, PageDraft draft) {
     pageFormat: PdfPageFormat(width, height, marginAll: 0),
     build: (_) => pw.Stack(
       children: [
-        pw.Positioned(left: 0, top: 0, child: pw.Container(width: width, height: height, color: PdfColors.white)),
+        pw.Positioned(
+          left: 0,
+          top: 0,
+          child: pw.Container(width: width, height: height, color: PdfColors.white),
+        ),
         for (final piece in draft.pieces)
           pw.Positioned(
             left: piece.left * width,
