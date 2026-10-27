@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/app_info.dart';
 import '../../app/preferences.dart';
+import '../../app/purchases.dart';
 import '../../app/theme.dart';
 import '../../debug/image_profiler.dart';
 import '../../debug/profiling_report_screen.dart';
@@ -12,6 +13,7 @@ import '../../domain/app_settings.dart';
 import '../../domain/models.dart';
 import '../cloud/accounts_screen.dart';
 import '../onboarding/onboarding_screen.dart';
+import '../plans/paywall_screen.dart';
 import 'about_section.dart';
 import 'storage_section.dart';
 
@@ -32,6 +34,14 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(Space.page, Space.sm, Space.page, Space.xxl),
         children: [
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.workspace_premium_outlined),
+            title: const Text('Plan'),
+            subtitle: Text('${ref.watch(purchasedPlanProvider).label}. See Pro and Gold, or restore a purchase.'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => openPaywall(context),
+          ),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.cloud_outlined),

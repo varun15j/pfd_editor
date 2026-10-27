@@ -59,8 +59,8 @@ Split one PDF into several, every few pages or by typed ranges, or copy chosen p
 
 ## Which plan the app uses
 
-- `purchasedPlan` in `lib/domain/plan.dart` is the one config variable. It is `AppPlan.basic` until billing exists; billing will replace it with the plan the store reports. Change it there to try a plan in any build.
-- **Debug builds** can switch plans without buying: swipe in from the left edge to open the debug panel, then choose Real, Basic, Pro or Gold under Plan. The choice is saved on the device (`AppSettings.debugPlan`). Real follows `purchasedPlan`. Release builds ignore the choice completely.
+- The real plan is `purchasedPlanProvider` (`lib/app/purchases.dart`): the plan the app store says this account paid for. It starts on the last plan the store reported (saved in `settings/plan.json`, Basic the first time), then asks the store at every start. Buying, restore and the store setup are in `docs/in-app-purchases.md`.
+- **Debug builds** can switch plans without buying: swipe in from the left edge to open the debug panel, then choose Real, Basic, Pro or Gold under Plan. The choice is saved on the device (`AppSettings.debugPlan`). Real follows the store. Release builds ignore the choice completely.
 - Code asks `ref.watch(planIncludesProvider(PlanFeature.smartScan))`; it never reads the plan name.
 
 ## Adding a feature to a plan

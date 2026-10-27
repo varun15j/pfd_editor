@@ -1,11 +1,13 @@
 import 'package:lumascan/data/app_settings_store.dart';
 import 'package:lumascan/data/library_store.dart';
 import 'package:lumascan/data/page_store.dart';
+import 'package:lumascan/data/plan_cache_store.dart';
 import 'package:lumascan/data/signature_library_store.dart';
 import 'package:lumascan/data/ui_prefs_store.dart';
 import 'package:lumascan/domain/app_settings.dart';
 import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/domain/models.dart';
+import 'package:lumascan/domain/plan.dart';
 import 'package:lumascan/domain/scan_document.dart';
 import 'package:lumascan/domain/signature_library.dart';
 import 'package:lumascan/domain/ui_prefs.dart';
@@ -106,6 +108,19 @@ class MemoryAppSettingsStore extends AppSettingsStore {
 
   @override
   Future<void> save(AppSettings settings) async => this.settings = settings;
+}
+
+/// The last plan the store reported, kept in memory.
+class MemoryPlanCacheStore extends PlanCacheStore {
+  MemoryPlanCacheStore([this.plan]) : super(PageStore());
+
+  AppPlan? plan;
+
+  @override
+  Future<AppPlan?> load() async => plan;
+
+  @override
+  Future<void> save(AppPlan plan) async => this.plan = plan;
 }
 
 class MemorySignatureLibraryStore extends SignatureLibraryStore {

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/preferences.dart';
+import '../app/purchases.dart';
 import '../domain/plan.dart';
 
 /// Debug panel: pick the plan the app behaves as, to try Basic, Pro and Gold
-/// without buying. "Real plan" follows [purchasedPlan]. Debug builds only.
+/// without buying. "Real" follows the plan paid for in the store
+/// ([purchasedPlanProvider]). Debug builds only.
 class PlanSwitcherTile extends ConsumerWidget {
   const PlanSwitcherTile({super.key});
 
@@ -13,6 +15,7 @@ class PlanSwitcherTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final picked = ref.watch(appSettingsProvider.select((s) => s.debugPlan));
     final plan = ref.watch(planProvider);
+    final real = ref.watch(purchasedPlanProvider);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Column(
@@ -23,7 +26,7 @@ class PlanSwitcherTile extends ConsumerWidget {
           Text(
             picked == null
                 ? 'Behaving as the real plan: ${plan.label}.'
-                : 'Behaving as ${plan.label} (the real plan is ${purchasedPlan.label}).',
+                : 'Behaving as ${plan.label} (the real plan is ${real.label}).',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 8),
