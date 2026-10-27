@@ -9,9 +9,11 @@ import '../../app/preferences.dart';
 import '../../domain/models.dart';
 import '../../domain/plan.dart';
 import '../../imaging/book_split.dart';
+import '../../imaging/corner_model.dart';
 import '../../imaging/page_detector.dart';
 import '../../imaging/rgb_image.dart';
 import 'auto_capture.dart';
+import 'frame_worker.dart';
 
 /// How the bytes of a [CameraFrame] are laid out.
 enum FramePixels {
@@ -148,17 +150,16 @@ class FrameAnalysis {
   bool get tooDark => brightness < 45;
 }
 
-/// Pure Dart, so it can run in an isolate.
-FrameAnalysis analyzeFrame(CameraFrame frame, {bool smart = true}) {
+/// Pure Dart apart from [model], so it can run in an isolate. With [smart]
+/// on and a [model], the model's outline is tried first, and the hand-made
+/// detector is asked only when the model is not sure of every corner.
+FrameAnalysis analyzeFrame(CameraFrame frame, {bool smart = true, CornerModel? model}) {
   final gray = frame.uprightGray();
   // Outlines are found in colour where the frame has it: a coloured page on
   // a surface of the same brightness only stands out by its colour.
-  final quad = detectPageQuad(
-    frame.hasColour ? frame.uprightColour() : gray,
-    workSize: 160,
-    minArea: 0.2,
-    smart: smart,
-  );
+  final picture = frame.hasColour ? frame.uprightColour() : gray;
+  final fromModel = smart ? model?.find(picture) : null;
+  final quad = fromModel ?? detectPageQuad(picture, workSize: 160, minArea: 0.2, smart: smart);
   return FrameAnalysis(
     quad: quad,
     signature: quad == null ? null : pageSignature(gray, quad),
@@ -170,9 +171,20 @@ FrameAnalysis analyzeFrame(CameraFrame frame, {bool smart = true}) {
 typedef FrameAnalyzer = Future<FrameAnalysis> Function(CameraFrame frame);
 
 /// Analyses preview frames off the UI thread. Tests swap in a direct call.
+/// With smart scanning (Pro), frames go to one long-lived isolate that holds
+/// the corner model ([FrameWorker]); without it, or while the model loads
+/// or if it cannot, each frame runs in a fresh isolate on the hand-made
+/// detector alone.
 final frameAnalyzerProvider = Provider<FrameAnalyzer>((ref) {
   final smart = ref.watch(planIncludesProvider(PlanFeature.smartScan));
-  return (frame) => Isolate.run(() => analyzeFrame(frame, smart: smart));
+  FrameAnalysis plain(CameraFrame frame) => analyzeFrame(frame, smart: smart);
+  if (!smart) return (frame) => Isolate.run(() => plain(frame));
+  final worker = FrameWorker.start();
+  ref.onDispose(() => worker.then((w) => w?.stop()));
+  return (frame) async {
+    final w = await worker;
+    return w == null ? Isolate.run(() => plain(frame)) : w.analyze(frame);
+  };
 });
 
 typedef SpreadSplitter = Future<(CropQuad, CropQuad)> Function(String photoPath);

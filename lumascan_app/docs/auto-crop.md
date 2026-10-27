@@ -84,3 +84,26 @@ Tried and dropped: rejecting outlines whose corners are far from square, as some
 The colour book pages that still fail (04, 06, 17, 18, 22, page turns 03 and 16) lie on a wooden desk the same tone as the book's edge, beside the facing page; hand-made rules have run out of room there.
 
 **Tests:** `test/colour_book_detection_test.dart` (the 22 colour book photos), `test/edge_samples_test.dart` (each edge test page at photo size, as a colour preview frame and as a grey one, the odds book photos, and a loose time limit for a preview frame), `test/camera_colour_frame_test.dart` (NV21 and BGRA frames come out in colour, and the c02 page is outlined from a colour frame where the grey frame found none).
+
+## Corner model in the camera preview (October 2026)
+
+The hand-made detector had stopped improving on colour pages (see above), so the camera preview now asks a small open-source neural network first: DocAligner's LCNet heatmap model (DocsaidLab, Apache-2.0, 4.8 MB, `assets/models/`). It reads a 256 x 256 colour copy of the frame and gives one heatmap per corner. Its outline is used only when every corner's peak is at least 0.8 (`minCornerConfidence`); otherwise the hand-made detector decides, as before. It runs with ONNX Runtime (`onnxruntime_v2`, FFI, two threads) in one long-lived isolate that loads the model once (`FrameWorker`). Pro and Gold only, like the rest of smart scanning; if the model cannot load, the preview falls back to the hand-made detector. Imported photos and the capture crop still use the hand-made detector.
+
+**What it is good at.** A whole page in view, whatever its colour, print or surface: on the made test pages it scores 0.98 to 0.99 where it is sure, including the narrow slip (b05, no page before) and the colour page in a greyscale photo (b07, 0.66 before).
+
+**What it cannot do.** It finds nothing when a corner is out of the frame. It was never sure on any of the 22 colour book photos, where the open book fills the frame, so those keep the hand-made detector's result.
+
+**Result** (overlap with the true page, hand-made detector alone → with the model first, scored with `onnxruntime` in Python on the same photos, 2026-10-27):
+
+| Set | Photo (640 px) | Preview (200 px) |
+| --- | --- | --- |
+| Edge test pages, colour | 0.97 → 0.97 | 0.97 → 0.97 |
+| Edge test pages, black and white | 0.79 → 0.99 | 0.78 → 0.98 |
+| Edge test pages, books | 0.89 → 0.93 | 0.92 → 0.95 |
+| 20 book photos | 0.83 → 0.83 | 0.82 → 0.84 (17: 0.69 → 0.93) |
+| 6 odds book photos | 0.84 → 0.84 | 0.83 → 0.83 |
+| 22 colour book photos | 0.85 → 0.85 | 0.79 → 0.79 |
+
+The made test pages are cleaner than real photos and close to what such models are trained on, so the gain there is likely larger than on real pages. The model takes about 30 ms per frame on the cloud test machine (onnxruntime, CPU); on the phone it is not yet measured. The FastViT-T8 variant was also tried and was sure of fewer pages.
+
+**Tests:** `test/corner_model_test.dart` (heatmaps to corners, the model input, and that the preview uses the model only when it is sure and only with smart scanning). The model itself does not run in `flutter test` (no native library there).
