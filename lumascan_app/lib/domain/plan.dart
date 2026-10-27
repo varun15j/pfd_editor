@@ -54,7 +54,12 @@ enum PlanFeature {
   /// The table is read with on-device OCR, so it costs nothing per use and
   /// needs no usage cap; it is Gold because rivals sell it at their top
   /// tier (improvement.md #21).
-  tableToExcel(AppPlan.gold);
+  tableToExcel(AppPlan.gold),
+
+  /// Compress to a target size: a copy of a saved PDF made to fit under
+  /// 200 KB, 500 KB, 1 MB or 2 MB for upload forms, choosing resolution and
+  /// quality automatically. Offered in the Send PDF sheet.
+  targetSize(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 
