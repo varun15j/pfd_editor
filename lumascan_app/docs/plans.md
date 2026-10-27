@@ -45,10 +45,22 @@ Code: `ExportOptions.watermark` and `ExportOptions.pageNumbers` in `lib/export/p
 
 `appName` in `lib/app/app_info.dart` is the one place the name is set. Every screen, the PDF creator field, the watermark and the Android launcher label (read by `android/app/build.gradle.kts`) follow it. iOS reads its home-screen name and camera notes from `APP_DISPLAY_NAME` in `ios/Flutter/AppName.xcconfig`; `test/app_name_test.dart` fails if that differs from `appName`, or if a screen spells the name out instead of using `appName`.
 
+## Compress to a target size (`PlanFeature.targetSize`, Pro and Gold)
+
+The Send PDF sheet has **Fit under a size** with 200 KB, 500 KB, 1 MB and 2 MB, for upload forms such as government portals. `PdfShrinker.makeUnder` renders the saved PDF at steps of `CompressionStep.ladder` (2000 px at quality 85 down to 480 px at quality 30), measures each copy and keeps the sharpest one that fits, in at most five tries. A kilobyte counts as 1000 bytes, so the copy fits forms that count either way. A PDF already under the limit is sent as it is. When even the smallest step is too big (many pages), the sheet shows the smallest size and a second tap sends it anyway. The copy is rendered from the saved PDF, so anything burned into it (masks, signatures, drawings) stays; text in the copy cannot be selected. On Basic the option shows a Pro badge and opens the upgrade pop-up.
+
+## Document password (`PlanFeature.password`, Pro and Gold)
+
+Add password (Library menu) and Send with password (Send sheet) make a copy of a saved PDF that asks for a password when opened, encrypted with AES-256 (`docs/document-password.md`). On Basic both are listed with a Pro badge and open the upgrade pop-up.
+
+## Split PDF and extract pages (`PlanFeature.splitPdf`, Pro and Gold)
+
+Split one PDF into several, every few pages or by typed ranges, or copy chosen pages into a new PDF (`docs/split-pdf.md`). Offered in Tools ("Split PDF") and the Library menu ("Split or extract pages"); on Basic both show Pro and open the upgrade pop-up. Merging stays on every plan.
+
 ## Which plan the app uses
 
-- `purchasedPlan` in `lib/domain/plan.dart` is the one config variable. It is `AppPlan.basic` until billing exists; billing will replace it with the plan the store reports. Change it there to try a plan in any build.
-- **Debug builds** can switch plans without buying: swipe in from the left edge to open the debug panel, then choose Real, Basic, Pro or Gold under Plan. The choice is saved on the device (`AppSettings.debugPlan`). Real follows `purchasedPlan`. Release builds ignore the choice completely.
+- The real plan is `purchasedPlanProvider` (`lib/app/purchases.dart`): the plan the app store says this account paid for. It starts on the last plan the store reported (saved in `settings/plan.json`, Basic the first time), then asks the store at every start. Buying, restore and the store setup are in `docs/in-app-purchases.md`.
+- **Debug builds** can switch plans without buying: swipe in from the left edge to open the debug panel, then choose Real, Basic, Pro or Gold under Plan. The choice is saved on the device (`AppSettings.debugPlan`). Real follows the store. Release builds ignore the choice completely.
 - Code asks `ref.watch(planIncludesProvider(PlanFeature.smartScan))`; it never reads the plan name.
 
 ## Adding a feature to a plan

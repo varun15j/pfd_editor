@@ -112,6 +112,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
           pages,
           fileName: await store.freeExportName(fileName),
           keepLayout: keepLayout,
+          languageCode: ref.read(ocrLanguageProvider),
           onProgress: (f) {
             if (mounted) setState(() => _progress = f);
           },

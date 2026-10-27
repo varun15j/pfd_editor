@@ -69,8 +69,12 @@ Future<void> runBatchAction(BuildContext context, WidgetRef ref, BatchAction act
           showUndoToast(messenger, message: 'Full photo on $count $noun', onUndo: controller.undo);
       }
     case BatchAction.ocr:
-      await Navigator.of(context)
-          .push(MaterialPageRoute<void>(builder: (_) => BatchOcrScreen(pageIds: [for (final p in selected) p.id])));
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              BatchOcrScreen(pageIds: [for (final p in selected) p.id], languageCode: ref.read(ocrLanguageProvider)),
+        ),
+      );
     case BatchAction.rotate:
       final dropsMarks = controller.rotationDropsMarks(selection.ids);
       controller.rotatePages(selection.ids);

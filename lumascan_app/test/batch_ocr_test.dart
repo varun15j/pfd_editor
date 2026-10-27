@@ -41,7 +41,7 @@ class _FakeOcr implements OcrEngine {
   }
 
   @override
-  Future<String> recognizeFile(String path) async => '';
+  Future<String> recognizeFile(String path, {String languageCode = 'en'}) async => '';
 }
 
 List<ScanPage> _pages(int n) => [for (var i = 0; i < n; i++) ScanPage(id: 'p$i', originalPath: '/p$i.jpg')];

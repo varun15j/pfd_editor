@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 
 import 'models.dart';
+import 'ocr_languages.dart';
 import 'plan.dart';
 import 'scan_document.dart';
 
@@ -72,6 +73,7 @@ class AppSettings {
     this.captureHaptics = true,
     this.autoCaptureSteadiness = AutoCaptureSteadiness.normal,
     this.debugPlan,
+    this.ocrLanguage = 'en',
   });
 
   /// Looks only. Does not touch any file.
@@ -123,6 +125,10 @@ class AppSettings {
   /// builds ignore it.
   final AppPlan? debugPlan;
 
+  /// Language text recognition reads, as a code from [OcrLanguage.all].
+  /// Applies to the next read; text already recognised is kept.
+  final String ocrLanguage;
+
   AppSettings copyWith({
     ThemeMode? themeMode,
     DocumentFilter? defaultFilter,
@@ -136,6 +142,7 @@ class AppSettings {
     bool? captureHaptics,
     AutoCaptureSteadiness? autoCaptureSteadiness,
     Object? debugPlan = _keep,
+    String? ocrLanguage,
   }) => AppSettings(
     themeMode: themeMode ?? this.themeMode,
     defaultFilter: defaultFilter ?? this.defaultFilter,
@@ -149,6 +156,7 @@ class AppSettings {
     captureHaptics: captureHaptics ?? this.captureHaptics,
     autoCaptureSteadiness: autoCaptureSteadiness ?? this.autoCaptureSteadiness,
     debugPlan: identical(debugPlan, _keep) ? this.debugPlan : debugPlan as AppPlan?,
+    ocrLanguage: ocrLanguage ?? this.ocrLanguage,
   );
 
   static const Object _keep = Object();
@@ -172,6 +180,7 @@ class AppSettings {
     'captureHaptics': captureHaptics,
     'autoCaptureSteadiness': autoCaptureSteadiness.name,
     if (debugPlan != null) 'debugPlan': debugPlan!.name,
+    'ocrLanguage': ocrLanguage,
   };
 
   /// Unknown or missing values fall back to the defaults, so a settings file
@@ -190,6 +199,7 @@ class AppSettings {
     autoCaptureSteadiness:
         AutoCaptureSteadiness.values.asNameMap()[json['autoCaptureSteadiness']] ?? AutoCaptureSteadiness.normal,
     debugPlan: AppPlan.values.asNameMap()[json['debugPlan']],
+    ocrLanguage: OcrLanguage.byCode(json['ocrLanguage'] as String? ?? '')?.code ?? 'en',
   );
 
   /// Files before 3 always held Date and time, the default then, chosen or
@@ -226,7 +236,8 @@ class AppSettings {
       other.shutterSound == shutterSound &&
       other.captureHaptics == captureHaptics &&
       other.autoCaptureSteadiness == autoCaptureSteadiness &&
-      other.debugPlan == debugPlan;
+      other.debugPlan == debugPlan &&
+      other.ocrLanguage == ocrLanguage;
 
   @override
   int get hashCode => Object.hash(
@@ -242,5 +253,6 @@ class AppSettings {
     captureHaptics,
     autoCaptureSteadiness,
     debugPlan,
+    ocrLanguage,
   );
 }

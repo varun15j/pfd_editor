@@ -12,6 +12,8 @@ import '../id_card/id_card_type_screen.dart';
 import '../merge/merge_screen.dart';
 import '../pdf_editor/open_pdf.dart';
 import '../pdf_editor/pdf_editor_screen.dart';
+import '../split/split_actions.dart';
+import '../table/table_to_excel.dart';
 import '../word/word_actions.dart';
 
 /// Tools tab, laid out as Screens 3 and 4 of the UI/UX screenshots:
@@ -33,6 +35,12 @@ class ToolsScreen extends ConsumerWidget {
           _Tool(Icons.menu_book_outlined, 'Book', () => scan(CameraMode.book)),
           _Tool(Icons.qr_code_scanner, 'QR Code', () => scan(CameraMode.qr)),
           _Tool(Icons.text_fields, 'To Text', () => scan(CameraMode.text)),
+          _Tool(
+            Icons.table_chart_outlined,
+            'Table to Excel',
+            () => scanTableToExcel(context, ref),
+            badge: ref.watch(planIncludesProvider(PlanFeature.tableToExcel)) ? null : 'Gold',
+          ),
         ],
       ),
       (
@@ -50,6 +58,12 @@ class ToolsScreen extends ConsumerWidget {
             Icons.library_add_outlined,
             'Merge PDFs',
             () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const MergeScreen())),
+          ),
+          _Tool(
+            Icons.call_split,
+            'Split PDF',
+            () => pickPdfToSplit(context, ref),
+            badge: ref.watch(planIncludesProvider(PlanFeature.splitPdf)) ? null : 'Pro',
           ),
         ],
       ),

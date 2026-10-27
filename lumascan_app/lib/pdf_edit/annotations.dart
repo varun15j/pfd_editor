@@ -223,16 +223,35 @@ class SignatureAnnotation extends Annotation {
       for (final s in strokes)
         if (s.isNotEmpty) [for (final (x, y) in s) NormPoint((x - minX) / w, (y - minY) / h)],
     ];
-    final aspect = w / h;
-    // Centre the box on the page; heightOn() gives its page-relative height.
-    final boxHeight = width * pageAspect / aspect;
-    return SignatureAnnotation(
+    return centred(
       id: id,
       strokes: normalized,
+      aspectRatio: w / h,
+      color: color,
+      pageAspect: pageAspect,
+      width: width,
+    );
+  }
+
+  /// Places already-normalized [strokes], such as a signature saved in the
+  /// library, in a box [width] wide centred on the page.
+  static SignatureAnnotation centred({
+    required String id,
+    required List<List<NormPoint>> strokes,
+    required double aspectRatio,
+    required int color,
+    required double pageAspect,
+    double width = 0.35,
+  }) {
+    // heightOn() gives the box's page-relative height.
+    final boxHeight = width * pageAspect / aspectRatio;
+    return SignatureAnnotation(
+      id: id,
+      strokes: strokes,
       left: (1 - width) / 2,
       top: ((1 - boxHeight) / 2).clamp(0.0, 1.0),
       width: width,
-      aspectRatio: aspect,
+      aspectRatio: aspectRatio,
       color: color,
     );
   }

@@ -27,7 +27,7 @@ The five that matter most in India, where LumaScan can be better than every lega
 
 | # | Feature | What it is | Effort | Plan |
 | --- | --- | --- | --- | --- |
-| 6 | Signature library | Signatures and initials saved once and reused, instead of drawing each time. Also a date and name stamp. | S | Basic (free) |
+| 6 | Signature library (built 2026-10-27) | Signatures and initials saved once and reused, instead of drawing each time. Also a date and name stamp. Built as a Sign sheet in the PDF editor and Markup; drawing a one-off signature stays free. | M | Pro |
 | 7 | Auto file naming | A name suggested from the text on the page (invoice number, date, title), instead of "Scan 2026-10-26". Genius Scan calls it smart rename. | M | Pro |
 | 8 | Searchable library | Search inside the text of saved documents, not only their names, folders and tags. Needs OCR text kept in the index. | M | Pro |
 | 9 | Book mode, finished | Curve flattening and finger removal for photographed books. The two-page split exists; pages photographed from a thick book still curve. | L | Pro |
@@ -47,7 +47,7 @@ The five that matter most in India, where LumaScan can be better than every lega
 | 18 | Print | Print straight from the app through the system print service. | S | Basic (free) |
 | 19 | Sort and bulk actions in the library | Multi-select for move, tag, delete and share; sort by size and by page count. | S | Basic (free) |
 | 20 | Watermark and page numbers (built 2026-10-27) | Basic exports carry "Scanned with LumaScan" at the foot of each page; Pro and Gold exports have no mark and can add page numbers ("2 / 5"). The name comes from `appName` in `lib/app/app_info.dart`. See [plans.md](plans.md). | M | Watermark: Basic. Page numbers and no watermark: Pro |
-| 21 | Scan to Excel from a photo of a table | A quicker path than #10: one photo, one spreadsheet. | L | Gold |
+| 21 | Scan to Excel from a photo of a table | A quicker path than #10: one photo, one spreadsheet. Built 2026-10-27 (Tools > Table to Excel): read with on-device ML Kit, so no cost per use and no usage cap. | L | Gold |
 | 22 | Import from WhatsApp and files, by share sheet | LumaScan appearing in the system share sheet, so a PDF or photo from another app comes straight in. | S | Basic (free) |
 
 ## What LumaScan already has that rivals charge for
