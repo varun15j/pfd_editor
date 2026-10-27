@@ -58,6 +58,16 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
   /// Page count of the saved PDF; the draft may be emptied right after saving.
   int _savedPages = 0;
 
+  /// The name the sheet opened with. A suggested name replaces it only
+  /// while the user has not typed their own.
+  late final String _openingName;
+
+  /// True while the first page is read for a name (Auto file naming).
+  bool _naming = false;
+
+  /// Said under the name when a suggestion found nothing to go on.
+  String? _namingNote;
+
   bool get _saving => _progress != null && _result == null;
 
   @override
@@ -69,6 +79,9 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
     _name = TextEditingController(
       text: scanName ?? ref.read(appSettingsProvider).fileNamePattern.format(DateTime.now()),
     )..addListener(_onNameChanged);
+    _openingName = _name.text;
+    // Pro and Gold: offer a name from the page text straight away.
+    if (ref.read(planIncludesProvider(PlanFeature.smartName))) _suggestName(auto: true);
   }
 
   @override
@@ -161,6 +174,31 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
     }
   }
 
+  /// Reads the first page and puts a name from its text in the field, such
+  /// as "Invoice INV-2041 2026-10-26". When [auto], a name the user has
+  /// typed meanwhile is kept and nothing is said if no name is found.
+  Future<void> _suggestName({bool auto = false}) async {
+    if (_naming) return;
+    if (!auto && !await ensurePlan(context, ref, PlanFeature.smartName, what: 'Smart file names')) return;
+    final pages = ref.read(scanControllerProvider).pages;
+    final namer = ref.read(smartNamerProvider);
+    final language = ref.read(ocrLanguageProvider);
+    setState(() {
+      _naming = true;
+      _namingNote = null;
+    });
+    final name = await namer.suggest(pages, languageCode: language);
+    if (!mounted) return;
+    setState(() {
+      _naming = false;
+      if (name != null && (!auto || _name.text == _openingName)) {
+        _name.text = name;
+      } else if (name == null && !auto) {
+        _namingNote = 'No title, number or date found on the first page.';
+      }
+    });
+  }
+
   Future<void> _pickKind(bool textPdf) async {
     if (textPdf && !await ensurePlan(context, ref, PlanFeature.textPdf, what: 'Text PDF')) return;
     if (mounted) setState(() => _textPdf = textPdf);
@@ -186,6 +224,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
     final saving = _saving;
     final hasTextPdf = ref.watch(planIncludesProvider(PlanFeature.textPdf));
     final hasPageNumbers = ref.watch(planIncludesProvider(PlanFeature.pageNumbers));
+    final hasSmartName = ref.watch(planIncludesProvider(PlanFeature.smartName));
     final watermarked = !ref.watch(planIncludesProvider(PlanFeature.noWatermark));
 
     return PopScope(
@@ -239,6 +278,17 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
                     border: const OutlineInputBorder(),
                     counterText: '',
                     errorText: _nameValid ? null : 'Enter a name for the PDF',
+                    helperText: _naming ? 'Reading the page for a name…' : _namingNote,
+                    suffixIcon: _naming
+                        ? const Padding(
+                            padding: EdgeInsets.all(14),
+                            child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                          )
+                        : IconButton(
+                            tooltip: hasSmartName ? 'Name from page text' : 'Name from page text · Pro',
+                            icon: Icon(hasSmartName ? Icons.auto_awesome_outlined : Icons.lock_outline),
+                            onPressed: saving || pageCount == 0 ? null : _suggestName,
+                          ),
                   ),
                 ),
                 const SizedBox(height: 16),
