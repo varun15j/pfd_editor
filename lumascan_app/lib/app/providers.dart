@@ -4,6 +4,7 @@ import '../data/cunning_scanner_service.dart';
 import '../data/library_store.dart';
 import '../data/mlkit_vision.dart';
 import '../data/routed_ocr_engine.dart';
+import '../data/smart_namer.dart';
 import '../data/tesseract_ocr.dart';
 import '../data/page_store.dart';
 import '../data/photo_import_services.dart';
@@ -83,6 +84,9 @@ final ocrEngineProvider = Provider<OcrEngine>((ref) {
     handles: TesseractOcrEngine.handles,
   );
 });
+
+/// Auto file naming (Pro): a name suggested from the first page's text.
+final smartNamerProvider = Provider<SmartNamer>((ref) => SmartNamer(ref.watch(ocrEngineProvider)));
 
 /// On-device QR reading for the camera's QR mode.
 final qrReaderProvider = Provider<QrReader>((ref) {
