@@ -15,5 +15,8 @@ import UIKit
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "ShareInbox") {
       ShareInbox.register(with: registrar.messenger())
     }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "DeviceAuth") {
+      DeviceAuth.register(with: registrar.messenger())
+    }
   }
 }

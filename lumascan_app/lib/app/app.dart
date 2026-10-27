@@ -5,6 +5,7 @@ import '../debug/debug_panel.dart';
 import '../features/capture/shared_images_listener.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import 'app_info.dart';
+import 'app_lock.dart';
 import 'preferences.dart';
 import 'purchases.dart';
 import 'shell.dart';
@@ -15,16 +16,19 @@ class LumaScanApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return MaterialApp(
-      title: appName,
-      debugShowCheckedModeBanner: false,
-      theme: buildLumaTheme(Brightness.light),
-      darkTheme: buildLumaTheme(Brightness.dark),
-      themeMode: ref.watch(themeModeProvider),
-      navigatorKey: debugNavigatorKey,
-      // Debug builds: swipe in from the left edge for the debug panel.
-      builder: (context, child) => DebugPanelHost(child: child!),
-      home: const StartGate(),
+    return AppLockScope(
+      child: MaterialApp(
+        title: appName,
+        debugShowCheckedModeBanner: false,
+        theme: buildLumaTheme(Brightness.light),
+        darkTheme: buildLumaTheme(Brightness.dark),
+        themeMode: ref.watch(themeModeProvider),
+        navigatorKey: debugNavigatorKey,
+        // Debug builds: swipe in from the left edge for the debug panel. The
+        // app lock covers it too.
+        builder: (context, child) => AppLockOverlay(child: DebugPanelHost(child: child!)),
+        home: const StartGate(),
+      ),
     );
   }
 }

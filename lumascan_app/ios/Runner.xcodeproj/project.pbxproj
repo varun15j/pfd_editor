@@ -18,6 +18,7 @@
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		E8C528448F5BEB78DAE71FF0 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DF0A87648241EF501E56F9B /* ShareViewController.swift */; };
 		0DC317E48BAEBDDADA4FB48F /* ShareInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF774951D6ADFCE7B8E31FFD /* ShareInbox.swift */; };
+		0DC317E48BAEBDDADA4FB490 /* DeviceAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF774951D6ADFCE7B8E31FFE /* DeviceAuth.swift */; };
 		F518AAC027CDC4B956ED41F0 /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B9D7C15139C9DCE9E12811A0 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -85,6 +86,7 @@
 		4551AE1E9AEC35F3A6A87122 /* ShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
 		35221D5086F241B9A6622228 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		AF774951D6ADFCE7B8E31FFD /* ShareInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareInbox.swift; sourceTree = "<group>"; };
+		AF774951D6ADFCE7B8E31FFE /* DeviceAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceAuth.swift; sourceTree = "<group>"; };
 		B9D7C15139C9DCE9E12811A0 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -160,6 +162,7 @@
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				AF774951D6ADFCE7B8E31FFD /* ShareInbox.swift */,
+				AF774951D6ADFCE7B8E31FFE /* DeviceAuth.swift */,
 				35221D5086F241B9A6622228 /* Runner.entitlements */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
@@ -363,6 +366,7 @@
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 				0DC317E48BAEBDDADA4FB48F /* ShareInbox.swift in Sources */,
+				0DC317E48BAEBDDADA4FB490 /* DeviceAuth.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

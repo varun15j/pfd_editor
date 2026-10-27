@@ -23,6 +23,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var channel: MethodChannel? = null
+    private val deviceAuth = DeviceAuth(this)
     private var resumed = false
     private var uiDisplayed = false
     private var debugSession = false
@@ -60,6 +61,15 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ShareInbox.CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "inboxPath") result.success(ShareInbox.dir(this).absolutePath) else result.notImplemented()
         }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DeviceAuth.CHANNEL)
+            .setMethodCallHandler(deviceAuth::handle)
+    }
+
+    @Deprecated("Needed for the lock screen's confirm screen on Android 8 and 9")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (deviceAuth.onActivityResult(requestCode, resultCode)) return
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun onResume() {

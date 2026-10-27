@@ -209,6 +209,7 @@ class _PlanCard extends StatelessWidget {
     PlanFeature.tableToExcel => 'Table to Excel: a photo of a table becomes a spreadsheet',
     PlanFeature.targetSize => 'Compress a PDF to fit under a size',
     PlanFeature.password => 'Password-protected PDFs',
+    PlanFeature.appLock => 'App lock with fingerprint or face',
     PlanFeature.splitPdf => 'Split a PDF and extract pages',
     PlanFeature.indianOcr => 'Text in Hindi, Marathi and other Indian languages',
     PlanFeature.smartName => 'Smart file names from the text on the page',

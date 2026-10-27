@@ -53,6 +53,10 @@ The Send PDF sheet has **Fit under a size** with 200 KB, 500 KB, 1 MB and 2 MB, 
 
 Add password (Library menu) and Send with password (Send sheet) make a copy of a saved PDF that asks for a password when opened, encrypted with AES-256 (`docs/document-password.md`). On Basic both are listed with a Pro badge and open the upgrade pop-up.
 
+## App lock (`PlanFeature.appLock`, Pro and Gold)
+
+Settings > App lock asks for fingerprint or face, with the phone's PIN, pattern or passcode as the fallback, when the app opens and after it has been in the background for the chosen time (immediately, 1 minute or 5 minutes; 1 minute by default). Turning it on needs Pro and a phone with a screen lock; turning it on or off asks for the owner first. If the plan later drops to Basic the lock stays on until it is turned off, so documents are never left open by a lapsed subscription. Native code: `DeviceAuth.kt` (platform BiometricPrompt on Android 10+, the lock screen's confirm screen on 8 and 9) and `DeviceAuth.swift` (LocalAuthentication), on the `lumascan/device_auth` channel.
+
 ## Split PDF and extract pages (`PlanFeature.splitPdf`, Pro and Gold)
 
 Split one PDF into several, every few pages or by typed ranges, or copy chosen pages into a new PDF (`docs/split-pdf.md`). Offered in Tools ("Split PDF") and the Library menu ("Split or extract pages"); on Basic both show Pro and open the upgrade pop-up. Merging stays on every plan.

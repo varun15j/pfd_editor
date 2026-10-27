@@ -72,6 +72,11 @@ class AppSettingsController extends Notifier<AppSettings> {
 
   void setOcrLanguage(String code) => _set(state.copyWith(ocrLanguage: code));
 
+  /// Settings checks the plan and the phone's lock before calling this.
+  void setAppLock(bool value) => _set(state.copyWith(appLock: value));
+
+  void setAppLockDelay(AppLockDelay value) => _set(state.copyWith(appLockDelay: value));
+
   void _set(AppSettings settings) {
     _changed = true;
     state = settings;
