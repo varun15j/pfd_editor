@@ -86,7 +86,12 @@ enum PlanFeature {
   /// Auto file naming: the save sheet suggests a name from the text on the
   /// first page, such as "Invoice INV-2041 2026-10-26", instead of the date
   /// pattern. Read on the device; typing a name stays on every plan.
-  smartName(AppPlan.pro);
+  smartName(AppPlan.pro),
+
+  /// Library search inside documents: the text of every saved PDF is read
+  /// on the device (its text layer, or OCR for scans) and searched along
+  /// with names. Searching by name stays on every plan.
+  searchText(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 

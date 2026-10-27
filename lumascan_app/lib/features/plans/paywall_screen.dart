@@ -213,6 +213,7 @@ class _PlanCard extends StatelessWidget {
     PlanFeature.splitPdf => 'Split a PDF and extract pages',
     PlanFeature.indianOcr => 'Text in Hindi, Marathi and other Indian languages',
     PlanFeature.smartName => 'Smart file names from the text on the page',
+    PlanFeature.searchText => 'Search the text inside your documents',
   };
 }
 

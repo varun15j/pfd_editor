@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/preferences.dart';
+import '../../domain/document_text.dart';
 import '../../domain/library.dart';
+import '../../domain/plan.dart';
+import 'document_text_controller.dart';
 import '../../domain/library_query.dart';
 import 'library_actions.dart';
 import 'library_controller.dart';
@@ -55,5 +59,13 @@ final filteredDocumentsProvider = Provider<List<SavedDocument>>((ref) {
     final known = {for (final t in index.allTags) t.toLowerCase()};
     query = query.copyWith(tags: query.tags.intersection(known));
   }
-  return query.apply(ref.watch(visibleDocumentsProvider), DateTime.now());
+  return query.apply(ref.watch(visibleDocumentsProvider), DateTime.now(), texts: ref.watch(searchableTextsProvider));
+});
+
+/// Text of documents to search in: on Pro and Gold, while searching. Empty
+/// otherwise, so Basic searches names only and nothing is read in vain.
+final searchableTextsProvider = Provider<Map<String, DocumentText>>((ref) {
+  final searching = ref.watch(libraryQueryProvider.select((q) => q.isSearching));
+  if (!searching || !ref.watch(planIncludesProvider(PlanFeature.searchText))) return const {};
+  return ref.watch(documentTextProvider.select((s) => s.texts));
 });
