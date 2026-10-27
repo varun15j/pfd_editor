@@ -5,6 +5,7 @@ import 'package:image/image.dart' as img;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../../app/app_info.dart';
 import 'docx_reader.dart';
 
 /// Lays a [DocxDocument] out as a PDF. Each Word section keeps its page size
@@ -19,7 +20,7 @@ class DocxToPdf {
   static const _bodyPt = 11.0;
 
   static Future<({Uint8List bytes, int pageCount})> build(DocxDocument document, {String title = 'Document'}) async {
-    final doc = pw.Document(title: title, creator: 'LumaScan');
+    final doc = pw.Document(title: title, creator: appName);
     for (final section in document.sections) {
       final m = section.margins;
       final contentW = section.pageWidthPt - m.left - m.right;

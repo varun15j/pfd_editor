@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../app/app_info.dart';
 import 'models.dart';
 
 /// Whether text recognition can run for a language on this device.
@@ -52,7 +53,7 @@ class UnavailableOcrEngine implements OcrEngine {
   Future<OcrCapability> capability(String languageCode) async => const OcrCapability(
     readiness: OcrReadiness.unavailable,
     language: 'English',
-    reason: 'Text recognition is not available in this version of LumaScan yet. Your pages are not affected.',
+    reason: 'Text recognition is not available in this version of $appName yet. Your pages are not affected.',
   );
 
   @override

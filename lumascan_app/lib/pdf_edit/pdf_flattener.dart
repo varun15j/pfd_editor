@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../app/app_info.dart';
 import '../domain/models.dart';
 import '../imaging/masking.dart';
 import 'annotations.dart';
@@ -25,7 +26,7 @@ class FlattenPage {
 /// left in the file.
 Future<Uint8List> buildEditedPdf(List<FlattenPage> pages, {String? title}) {
   if (pages.isEmpty) throw ArgumentError('A PDF needs at least one page');
-  final doc = pw.Document(title: title, creator: 'LumaScan');
+  final doc = pw.Document(title: title, creator: appName);
   for (final page in pages) {
     final w = page.widthPt, h = page.heightPt;
     final jpeg = burnMasksIntoJpeg(page.jpeg, masksIn(page.annotations));
