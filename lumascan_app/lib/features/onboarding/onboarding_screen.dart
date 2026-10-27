@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/app_info.dart';
 import '../../app/preferences.dart';
 import '../../app/theme.dart';
 
@@ -23,7 +24,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _IntroPage(
       Icons.document_scanner_outlined,
       'Scan anything',
-      'Point your camera at a page. LumaScan finds the edges and cleans it up, or turn photos you already have into pages.',
+      'Point your camera at a page. $appName finds the edges and cleans it up, or turn photos you already have into pages.',
     ),
     _IntroPage(
       Icons.edit_document,
@@ -188,7 +189,7 @@ class _ConsentView extends StatelessWidget {
           const SizedBox(height: Space.xxl),
           Semantics(
             header: true,
-            child: Text('Help improve LumaScan?', style: text.headlineMedium, textAlign: TextAlign.center),
+            child: Text('Help improve $appName?', style: text.headlineMedium, textAlign: TextAlign.center),
           ),
           const SizedBox(height: Space.md),
           Text(
@@ -199,7 +200,7 @@ class _ConsentView extends StatelessWidget {
           ),
           const SizedBox(height: Space.md),
           Text(
-            'This is optional and LumaScan works the same either way. You can change it any time in Settings.',
+            'This is optional and $appName works the same either way. You can change it any time in Settings.',
             style: text.bodyMedium?.copyWith(color: c.muted),
             textAlign: TextAlign.center,
           ),

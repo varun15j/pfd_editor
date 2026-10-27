@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/app_info.dart';
 import '../../app/theme.dart';
 import '../../domain/models.dart';
 import '../../domain/scanner_service.dart';
@@ -49,7 +50,7 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: pages.isEmpty || name == null
-            ? Text(adding == null ? 'LumaScan' : 'Adding pages')
+            ? Text(adding == null ? appName : 'Adding pages')
             : Semantics(
                 button: true,
                 hint: 'Rename',

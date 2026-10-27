@@ -1,4 +1,5 @@
 #include "Generated.xcconfig"
+#include "AppName.xcconfig"
 
 // Google Drive sign-in: the debug iOS client ID reversed, so
 // "123-abc.apps.googleusercontent.com" becomes

@@ -35,7 +35,15 @@ enum PlanFeature {
   /// a page and hides all but their last four characters. Drawing a mask by
   /// hand stays on every plan, because hiding your own ID number is basic
   /// privacy (Varun, 2026-10-26).
-  autoMask(AppPlan.pro);
+  autoMask(AppPlan.pro),
+
+  /// Exported PDFs without the "Scanned with" mark that Basic
+  /// prints at the foot of each page (Varun, 2026-10-27).
+  noWatermark(AppPlan.pro),
+
+  /// Page numbers ("2 / 5") at the foot of each page, offered as a switch
+  /// in the export sheet.
+  pageNumbers(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 

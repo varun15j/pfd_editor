@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/app_info.dart';
 import '../../app/theme.dart';
 import '../../domain/id_copy.dart';
 import '../../domain/models.dart';
@@ -36,9 +37,8 @@ class _IdCardTypeScreenState extends ConsumerState<IdCardTypeScreen> {
     ref.read(idCopyDraftProvider.notifier).start(_type);
     if (!mounted) return;
     setState(() => _starting = false);
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => const IdCardCaptureScreen()),
-    );
+    await Navigator.of(context)
+        .push(MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => const IdCardCaptureScreen()));
   }
 
   @override
@@ -85,7 +85,7 @@ class _IdCardTypeScreenState extends ConsumerState<IdCardTypeScreen> {
             ),
             const SizedBox(height: Space.xs),
             Text(
-              'Made on this phone. LumaScan copies your card; it does not check or verify it.',
+              'Made on this phone. $appName copies your card; it does not check or verify it.',
               textAlign: TextAlign.center,
               style: text.bodySmall?.copyWith(color: c.muted),
             ),
@@ -162,9 +162,8 @@ class _TypeChoice extends StatelessWidget {
                 type.label,
                 textAlign: TextAlign.center,
                 maxLines: 2,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                ),
+                style: Theme.of(context).textTheme.labelLarge
+                    ?.copyWith(fontWeight: selected ? FontWeight.w700 : FontWeight.w500),
               ),
             ],
           ),
@@ -255,17 +254,38 @@ class _SampleDocument extends StatelessWidget {
                 Expanded(child: lines),
                 const Divider(height: 4, color: ink),
                 Expanded(
-                  child: Row(children: [photo, const SizedBox(width: 4), Expanded(child: lines)]),
+                  child: Row(
+                    children: [
+                      photo,
+                      const SizedBox(width: 4),
+                      Expanded(child: lines),
+                    ],
+                  ),
                 ),
               ],
             )
           else if (back)
-            Row(children: [Expanded(child: lines), const SizedBox(width: 4), const AspectRatio(aspectRatio: 1, child: ColoredBox(color: Color(0xFFDCE3EA)))])
+            Row(
+              children: [
+                Expanded(child: lines),
+                const SizedBox(width: 4),
+                const AspectRatio(aspectRatio: 1, child: ColoredBox(color: Color(0xFFDCE3EA))),
+              ],
+            )
           else
-            Row(children: [photo, const SizedBox(width: 4), Expanded(child: lines)]),
+            Row(
+              children: [
+                photo,
+                const SizedBox(width: 4),
+                Expanded(child: lines),
+              ],
+            ),
           const Align(
             alignment: Alignment.topRight,
-            child: Text('SAMPLE', style: TextStyle(fontSize: 6, fontWeight: FontWeight.w800, color: Color(0xFFB0413E))),
+            child: Text(
+              'SAMPLE',
+              style: TextStyle(fontSize: 6, fontWeight: FontWeight.w800, color: Color(0xFFB0413E)),
+            ),
           ),
         ],
       ),
