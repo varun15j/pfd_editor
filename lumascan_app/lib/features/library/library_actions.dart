@@ -219,6 +219,7 @@ Future<void> createTextPdf(BuildContext context, WidgetRef ref, SavedDocument do
       pageCount: doc.pageCount,
       fileName: await store.freeExportName(TextPdfService.textName(doc.name)),
       keepLayout: ref.read(planIncludesProvider(PlanFeature.smartScan)),
+      languageCode: ref.read(ocrLanguageProvider),
       onProgress: (f) => progress.value = f,
     );
     navigator.pop();

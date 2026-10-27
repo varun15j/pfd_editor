@@ -69,7 +69,13 @@ enum PlanFeature {
   /// Split a PDF into several by page ranges, or extract chosen pages into
   /// a new PDF. Offered in Tools and the Library menu; merging stays on
   /// every plan.
-  splitPdf(AppPlan.pro);
+  splitPdf(AppPlan.pro),
+
+  /// Text recognition in Indian languages: Hindi, Marathi and the other
+  /// Devanagari languages including neat handwriting, and Bangla, Gujarati,
+  /// Tamil, Telugu, Kannada, Malayalam, Punjabi, Odia, Assamese and Urdu.
+  /// Basic reads English and other Latin-script languages.
+  indianOcr(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 

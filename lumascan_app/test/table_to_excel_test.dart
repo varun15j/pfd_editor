@@ -328,7 +328,7 @@ class _FakeOcr implements OcrEngine, OcrFileLayoutEngine {
   Future<String> recognize(ScanPage page, {required String languageCode}) async => layout.text;
 
   @override
-  Future<String> recognizeFile(String path) async => layout.text;
+  Future<String> recognizeFile(String path, {String languageCode = 'en'}) async => layout.text;
 
   @override
   Future<OcrLayout> recognizeLayoutFile(String path) async => layout;

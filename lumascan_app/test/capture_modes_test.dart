@@ -47,7 +47,7 @@ class _FakeOcr implements OcrEngine {
   int fileReads = 0;
 
   @override
-  Future<String> recognizeFile(String path) async {
+  Future<String> recognizeFile(String path, {String languageCode = 'en'}) async {
     fileReads++;
     return photoText;
   }

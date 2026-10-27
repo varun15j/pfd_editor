@@ -54,6 +54,9 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DeviceLoad.CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "snapshot") result.success(DeviceLoad.snapshot(this)) else result.notImplemented()
         }
+        val tesseract = TesseractOcr()
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, TesseractOcr.CHANNEL)
+            .setMethodCallHandler(tesseract::handle)
     }
 
     override fun onResume() {

@@ -80,3 +80,11 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Tesseract for the Indian scripts ML Kit cannot read (TesseractOcr.kt).
+    implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
+    // ML Kit's Devanagari model (Hindi, Marathi), about 4 MB. The plugin
+    // bundles Latin only.
+    implementation("com.google.mlkit:text-recognition-devanagari:16.0.1")
+}

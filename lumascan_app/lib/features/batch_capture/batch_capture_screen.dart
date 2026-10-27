@@ -506,7 +506,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
         try {
           final current = container.read(scanControllerProvider).pageById(page.id);
           if (current == null) continue;
-          final text = await ocr.recognize(current, languageCode: 'en');
+          final text = await ocr.recognize(current, languageCode: container.read(ocrLanguageProvider));
           controller.setPageText(page.id, text);
           if (mounted && text.trim().isNotEmpty) {
             final n = container.read(scanControllerProvider).pages.indexWhere((p) => p.id == page.id) + 1;
@@ -573,7 +573,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     String? text;
     String? problem;
     try {
-      text = await ref.read(ocrEngineProvider).recognizeFile(path);
+      text = await ref.read(ocrEngineProvider).recognizeFile(path, languageCode: ref.read(ocrLanguageProvider));
     } catch (e) {
       problem = 'Text could not be read on this device.';
       debugPrint('Text recognition failed: $e');

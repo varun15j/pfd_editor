@@ -41,7 +41,7 @@ abstract interface class OcrEngine {
   Future<String> recognize(ScanPage page, {required String languageCode});
 
   /// Returns the text in a photo file as it is, for Text mode in the camera.
-  Future<String> recognizeFile(String path);
+  Future<String> recognizeFile(String path, {String languageCode = 'en'});
 }
 
 /// The engine used until LumaScan ships one: it reports OCR as unavailable,
@@ -64,7 +64,8 @@ class UnavailableOcrEngine implements OcrEngine {
       Future.error(UnsupportedError('No OCR engine'));
 
   @override
-  Future<String> recognizeFile(String path) => Future.error(UnsupportedError('No OCR engine'));
+  Future<String> recognizeFile(String path, {String languageCode = 'en'}) =>
+      Future.error(UnsupportedError('No OCR engine'));
 }
 
 /// A piece of text and where it sits on the page, as fractions (0 to 1) of
