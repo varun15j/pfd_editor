@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
+import '../../app/app_info.dart';
 import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../domain/models.dart';
@@ -45,6 +46,9 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
   /// Export a text PDF (Pro and Gold): OCR reads the pages and the PDF holds
   /// their text, with pictures kept as images.
   bool _textPdf = false;
+
+  /// "2 / 5" at the foot of each page (Pro and Gold).
+  bool _pageNumbers = false;
   double? _progress;
   File? _result;
   String? _error;
@@ -88,6 +92,9 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
     final exporter = ref.read(pdfExporterProvider);
     final textPdf = _textPdf && ref.read(planIncludesProvider(PlanFeature.textPdf));
     final textService = ref.read(textPdfServiceProvider);
+    // Basic PDFs carry the "Scanned with" mark; Pro and Gold have none.
+    final watermark = ref.read(planIncludesProvider(PlanFeature.noWatermark)) ? null : exportWatermark;
+    final pageNumbers = _pageNumbers && ref.read(planIncludesProvider(PlanFeature.pageNumbers));
     final fileName = textPdf ? TextPdfService.textName(_name.text) : PdfEditSaver.safeFileName(_name.text);
     final draft = ref.read(scanControllerProvider.notifier);
     final keepOriginals = ref.read(appSettingsProvider).keepOriginals;
@@ -115,7 +122,13 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
         file = await exporter.export(
           pages,
           // A name that is already taken gets a number, never replaces a file.
-          ExportOptions(pageSize: _size, quality: _quality, fileName: await store.freeExportName(fileName)),
+          ExportOptions(
+            pageSize: _size,
+            quality: _quality,
+            fileName: await store.freeExportName(fileName),
+            watermark: watermark,
+            pageNumbers: pageNumbers,
+          ),
           onProgress: (done, total) {
             if (mounted) setState(() => _progress = done / total);
           },
@@ -152,6 +165,11 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
     if (mounted) setState(() => _textPdf = textPdf);
   }
 
+  Future<void> _setPageNumbers(bool on) async {
+    if (on && !await ensurePlan(context, ref, PlanFeature.pageNumbers, what: 'Page numbers')) return;
+    if (mounted) setState(() => _pageNumbers = on);
+  }
+
   Future<void> _send() {
     final file = _result!;
     return showSendPdfSheet(context, pdfPath: file.path, name: p.basename(file.path), pageCount: _savedPages);
@@ -166,6 +184,8 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
     final result = _result;
     final saving = _saving;
     final hasTextPdf = ref.watch(planIncludesProvider(PlanFeature.textPdf));
+    final hasPageNumbers = ref.watch(planIncludesProvider(PlanFeature.pageNumbers));
+    final watermarked = !ref.watch(planIncludesProvider(PlanFeature.noWatermark));
 
     return PopScope(
       canPop: !saving,
@@ -258,6 +278,22 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
                       pageCount: pageCount,
                       selected: q == _quality,
                       onTap: saving ? null : () => setState(() => _quality = q),
+                    ),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    secondary: Icon(hasPageNumbers ? Icons.format_list_numbered : Icons.lock_outline),
+                    title: Text(hasPageNumbers ? 'Page numbers' : 'Page numbers · Pro'),
+                    subtitle: const Text('Adds "2 / 5" at the foot of each page'),
+                    value: _pageNumbers && hasPageNumbers,
+                    onChanged: saving ? null : _setPageNumbers,
+                  ),
+                  if (watermarked)
+                    Text(
+                      'Basic PDFs have a small "$exportWatermark" at the foot of each page. '
+                      'Pro and Gold PDFs have none.',
+                      style: textTheme.bodySmall,
                     ),
                 ],
                 const SizedBox(height: 16),

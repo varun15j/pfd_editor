@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/app_info.dart';
 import '../../app/theme.dart';
 import '../../domain/id_copy.dart';
 import '../../domain/models.dart';
@@ -101,7 +102,9 @@ class _IdCardReviewScreenState extends ConsumerState<IdCardReviewScreen> {
         controller.rotate(page.id);
       case _EditAction.mask:
         await navigator.push(
-          MaterialPageRoute<void>(builder: (_) => MarkupScreen(pageId: page.id, initialTool: EditorTool.mask)),
+          MaterialPageRoute<void>(
+            builder: (_) => MarkupScreen(pageId: page.id, initialTool: EditorTool.mask),
+          ),
         );
       case _EditAction.retake:
         await _retake(_selected);
@@ -110,9 +113,9 @@ class _IdCardReviewScreenState extends ConsumerState<IdCardReviewScreen> {
     }
   }
 
-  Future<void> _retake(int side) => Navigator.of(context).push(
-    MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => IdCardCaptureScreen(retakeSide: side)),
-  );
+  Future<void> _retake(int side) =>
+      Navigator.of(context)
+          .push(MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => IdCardCaptureScreen(retakeSide: side)));
 
   Future<void> _filter() async {
     final page = _selectedPage();
@@ -142,9 +145,7 @@ class _IdCardReviewScreenState extends ConsumerState<IdCardReviewScreen> {
       if (widget.fromSaved) {
         Navigator.of(context).pop();
       } else {
-        await Navigator.of(
-          context,
-        ).pushReplacement(MaterialPageRoute<void>(builder: (_) => const IdCardSavedScreen()));
+        await Navigator.of(context).pushReplacement(MaterialPageRoute<void>(builder: (_) => const IdCardSavedScreen()));
       }
     } on Object catch (e) {
       debugPrint('ID copy save failed: $e');
@@ -166,7 +167,7 @@ class _IdCardReviewScreenState extends ConsumerState<IdCardReviewScreen> {
         'Tap a side to crop, resize, rotate or take it again, or to hide a number with a mask.\n\n'
         'Filter makes the selected side clearer. Add Watermark prints a purpose, such as '
         '"For bank KYC only", across every side so the copy is less useful anywhere else.\n\n'
-        'The copy is made and kept on this phone. LumaScan copies your card; it does not check or verify it.',
+        'The copy is made and kept on this phone. $appName copies your card; it does not check or verify it.',
       ),
       actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
     ),
@@ -177,7 +178,10 @@ class _IdCardReviewScreenState extends ConsumerState<IdCardReviewScreen> {
     final draft = ref.watch(idCopyDraftProvider);
     final scan = ref.watch(scanControllerProvider);
     if (draft == null) {
-      return Scaffold(appBar: AppBar(), body: const Center(child: Text('Nothing to review')));
+      return Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: Text('Nothing to review')),
+      );
     }
     final sides = sidePages(draft, scan);
     final name = scan.info?.name ?? 'ID card';
@@ -300,8 +304,12 @@ class IdCopyPagePreview extends StatelessWidget {
         ),
         child: LayoutBuilder(
           builder: (context, box) {
-            Rect place(Rect s) =>
-                Rect.fromLTWH(s.left * box.maxWidth, s.top * box.maxHeight, s.width * box.maxWidth, s.height * box.maxHeight);
+            Rect place(Rect s) => Rect.fromLTWH(
+              s.left * box.maxWidth,
+              s.top * box.maxHeight,
+              s.width * box.maxWidth,
+              s.height * box.maxHeight,
+            );
             return Stack(
               children: [
                 for (var i = 0; i < slots.length; i++)
@@ -384,8 +392,7 @@ class _SideSlot extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     PageImage(page: page, maxDimension: 1600),
-                    if (watermark != null)
-                      IgnorePointer(child: CustomPaint(painter: _WatermarkPainter(watermark!))),
+                    if (watermark != null) IgnorePointer(child: CustomPaint(painter: _WatermarkPainter(watermark!))),
                   ],
                 ),
         ),
@@ -606,7 +613,10 @@ class _AddWatermarkDialogState extends State<AddWatermarkDialog> {
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         TextButton(
           onPressed: _ok,
-          child: const Text('OK', style: TextStyle(color: LumaColors.scan, fontWeight: FontWeight.w700)),
+          child: const Text(
+            'OK',
+            style: TextStyle(color: LumaColors.scan, fontWeight: FontWeight.w700),
+          ),
         ),
       ],
     );

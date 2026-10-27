@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../debug/debug_panel.dart';
 import '../features/capture/shared_images_listener.dart';
 import '../features/onboarding/onboarding_screen.dart';
+import 'app_info.dart';
 import 'preferences.dart';
 import 'shell.dart';
 import 'theme.dart';
@@ -14,7 +15,7 @@ class LumaScanApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
-      title: 'LumaScan',
+      title: appName,
       debugShowCheckedModeBanner: false,
       theme: buildLumaTheme(Brightness.light),
       darkTheme: buildLumaTheme(Brightness.dark),

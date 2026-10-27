@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/app_info.dart';
 import 'image_profiler.dart';
 import 'plan_switcher_tile.dart';
 import 'profile_sample.dart';
@@ -179,7 +180,7 @@ class DebugPanel extends StatelessWidget {
                     subtitle: Text(
                       profiler.keptAfterUninstall
                           ? 'Saved in ${profiler.databasePath}'
-                          : 'Moves the database to Documents/LumaScan/debug. Android asks for "All files access".',
+                          : 'Moves the database to Documents/$appName/debug. Android asks for "All files access".',
                     ),
                     onTap: profiler.keptAfterUninstall
                         ? null
