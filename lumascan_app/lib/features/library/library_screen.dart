@@ -69,6 +69,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         editTagsSheet(context, ref, [doc]);
       case DocumentMenuAction.share:
         shareDocuments(context, [doc]);
+      case DocumentMenuAction.password:
+        addPasswordToDocument(context, ref, doc);
       case DocumentMenuAction.textPdf:
         createTextPdf(context, ref, doc);
       case DocumentMenuAction.word:

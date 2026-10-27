@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../app/providers.dart';
+import '../../export/pdf_lock/pdf_locker.dart';
 import '../../export/pdf_shrinker.dart';
 import '../../pdf_edit/pdf_edit_controller.dart';
 
@@ -42,3 +43,5 @@ final pdfSharerProvider = Provider<PdfSharer>((ref) => SharePlusPdfSharer());
 final pdfShrinkerProvider = Provider<PdfShrinker>(
   (ref) => PdfShrinker(ref.watch(pageStoreProvider), ref.watch(pdfRasterizerProvider)),
 );
+
+final pdfLockerProvider = Provider<PdfLocker>((ref) => PdfLocker(ref.watch(pageStoreProvider)));

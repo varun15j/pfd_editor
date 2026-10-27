@@ -29,7 +29,12 @@ enum PlanFeature {
   /// PDF to Word: a saved PDF, a PDF from the device or the pages of a scan
   /// become a Word (.docx) file. Offered in Export, Tools and the Library
   /// menu. Word to PDF stays on every plan.
-  word(AppPlan.pro);
+  word(AppPlan.pro),
+
+  /// Document password: a copy of a saved PDF, encrypted with AES-256, that
+  /// asks for a password when opened. Offered in the Library menu and the
+  /// Send sheet.
+  password(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 

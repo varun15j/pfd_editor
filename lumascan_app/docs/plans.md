@@ -26,6 +26,10 @@ Basic scans the original way: white-paper detection only, the page found in each
 
 OCR turns a draft, a saved document or any PDF of photos into a PDF of real text, with pictures kept as images (`docs/ocr-text-pdf.md`). On Basic the buttons are visible and open the upgrade pop-up (`ensurePlan` in `lib/ui/upgrade_dialog.dart`).
 
+## Document password (`PlanFeature.password`, Pro and Gold)
+
+Add password (Library menu) and Send with password (Send sheet) make a copy of a saved PDF that asks for a password when opened, encrypted with AES-256 (`docs/document-password.md`). On Basic both are listed with a Pro badge and open the upgrade pop-up.
+
 ## Which plan the app uses
 
 - `purchasedPlan` in `lib/domain/plan.dart` is the one config variable. It is `AppPlan.basic` until billing exists; billing will replace it with the plan the store reports. Change it there to try a plan in any build.
