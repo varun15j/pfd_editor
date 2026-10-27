@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
+import '../../app/app_info.dart';
 import '../../export/pdf_lock/pdf_locker.dart';
 import '../../ui/file_size.dart';
 import 'pdf_sharer.dart';
@@ -202,7 +203,7 @@ class _LockPdfSheetState extends ConsumerState<LockPdfSheet> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'LumaScan does not keep the password. If it is forgotten, the locked copy cannot be opened.',
+                        '$appName does not keep the password. If it is forgotten, the locked copy cannot be opened.',
                         style: textTheme.bodySmall,
                       ),
                     ),

@@ -302,7 +302,11 @@ void main() {
       await tester.runAsync(setUpContainer);
       await pumpSheet(tester);
       expect(find.text('Fit under a size'), findsOneWidget);
-      expect(find.text('Pro'), findsOneWidget);
+      // Send with password has its own Pro badge on Basic.
+      expect(
+        find.descendant(of: find.widgetWithText(ListTile, 'Fit under a size'), matching: find.text('Pro')),
+        findsOneWidget,
+      );
       await tester.tap(find.widgetWithText(ActionChip, '200 KB'));
       await tester.pumpAndSettle();
       expect(find.text('Upgrade to Pro'), findsWidgets);
