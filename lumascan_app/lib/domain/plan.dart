@@ -64,7 +64,12 @@ enum PlanFeature {
   /// Document password: a copy of a saved PDF, encrypted with AES-256, that
   /// asks for a password when opened. Offered in the Library menu and the
   /// Send sheet.
-  password(AppPlan.pro);
+  password(AppPlan.pro),
+
+  /// Split a PDF into several by page ranges, or extract chosen pages into
+  /// a new PDF. Offered in Tools and the Library menu; merging stays on
+  /// every plan.
+  splitPdf(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 

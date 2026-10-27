@@ -53,6 +53,10 @@ The Send PDF sheet has **Fit under a size** with 200 KB, 500 KB, 1 MB and 2 MB, 
 
 Add password (Library menu) and Send with password (Send sheet) make a copy of a saved PDF that asks for a password when opened, encrypted with AES-256 (`docs/document-password.md`). On Basic both are listed with a Pro badge and open the upgrade pop-up.
 
+## Split PDF and extract pages (`PlanFeature.splitPdf`, Pro and Gold)
+
+Split one PDF into several, every few pages or by typed ranges, or copy chosen pages into a new PDF (`docs/split-pdf.md`). Offered in Tools ("Split PDF") and the Library menu ("Split or extract pages"); on Basic both show Pro and open the upgrade pop-up. Merging stays on every plan.
+
 ## Which plan the app uses
 
 - `purchasedPlan` in `lib/domain/plan.dart` is the one config variable. It is `AppPlan.basic` until billing exists; billing will replace it with the plan the store reports. Change it there to try a plan in any build.

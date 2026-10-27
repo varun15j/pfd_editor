@@ -12,6 +12,7 @@ import '../id_card/id_card_type_screen.dart';
 import '../merge/merge_screen.dart';
 import '../pdf_editor/open_pdf.dart';
 import '../pdf_editor/pdf_editor_screen.dart';
+import '../split/split_actions.dart';
 import '../table/table_to_excel.dart';
 import '../word/word_actions.dart';
 
@@ -57,6 +58,12 @@ class ToolsScreen extends ConsumerWidget {
             Icons.library_add_outlined,
             'Merge PDFs',
             () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const MergeScreen())),
+          ),
+          _Tool(
+            Icons.call_split,
+            'Split PDF',
+            () => pickPdfToSplit(context, ref),
+            badge: ref.watch(planIncludesProvider(PlanFeature.splitPdf)) ? null : 'Pro',
           ),
         ],
       ),

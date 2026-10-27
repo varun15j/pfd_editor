@@ -84,8 +84,9 @@ void main() {
   testWidgets('on Basic Create text PDF is listed with Pro and opens the upgrade pop-up', (tester) async {
     await openMenu(tester, AppPlan.basic);
     expect(find.text('Create text PDF'), findsOneWidget);
-    // Add password, Create text PDF and Convert to Word are all Pro.
-    expect(find.text('Pro'), findsNWidgets(3));
+    // Add password, Create text PDF, Convert to Word and Split or extract
+    // pages are all Pro.
+    expect(find.text('Pro'), findsNWidgets(4));
     expect(
       find.descendant(of: find.widgetWithText(ListTile, 'Create text PDF'), matching: find.text('Pro')),
       findsOneWidget,

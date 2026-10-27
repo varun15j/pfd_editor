@@ -11,6 +11,7 @@ import '../../domain/library_query.dart';
 import '../../domain/scanner_service.dart';
 import '../../domain/ui_prefs.dart';
 import '../../ui/state_views.dart';
+import '../split/split_actions.dart';
 import '../word/word_actions.dart';
 import 'document_tile.dart';
 import 'library_actions.dart';
@@ -75,6 +76,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         createTextPdf(context, ref, doc);
       case DocumentMenuAction.word:
         convertToWord(context, ref, doc);
+      case DocumentMenuAction.split:
+        splitDocument(context, ref, doc);
       case DocumentMenuAction.delete:
         deleteWithUndo(context, ref, [doc]);
     }
