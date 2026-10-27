@@ -23,6 +23,11 @@ class HelpScreen extends StatelessWidget {
           'Everything can be undone from the top of the screen.',
     ),
     (
+      'Signing and stamping',
+      'In Markup or the PDF editor, tap Sign to draw a signature. On Pro, signatures and initials are saved on this phone '
+          'so you can place them again with one tap, and Date and Name stamps add today\'s date or your name.',
+    ),
+    (
       'Hiding an Aadhaar or ID number',
       'In Markup, choose Mask and drag over the part to hide. On Pro, Auto mask ID numbers finds Aadhaar, VID, PAN and other '
           'ID numbers for you and hides all but the last four characters. A mask is burned into the saved PDF or JPG, so what '

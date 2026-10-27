@@ -43,7 +43,12 @@ enum PlanFeature {
 
   /// Page numbers ("2 / 5") at the foot of each page, offered as a switch
   /// in the export sheet.
-  pageNumbers(AppPlan.pro);
+  pageNumbers(AppPlan.pro),
+
+  /// Signature library: signatures and initials saved once and placed again
+  /// with a tap, plus date and name stamps, in the PDF editor and Markup.
+  /// Drawing a one-off signature stays on every plan.
+  signatureLibrary(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 
