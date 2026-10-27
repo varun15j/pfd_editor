@@ -42,7 +42,7 @@ The five that matter most in India, where LumaScan can be better than every lega
 | # | Feature | What it is | Effort | Plan |
 | --- | --- | --- | --- | --- |
 | 15 | Redact text, not just cover it | Masking (built 2026-10-26) covers a region; redaction would also delete the text behind it in a PDF that has real text. | M | Pro |
-| 16 | Widget and quick actions | A home-screen widget and a long-press shortcut that open the camera straight away. | S | Basic (free) |
+| 16 | Widget and quick actions (built 2026-10-27, see [widget-and-shortcuts.md](widget-and-shortcuts.md)) | A home-screen widget and a long-press shortcut that open the camera straight away. | S | Basic (free) |
 | 17 | Share a scan as a link | A link instead of a file, so WhatsApp does not re-compress it. Needs the backend. | XL | Gold |
 | 18 | Print | Print straight from the app through the system print service. | S | Basic (free) |
 | 19 | Sort and bulk actions in the library | Multi-select for move, tag, delete and share; sort by size and by page count. | S | Basic (free) |

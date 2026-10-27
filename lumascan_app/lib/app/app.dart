@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../debug/debug_panel.dart';
+import '../features/capture/launch_actions_listener.dart';
 import '../features/capture/shared_images_listener.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import 'app_info.dart';
@@ -43,6 +44,8 @@ class StartGate extends ConsumerWidget {
     if (!ready.hasValue) return const Scaffold(body: SizedBox.shrink());
     final seen = ref.watch(appSettingsProvider.select((s) => s.onboardingSeen));
     // Images shared from the gallery wait until the intro has been seen.
-    return seen ? const SharedImagesListener(child: AppShell()) : OnboardingScreen(onDone: () {});
+    return seen
+        ? const SharedImagesListener(child: LaunchActionsListener(child: AppShell()))
+        : OnboardingScreen(onDone: () {});
   }
 }
