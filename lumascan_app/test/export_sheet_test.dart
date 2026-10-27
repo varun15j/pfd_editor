@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:lumascan/app/app_info.dart';
 import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/app/theme.dart';
@@ -235,6 +236,43 @@ void main() {
     expect(find.textContaining('out.pdf'), findsOneWidget);
     expect(exporter.calls, hasLength(1));
   });
+
+  testWidgets('on Basic the PDF carries the watermark and page numbers offer the upgrade', (tester) async {
+    await pumpSheet(tester);
+    expect(find.textContaining(exportWatermark), findsOneWidget);
+    expect(find.text('Page numbers · Pro'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Page numbers · Pro'));
+    await tester.tap(find.text('Page numbers · Pro'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('part of the Pro plan'), findsOneWidget);
+    await tester.tap(find.text('Not now'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value, isFalse);
+
+    await tester.ensureVisible(find.text('Save PDF'));
+    await tapSave(tester);
+    expect(exporter.calls.single.watermark, exportWatermark);
+    expect(exporter.calls.single.pageNumbers, isFalse);
+  });
+
+  for (final pro in [AppPlan.pro, AppPlan.gold]) {
+    testWidgets('on ${pro.label} the PDF has no watermark and can number its pages', (tester) async {
+      plan = pro;
+      await pumpSheet(tester);
+      expect(find.textContaining(exportWatermark), findsNothing);
+
+      await tester.ensureVisible(find.text('Page numbers'));
+      await tester.tap(find.text('Page numbers'));
+      await tester.pumpAndSettle();
+      expect(find.text('Upgrade to Pro'), findsNothing);
+
+      await tester.ensureVisible(find.text('Save PDF'));
+      await tapSave(tester);
+      expect(exporter.calls.single.watermark, isNull);
+      expect(exporter.calls.single.pageNumbers, isTrue);
+    });
+  }
 
   testWidgets('a name that is already taken is saved with a number', (tester) async {
     final store = container.read(pageStoreProvider);

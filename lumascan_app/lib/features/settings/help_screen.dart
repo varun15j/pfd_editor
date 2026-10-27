@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app/app_info.dart';
 import '../../app/theme.dart';
 
 /// Short answers to the questions people ask first. Plain text, works offline.
@@ -20,6 +21,25 @@ class HelpScreen extends StatelessWidget {
       'Fixing a page',
       'Open a page and use Crop, Filters or Rotate. Markup adds pen, highlighter, text and a signature. '
           'Everything can be undone from the top of the screen.',
+    ),
+    (
+      'Signing and stamping',
+      'In Markup or the PDF editor, tap Sign to draw a signature. On Pro, signatures and initials are saved on this phone '
+          'so you can place them again with one tap, and Date and Name stamps add today\'s date or your name.',
+    ),
+    (
+      'Hiding an Aadhaar or ID number',
+      'In Markup, choose Mask and drag over the part to hide. On Pro, Auto mask ID numbers finds Aadhaar, VID, PAN and other '
+          'ID numbers for you and hides all but the last four characters. A mask is burned into the saved PDF or JPG, so what '
+          'it covers cannot be read from the file.',
+    ),
+    (
+      'Copying an ID card',
+      'In Tools, choose ID Card (or tap + and choose ID copy). Pick ID Card for both sides, Single Side or Passport, then '
+          'Make it now. Take the front, then the back; each side is cropped to the card. On the review page, tap a side to '
+          'crop, rotate, take it again or hide a number, and Add Watermark prints a purpose such as "For bank KYC only" '
+          'across each side. The card prints at its real size on A4 or Letter. $appName copies your card; it does not '
+          'check or verify it.',
     ),
     (
       'Saving and sending',
@@ -71,7 +91,7 @@ class PrivacyScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(Space.page, Space.sm, Space.page, Space.xxl),
         children: [
           Text(
-            'Your scans and PDFs stay on this device. LumaScan has no account and does not upload anything. '
+            'Your scans and PDFs stay on this device. $appName has no account and does not upload anything. '
             'A file leaves your device only when you share it.',
             style: text.bodyLarge,
           ),

@@ -235,16 +235,19 @@ class ScanPage {
   /// because they would no longer line up.
   final List<Annotation> annotations;
 
-  /// Text read from the page (OCR Doc mode), or null when it has not been
+  /// Text read from the page (OCR mode), or null when it has not been
   /// read. Kept with the page so it can be copied later.
   final String? text;
 
-  ScanPage copyWith({EditRecipe? recipe, List<Annotation>? annotations, String? text}) => ScanPage(
+  /// [clearText] forgets the read text, for when it may show something a
+  /// new mask hides.
+  ScanPage copyWith({EditRecipe? recipe, List<Annotation>? annotations, String? text, bool clearText = false}) =>
+      ScanPage(
         id: id,
         originalPath: originalPath,
         recipe: recipe ?? this.recipe,
         annotations: annotations ?? this.annotations,
-        text: text ?? this.text,
+        text: clearText ? null : text ?? this.text,
       );
 
   /// [originalPath] is stored by file name only, because the app's private

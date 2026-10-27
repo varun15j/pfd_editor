@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/app/device_load.dart';
 import 'package:lumascan/app/preferences.dart';
@@ -381,12 +383,39 @@ void main() {
       await harness.settle(tester);
     }
 
-    testWidgets('the six modes are offered, with Docs first and selected', (tester) async {
+    testWidgets('the seven modes are offered, with Docs first and selected', (tester) async {
       await open(tester);
-      for (final m in ['Docs', 'Book', 'Text', 'OCR Doc', 'QR', 'Photo']) {
+      for (final m in ['Docs', 'ID', 'Book', 'Text', 'OCR', 'QR', 'Photo']) {
         expect(find.bySemanticsLabel('$m capture mode'), findsOneWidget, reason: m);
       }
       expect(tester.getSemantics(find.bySemanticsLabel('Docs capture mode')), isSemantics(isSelected: true));
+    });
+
+    testWidgets('ID closes the camera and opens ID card mode', (tester) async {
+      shots = Directory.systemTemp.createTempSync('lumascan_shots');
+      camera = FakeBatchCamera(shots);
+      await tester.runAsync(
+        () => harness.setUp(
+          pageCount: 0,
+          overrides: [
+            batchCameraProvider.overrideWithValue(() => camera),
+            photoAnalyzerProvider.overrideWithValue(FakePhotoAnalyzer()),
+            frameAnalyzerProvider.overrideWithValue((frame) async => const FrameAnalysis(quad: _page)),
+          ],
+        ),
+      );
+      await harness.pump(
+        tester,
+        Consumer(
+          builder: (context, ref, _) =>
+              TextButton(onPressed: () => openBatchCapture(context, ref), child: const Text('camera')),
+        ),
+      );
+      await tester.tap(find.text('camera'));
+      await harness.settle(tester);
+      await mode(tester, 'ID');
+      expect(find.text('Make it now'), findsOneWidget);
+      expect(camera.shots, 0);
     });
 
     testWidgets('auto capture takes the page once it holds still, and only once', (tester) async {
@@ -612,9 +641,9 @@ void main() {
       expect(harness.pages, hasLength(1));
     });
 
-    testWidgets('OCR Doc keeps the text read from each page to copy', (tester) async {
+    testWidgets('OCR keeps the text read from each page to copy', (tester) async {
       await open(tester, overrides: [ocrEngineProvider.overrideWithValue(_FakeOcr(pageText: 'Invoice 42'))]);
-      await mode(tester, 'OCR Doc');
+      await mode(tester, 'OCR');
       expect(find.text('OCR · IMAGE + SEARCHABLE TEXT'), findsOneWidget);
       await tester.tap(find.bySemanticsLabel('Auto On'));
       await shoot(tester, 'Capture page for text recognition');

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../app/app_info.dart';
 import '../../domain/models.dart';
 import '../crop/crop_screen.dart';
 import '../filters/filter_screen.dart';
@@ -52,7 +53,7 @@ Future<void> runPageAction(BuildContext context, WidgetRef ref, PageAction actio
         case ScanPermissionBlocked():
           messenger.showSnackBar(
             SnackBar(
-              content: const Text('Camera access is off for LumaScan.'),
+              content: const Text('Camera access is off for $appName.'),
               action: SnackBarAction(label: 'Open Settings', onPressed: openAppSettings),
             ),
           );

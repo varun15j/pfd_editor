@@ -1,0 +1,708 @@
+[
+ {
+  "text": "Monthly grocery bill",
+  "left": 0.3244,
+  "top": 0.06,
+  "right": 0.645,
+  "bottom": 0.1036,
+  "lines": [
+   {
+    "text": "Monthly grocery bill",
+    "left": 0.3244,
+    "top": 0.06,
+    "right": 0.645,
+    "bottom": 0.1036,
+    "words": [
+     {
+      "text": "Monthly",
+      "left": 0.3244,
+      "top": 0.0627,
+      "right": 0.4531,
+      "bottom": 0.1036
+     },
+     {
+      "text": "grocery",
+      "left": 0.465,
+      "top": 0.0691,
+      "right": 0.5869,
+      "bottom": 0.1027
+     },
+     {
+      "text": "bill",
+      "left": 0.6,
+      "top": 0.06,
+      "right": 0.645,
+      "bottom": 0.0918
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "Item",
+  "left": 0.0619,
+  "top": 0.1764,
+  "right": 0.1131,
+  "bottom": 0.1991,
+  "lines": [
+   {
+    "text": "Item",
+    "left": 0.0619,
+    "top": 0.1764,
+    "right": 0.1131,
+    "bottom": 0.1991,
+    "words": [
+     {
+      "text": "Item",
+      "left": 0.0619,
+      "top": 0.1764,
+      "right": 0.1131,
+      "bottom": 0.1991
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "Qty",
+  "left": 0.3862,
+  "top": 0.1718,
+  "right": 0.4263,
+  "bottom": 0.2,
+  "lines": [
+   {
+    "text": "Qty",
+    "left": 0.3862,
+    "top": 0.1718,
+    "right": 0.4263,
+    "bottom": 0.2,
+    "words": [
+     {
+      "text": "Qty",
+      "left": 0.3862,
+      "top": 0.1718,
+      "right": 0.4263,
+      "bottom": 0.2
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "Rate",
+  "left": 0.5369,
+  "top": 0.1691,
+  "right": 0.5887,
+  "bottom": 0.1918,
+  "lines": [
+   {
+    "text": "Rate",
+    "left": 0.5369,
+    "top": 0.1691,
+    "right": 0.5887,
+    "bottom": 0.1918,
+    "words": [
+     {
+      "text": "Rate",
+      "left": 0.5369,
+      "top": 0.1691,
+      "right": 0.5887,
+      "bottom": 0.1918
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "Amount",
+  "left": 0.7163,
+  "top": 0.1664,
+  "right": 0.81,
+  "bottom": 0.1891,
+  "lines": [
+   {
+    "text": "Amount",
+    "left": 0.7163,
+    "top": 0.1664,
+    "right": 0.81,
+    "bottom": 0.1891,
+    "words": [
+     {
+      "text": "Amount",
+      "left": 0.7163,
+      "top": 0.1664,
+      "right": 0.81,
+      "bottom": 0.1891
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "Basmati rice",
+  "left": 0.0625,
+  "top": 0.2609,
+  "right": 0.1925,
+  "bottom": 0.2855,
+  "lines": [
+   {
+    "text": "Basmati rice",
+    "left": 0.0625,
+    "top": 0.2609,
+    "right": 0.1925,
+    "bottom": 0.2855,
+    "words": [
+     {
+      "text": "Basmati",
+      "left": 0.0625,
+      "top": 0.2609,
+      "right": 0.145,
+      "bottom": 0.2855
+     },
+     {
+      "text": "rice",
+      "left": 0.1556,
+      "top": 0.2609,
+      "right": 0.1925,
+      "bottom": 0.2845
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "10",
+  "left": 0.3881,
+  "top": 0.2582,
+  "right": 0.4113,
+  "bottom": 0.2809,
+  "lines": [
+   {
+    "text": "10",
+    "left": 0.3881,
+    "top": 0.2582,
+    "right": 0.4113,
+    "bottom": 0.2809,
+    "words": [
+     {
+      "text": "10",
+      "left": 0.3881,
+      "top": 0.2582,
+      "right": 0.4113,
+      "bottom": 0.2809
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "95.50",
+  "left": 0.5369,
+  "top": 0.2545,
+  "right": 0.595,
+  "bottom": 0.2782,
+  "lines": [
+   {
+    "text": "95.50",
+    "left": 0.5369,
+    "top": 0.2545,
+    "right": 0.595,
+    "bottom": 0.2782,
+    "words": [
+     {
+      "text": "95.50",
+      "left": 0.5369,
+      "top": 0.2545,
+      "right": 0.595,
+      "bottom": 0.2782
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "955.00",
+  "left": 0.7181,
+  "top": 0.2518,
+  "right": 0.7894,
+  "bottom": 0.2755,
+  "lines": [
+   {
+    "text": "955.00",
+    "left": 0.7181,
+    "top": 0.2518,
+    "right": 0.7894,
+    "bottom": 0.2755,
+    "words": [
+     {
+      "text": "955.00",
+      "left": 0.7181,
+      "top": 0.2518,
+      "right": 0.7894,
+      "bottom": 0.2755
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "Wheat flour",
+  "left": 0.0619,
+  "top": 0.3473,
+  "right": 0.1856,
+  "bottom": 0.3718,
+  "lines": [
+   {
+    "text": "Wheat flour",
+    "left": 0.0619,
+    "top": 0.3473,
+    "right": 0.1856,
+    "bottom": 0.3718,
+    "words": [
+     {
+      "text": "Wheat",
+      "left": 0.0619,
+      "top": 0.3482,
+      "right": 0.13,
+      "bottom": 0.3718
+     },
+     {
+      "text": "flour",
+      "left": 0.1375,
+      "top": 0.3473,
+      "right": 0.1856,
+      "bottom": 0.3709
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "42",
+  "left": 0.5375,
+  "top": 0.3418,
+  "right": 0.5613,
+  "bottom": 0.3645,
+  "lines": [
+   {
+    "text": "42",
+    "left": 0.5375,
+    "top": 0.3418,
+    "right": 0.5613,
+    "bottom": 0.3645,
+    "words": [
+     {
+      "text": "42",
+      "left": 0.5375,
+      "top": 0.3418,
+      "right": 0.5613,
+      "bottom": 0.3645
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "210",
+  "left": 0.7188,
+  "top": 0.3391,
+  "right": 0.7562,
+  "bottom": 0.3618,
+  "lines": [
+   {
+    "text": "210",
+    "left": 0.7188,
+    "top": 0.3391,
+    "right": 0.7562,
+    "bottom": 0.3618,
+    "words": [
+     {
+      "text": "210",
+      "left": 0.7188,
+      "top": 0.3391,
+      "right": 0.7562,
+      "bottom": 0.3618
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "Toor dal",
+  "left": 0.0619,
+  "top": 0.4336,
+  "right": 0.1431,
+  "bottom": 0.4582,
+  "lines": [
+   {
+    "text": "Toor dal",
+    "left": 0.0619,
+    "top": 0.4336,
+    "right": 0.1431,
+    "bottom": 0.4582,
+    "words": [
+     {
+      "text": "Toor",
+      "left": 0.0619,
+      "top": 0.4355,
+      "right": 0.1062,
+      "bottom": 0.4582
+     },
+     {
+      "text": "dal",
+      "left": 0.1138,
+      "top": 0.4336,
+      "right": 0.1431,
+      "bottom": 0.4573
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "160",
+  "left": 0.5394,
+  "top": 0.4282,
+  "right": 0.5756,
+  "bottom": 0.4509,
+  "lines": [
+   {
+    "text": "160",
+    "left": 0.5394,
+    "top": 0.4282,
+    "right": 0.5756,
+    "bottom": 0.4509,
+    "words": [
+     {
+      "text": "160",
+      "left": 0.5394,
+      "top": 0.4282,
+      "right": 0.5756,
+      "bottom": 0.4509
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "320",
+  "left": 0.72,
+  "top": 0.4255,
+  "right": 0.7569,
+  "bottom": 0.4482,
+  "lines": [
+   {
+    "text": "320",
+    "left": 0.72,
+    "top": 0.4255,
+    "right": 0.7569,
+    "bottom": 0.4482,
+    "words": [
+     {
+      "text": "320",
+      "left": 0.72,
+      "top": 0.4255,
+      "right": 0.7569,
+      "bottom": 0.4482
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "Sunflower oil",
+  "left": 0.0638,
+  "top": 0.5191,
+  "right": 0.1981,
+  "bottom": 0.5445,
+  "lines": [
+   {
+    "text": "Sunflower oil",
+    "left": 0.0638,
+    "top": 0.5191,
+    "right": 0.1981,
+    "bottom": 0.5445,
+    "words": [
+     {
+      "text": "Sunflower",
+      "left": 0.0638,
+      "top": 0.52,
+      "right": 0.1688,
+      "bottom": 0.5445
+     },
+     {
+      "text": "oil",
+      "left": 0.1762,
+      "top": 0.5191,
+      "right": 0.1981,
+      "bottom": 0.5427
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "1,250.00",
+  "left": 0.54,
+  "top": 0.5136,
+  "right": 0.6306,
+  "bottom": 0.5409,
+  "lines": [
+   {
+    "text": "1,250.00",
+    "left": 0.54,
+    "top": 0.5136,
+    "right": 0.6306,
+    "bottom": 0.5409,
+    "words": [
+     {
+      "text": "1,250.00",
+      "left": 0.54,
+      "top": 0.5136,
+      "right": 0.6306,
+      "bottom": 0.5409
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "3,750.00",
+  "left": 0.7206,
+  "top": 0.5109,
+  "right": 0.8119,
+  "bottom": 0.5382,
+  "lines": [
+   {
+    "text": "3,750.00",
+    "left": 0.7206,
+    "top": 0.5109,
+    "right": 0.8119,
+    "bottom": 0.5382,
+    "words": [
+     {
+      "text": "3,750.00",
+      "left": 0.7206,
+      "top": 0.5109,
+      "right": 0.8119,
+      "bottom": 0.5382
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "180",
+  "left": 0.7219,
+  "top": 0.5982,
+  "right": 0.7581,
+  "bottom": 0.6209,
+  "lines": [
+   {
+    "text": "180",
+    "left": 0.7219,
+    "top": 0.5982,
+    "right": 0.7581,
+    "bottom": 0.6209,
+    "words": [
+     {
+      "text": "180",
+      "left": 0.7219,
+      "top": 0.5982,
+      "right": 0.7581,
+      "bottom": 0.6209
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "Sugar",
+  "left": 0.0644,
+  "top": 0.6082,
+  "right": 0.1256,
+  "bottom": 0.6373,
+  "lines": [
+   {
+    "text": "Sugar",
+    "left": 0.0644,
+    "top": 0.6082,
+    "right": 0.1256,
+    "bottom": 0.6373,
+    "words": [
+     {
+      "text": "Sugar",
+      "left": 0.0644,
+      "top": 0.6082,
+      "right": 0.1256,
+      "bottom": 0.6373
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "45",
+  "left": 0.5394,
+  "top": 0.6009,
+  "right": 0.5637,
+  "bottom": 0.6236,
+  "lines": [
+   {
+    "text": "45",
+    "left": 0.5394,
+    "top": 0.6009,
+    "right": 0.5637,
+    "bottom": 0.6236,
+    "words": [
+     {
+      "text": "45",
+      "left": 0.5394,
+      "top": 0.6009,
+      "right": 0.5637,
+      "bottom": 0.6236
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "299",
+  "left": 0.7212,
+  "top": 0.6845,
+  "right": 0.7588,
+  "bottom": 0.7073,
+  "lines": [
+   {
+    "text": "299",
+    "left": 0.7212,
+    "top": 0.6845,
+    "right": 0.7588,
+    "bottom": 0.7073,
+    "words": [
+     {
+      "text": "299",
+      "left": 0.7212,
+      "top": 0.6845,
+      "right": 0.7588,
+      "bottom": 0.7073
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "Green tea bags",
+  "left": 0.065,
+  "top": 0.6918,
+  "right": 0.2263,
+  "bottom": 0.7218,
+  "lines": [
+   {
+    "text": "Green tea bags",
+    "left": 0.065,
+    "top": 0.6918,
+    "right": 0.2263,
+    "bottom": 0.7218,
+    "words": [
+     {
+      "text": "Green",
+      "left": 0.065,
+      "top": 0.6945,
+      "right": 0.1263,
+      "bottom": 0.7173
+     },
+     {
+      "text": "tea",
+      "left": 0.1356,
+      "top": 0.6945,
+      "right": 0.1675,
+      "bottom": 0.7164
+     },
+     {
+      "text": "bags",
+      "left": 0.1781,
+      "top": 0.6918,
+      "right": 0.2263,
+      "bottom": 0.7218
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "299",
+  "left": 0.54,
+  "top": 0.6873,
+  "right": 0.5775,
+  "bottom": 0.71,
+  "lines": [
+   {
+    "text": "299",
+    "left": 0.54,
+    "top": 0.6873,
+    "right": 0.5775,
+    "bottom": 0.71,
+    "words": [
+     {
+      "text": "299",
+      "left": 0.54,
+      "top": 0.6873,
+      "right": 0.5775,
+      "bottom": 0.71
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "5,714.00",
+  "left": 0.7231,
+  "top": 0.7973,
+  "right": 0.825,
+  "bottom": 0.8255,
+  "lines": [
+   {
+    "text": "5,714.00",
+    "left": 0.7231,
+    "top": 0.7973,
+    "right": 0.825,
+    "bottom": 0.8255,
+    "words": [
+     {
+      "text": "5,714.00",
+      "left": 0.7231,
+      "top": 0.7973,
+      "right": 0.825,
+      "bottom": 0.8255
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "text": "Total",
+  "left": 0.065,
+  "top": 0.8064,
+  "right": 0.1212,
+  "bottom": 0.8309,
+  "lines": [
+   {
+    "text": "Total",
+    "left": 0.065,
+    "top": 0.8064,
+    "right": 0.1212,
+    "bottom": 0.8309,
+    "words": [
+     {
+      "text": "Total",
+      "left": 0.065,
+      "top": 0.8064,
+      "right": 0.1212,
+      "bottom": 0.8309
+     }
+    ]
+   }
+  ]
+ }
+]

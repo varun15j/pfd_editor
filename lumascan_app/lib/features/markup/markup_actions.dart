@@ -5,7 +5,7 @@ import '../../pdf_edit/annotations.dart';
 /// What the user picked in the menu for a text box or signature.
 enum AnnotationMenuAction { edit, larger, smaller, delete }
 
-/// Menu shown when tapping a text box or signature in Move mode.
+/// Menu shown when tapping a text box, signature or mask in Move mode.
 Future<AnnotationMenuAction?> showAnnotationMenu(BuildContext context, Annotation a) =>
     showModalBottomSheet<AnnotationMenuAction>(
       context: context,
@@ -40,12 +40,13 @@ Future<AnnotationMenuAction?> showAnnotationMenu(BuildContext context, Annotatio
       ),
     );
 
-/// [a] made 20% larger or smaller. Only text and signatures resize.
+/// [a] made 20% larger or smaller. Only text, signatures and masks resize.
 Annotation resizedAnnotation(Annotation a, {required bool larger}) {
   final f = larger ? 1.2 : 1 / 1.2;
   return switch (a) {
     TextAnnotation t => t.copyWith(fontSize: (t.fontSize * f).clamp(0.01, 0.2)),
     SignatureAnnotation s => s.copyWith(width: (s.width * f).clamp(0.08, 1.0)),
+    MaskAnnotation m => m.scaledBy(f),
     _ => a,
   };
 }
