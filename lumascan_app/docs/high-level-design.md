@@ -37,7 +37,7 @@ Dependencies point down only. Widgets never open files, call packages or write t
 
 | Subsystem | Responsibility | MVP implementation | Later |
 |---|---|---|---|
-| Capture | Produce page images with mode-specific geometry and metadata | Existing Docs flow uses cunning_document_scanner; planned custom surface exposes Docs/Book/Text/OCR Doc/QR/Photo | CameraX / AVFoundation adapters and evaluated book dewarp |
+| Capture | Produce page images with mode-specific geometry and metadata | Existing Docs flow uses cunning_document_scanner; planned custom surface exposes Docs/ID/Book/Text/OCR/QR/Photo | CameraX / AVFoundation adapters and evaluated book dewarp |
 | Library | Documents, pages, folders, trash, search | Drift + private asset store | Full-text OCR search |
 | Image editing | Crop, rotate, filters as recipes on immutable originals | Dart/native render per LLD section 7 | Advanced cleanup, dewarp |
 | Annotation | Ink, highlight, text, signature overlays | App-owned overlay, flattened at export | Stamping into imported PDFs |
