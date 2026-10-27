@@ -10,6 +10,7 @@ import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/app/theme.dart';
 import 'package:lumascan/data/page_store.dart';
+import 'package:lumascan/data/smart_namer.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/plan.dart';
 import 'package:lumascan/domain/scanner_service.dart';
@@ -83,8 +84,25 @@ class _FakeTextPdf implements TextPdfService {
   }) => throw UnimplementedError();
 }
 
+/// Suggests [name] for any pages, noting each call.
+class _FakeNamer implements SmartNamer {
+  _FakeNamer(this.name);
+  String? name;
+  int calls = 0;
+
+  @override
+  Duration get timeout => Duration.zero;
+
+  @override
+  Future<String?> suggest(List<ScanPage> pages, {String languageCode = 'en'}) async {
+    calls++;
+    return name;
+  }
+}
+
 void main() {
   var plan = AppPlan.basic;
+  late _FakeNamer namer;
   late _FakeTextPdf textPdf;
   late Directory tmp;
   late _FakeExporter exporter;
@@ -97,6 +115,7 @@ void main() {
         (File('${tmp.path}/scan$i.jpg')..writeAsBytesSync(img.encodeJpg(img.Image(width: 30, height: 40)))).path,
     ];
     plan = AppPlan.basic;
+    namer = _FakeNamer('Invoice INV-7 2026-10-26');
     textPdf = _FakeTextPdf(File('${tmp.path}/text.pdf')..writeAsBytesSync(List.filled(4096, 0)));
     exporter = _FakeExporter(File('${tmp.path}/out.pdf')..writeAsBytesSync(List.filled(2048, 0)));
     container = ProviderContainer(
@@ -107,6 +126,7 @@ void main() {
         textPdfServiceProvider.overrideWithValue(textPdf),
         planProvider.overrideWith((ref) => plan),
         libraryStoreProvider.overrideWithValue(MemoryLibraryStore()),
+        smartNamerProvider.overrideWithValue(namer),
       ],
     );
     await container.read(scanControllerProvider.notifier).scan(ScanSource.camera);
@@ -157,6 +177,51 @@ void main() {
     await pumpSheet(tester);
     expect(nameField(tester), matches(RegExp(r'^\d\d-[A-Z][a-z]{2}-\d{4}_\d\d-\d\d_SCAN$')));
     expect(find.text('.pdf'), findsOneWidget);
+  });
+
+  group('smart file names', () {
+    testWidgets('on Basic the name is not read from the page, and the button offers Pro', (tester) async {
+      await pumpSheet(tester);
+      expect(namer.calls, 0);
+      expect(nameField(tester), contains('_SCAN'));
+
+      await tester.tap(find.byTooltip('Name from page text · Pro'));
+      await tester.pumpAndSettle();
+      expect(find.text('Upgrade to Pro'), findsWidgets);
+      expect(namer.calls, 0);
+    });
+
+    for (final pro in [AppPlan.pro, AppPlan.gold]) {
+      testWidgets('on ${pro.label} the sheet opens with a name from the page text', (tester) async {
+        plan = pro;
+        await pumpSheet(tester);
+        expect(namer.calls, 1);
+        expect(nameField(tester), 'Invoice INV-7 2026-10-26');
+      });
+    }
+
+    testWidgets('a page with nothing to name keeps the date name, and says so only when asked', (tester) async {
+      plan = AppPlan.pro;
+      namer.name = null;
+      await pumpSheet(tester);
+      expect(nameField(tester), contains('_SCAN'));
+      expect(find.textContaining('No title'), findsNothing);
+
+      await tester.tap(find.byTooltip('Name from page text'));
+      await tester.pumpAndSettle();
+      expect(namer.calls, 2);
+      expect(find.text('No title, number or date found on the first page.'), findsOneWidget);
+    });
+
+    testWidgets('the button replaces a typed name, because the user asked', (tester) async {
+      plan = AppPlan.pro;
+      await pumpSheet(tester);
+      await tester.enterText(find.byType(TextField), 'Mine');
+      namer.name = 'Receipt 4471';
+      await tester.tap(find.byTooltip('Name from page text'));
+      await tester.pumpAndSettle();
+      expect(nameField(tester), 'Receipt 4471');
+    });
   });
 
   testWidgets('on Basic the Text PDF choice is shown with Pro, and tapping it offers the upgrade', (tester) async {

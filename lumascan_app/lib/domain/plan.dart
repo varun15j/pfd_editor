@@ -75,7 +75,12 @@ enum PlanFeature {
   /// Devanagari languages including neat handwriting, and Bangla, Gujarati,
   /// Tamil, Telugu, Kannada, Malayalam, Punjabi, Odia, Assamese and Urdu.
   /// Basic reads English and other Latin-script languages.
-  indianOcr(AppPlan.pro);
+  indianOcr(AppPlan.pro),
+
+  /// Auto file naming: the save sheet suggests a name from the text on the
+  /// first page, such as "Invoice INV-2041 2026-10-26", instead of the date
+  /// pattern. Read on the device; typing a name stays on every plan.
+  smartName(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 

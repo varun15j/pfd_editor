@@ -57,6 +57,10 @@ Add password (Library menu) and Send with password (Send sheet) make a copy of a
 
 Split one PDF into several, every few pages or by typed ranges, or copy chosen pages into a new PDF (`docs/split-pdf.md`). Offered in Tools ("Split PDF") and the Library menu ("Split or extract pages"); on Basic both show Pro and open the upgrade pop-up. Merging stays on every plan.
 
+## Smart file names (`PlanFeature.smartName`, Pro and Gold)
+
+The Save sheet suggests a name from the text on the first page instead of the date pattern: the kind of document (Invoice, Receipt, Certificate, Agreement and others) with its number and date, like "Tax Invoice INV-2041 2026-10-26", or else the page's title line. `SmartNamer` (`lib/data/smart_namer.dart`) reads the page on the device, reusing text already read in batch edit, and gives up after 8 seconds; the rules are in `suggestDocumentName` (`lib/domain/smart_name.dart`). On Pro and Gold the sheet opens with the suggestion unless the user has typed a name; the sparkle button in the name field asks again. On Basic the button shows a lock and opens the upgrade pop-up.
+
 ## Which plan the app uses
 
 - The real plan is `purchasedPlanProvider` (`lib/app/purchases.dart`): the plan the app store says this account paid for. It starts on the last plan the store reported (saved in `settings/plan.json`, Basic the first time), then asks the store at every start. Buying, restore and the store setup are in `docs/in-app-purchases.md`.
