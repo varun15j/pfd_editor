@@ -1,0 +1,592 @@
+{
+ "about": "Made by tool/make_edge_samples.py. Corners are TL, TR, BR, BL of the page, as a fraction of the photo width and height. Where more than one outline counts as the page (an open book: the spread or either page), each is listed.",
+ "size": [
+  1080,
+  1440
+ ],
+ "samples": [
+  {
+   "file": "c01_colour_page_dark_wood.jpg",
+   "group": "colour",
+   "about": "Colour book page on dark wood, slight tilt",
+   "pages": [
+    [
+     [
+      0.1664,
+      0.2042
+     ],
+     [
+      0.7742,
+      0.1723
+     ],
+     [
+      0.853,
+      0.8087
+     ],
+     [
+      0.2064,
+      0.8426
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "c02_colour_page_beige_table.jpg",
+   "group": "colour",
+   "about": "Colour page with a white margin on a light beige table (low contrast)",
+   "pages": [
+    [
+     [
+      0.2149,
+      0.116
+     ],
+     [
+      0.8448,
+      0.1656
+     ],
+     [
+      0.783,
+      0.859
+     ],
+     [
+      0.0832,
+      0.8038
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "c03_pink_paper_concrete.jpg",
+   "group": "colour",
+   "about": "Printed notice on pink paper, on grey concrete",
+   "pages": [
+    [
+     [
+      0.308,
+      0.1646
+     ],
+     [
+      0.8951,
+      0.2502
+     ],
+     [
+      0.7445,
+      0.8932
+     ],
+     [
+      0.1265,
+      0.8031
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "c04_yellow_paper_light_wood.jpg",
+   "group": "colour",
+   "about": "Yellow paper on light wood of a similar colour",
+   "pages": [
+    [
+     [
+      0.1357,
+      0.1807
+     ],
+     [
+      0.7328,
+      0.1178
+     ],
+     [
+      0.905,
+      0.815
+     ],
+     [
+      0.2265,
+      0.8865
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "c05_blue_form_blue_cloth.jpg",
+   "group": "colour",
+   "about": "Light blue form on blue cloth (page and background the same hue)",
+   "pages": [
+    [
+     [
+      0.2082,
+      0.162
+     ],
+     [
+      0.8207,
+      0.1861
+     ],
+     [
+      0.7999,
+      0.8668
+     ],
+     [
+      0.1341,
+      0.8406
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "c06_colour_page_carpet_perspective.jpg",
+   "group": "colour",
+   "about": "Colour page on red carpet, strong perspective",
+   "pages": [
+    [
+     [
+      0.2315,
+      0.2083
+     ],
+     [
+      0.8333,
+      0.2431
+     ],
+     [
+      0.9259,
+      0.8681
+     ],
+     [
+      0.1019,
+      0.8194
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "c07_colour_page_black_desk_turned.jpg",
+   "group": "colour",
+   "about": "Colour page turned 14 degrees on a black desk",
+   "pages": [
+    [
+     [
+      0.1117,
+      0.2575
+     ],
+     [
+      0.6867,
+      0.15
+     ],
+     [
+      0.8883,
+      0.7564
+     ],
+     [
+      0.3133,
+      0.8639
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "b01_bw_paper_black_desk.jpg",
+   "group": "bw",
+   "about": "Black and white question paper straight on a black desk (easy)",
+   "pages": [
+    [
+     [
+      0.1587,
+      0.1319
+     ],
+     [
+      0.8413,
+      0.1319
+     ],
+     [
+      0.8519,
+      0.8681
+     ],
+     [
+      0.1481,
+      0.8681
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "b02_bw_paper_concrete_shadow.jpg",
+   "group": "bw",
+   "about": "Black and white page turned 15 degrees on concrete, a shadow across it",
+   "pages": [
+    [
+     [
+      0.3393,
+      0.1189
+     ],
+     [
+      0.9278,
+      0.2372
+     ],
+     [
+      0.7165,
+      0.8849
+     ],
+     [
+      0.0905,
+      0.7591
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "b03_bw_paper_white_bedsheet.jpg",
+   "group": "bw",
+   "about": "White page on a white bedsheet (very low contrast)",
+   "pages": [
+    [
+     [
+      0.1516,
+      0.1882
+     ],
+     [
+      0.7693,
+      0.1477
+     ],
+     [
+      0.8716,
+      0.8241
+     ],
+     [
+      0.2075,
+      0.8677
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "b04_bw_paper_fingers_wood.jpg",
+   "group": "bw",
+   "about": "Hindi page held by fingers on the left and right edges, on dark wood",
+   "pages": [
+    [
+     [
+      0.233,
+      0.1379
+     ],
+     [
+      0.8316,
+      0.1693
+     ],
+     [
+      0.8002,
+      0.8638
+     ],
+     [
+      0.1352,
+      0.8289
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "b05_bw_narrow_slip_black_desk.jpg",
+   "group": "bw",
+   "about": "Narrow slip (like a receipt) on a black desk",
+   "pages": [
+    [
+     [
+      0.3074,
+      0.0823
+     ],
+     [
+      0.5726,
+      0.0614
+     ],
+     [
+      0.6981,
+      0.9173
+     ],
+     [
+      0.4219,
+      0.9391
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "b06_bw_paper_carpet_grey_photo.jpg",
+   "group": "bw",
+   "about": "Black and white page on carpet, photo taken in greyscale",
+   "pages": [
+    [
+     [
+      0.1247,
+      0.2069
+     ],
+     [
+      0.7305,
+      0.135
+     ],
+     [
+      0.9017,
+      0.8177
+     ],
+     [
+      0.2432,
+      0.8959
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "b07_colour_page_wood_grey_photo.jpg",
+   "group": "bw",
+   "about": "Colour page on light wood, photo taken in greyscale (page and wood nearly the same grey)",
+   "pages": [
+    [
+     [
+      0.2575,
+      0.1348
+     ],
+     [
+      0.8531,
+      0.1897
+     ],
+     [
+      0.7756,
+      0.8682
+     ],
+     [
+      0.1139,
+      0.8073
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "k01_colour_book_spread_wood.jpg",
+   "group": "book",
+   "about": "Open colour book, both pages in view, curved gutter, on dark wood",
+   "pages": [
+    [
+     [
+      0.0556,
+      0.2292
+     ],
+     [
+      0.9444,
+      0.2292
+     ],
+     [
+      0.963,
+      0.7361
+     ],
+     [
+      0.037,
+      0.7361
+     ]
+    ],
+    [
+     [
+      0.0556,
+      0.2292
+     ],
+     [
+      0.5,
+      0.2292
+     ],
+     [
+      0.5,
+      0.7361
+     ],
+     [
+      0.037,
+      0.7361
+     ]
+    ],
+    [
+     [
+      0.5,
+      0.2292
+     ],
+     [
+      0.9444,
+      0.2292
+     ],
+     [
+      0.963,
+      0.7361
+     ],
+     [
+      0.5,
+      0.7361
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "k02_bw_book_spread_cloth.jpg",
+   "group": "book",
+   "about": "Open black and white book, both pages in view, curved gutter, on blue cloth",
+   "pages": [
+    [
+     [
+      0.0278,
+      0.2639
+     ],
+     [
+      0.9722,
+      0.2778
+     ],
+     [
+      0.9815,
+      0.7014
+     ],
+     [
+      0.0185,
+      0.6875
+     ]
+    ],
+    [
+     [
+      0.0278,
+      0.2639
+     ],
+     [
+      0.5,
+      0.2708
+     ],
+     [
+      0.5,
+      0.6944
+     ],
+     [
+      0.0185,
+      0.6875
+     ]
+    ],
+    [
+     [
+      0.5,
+      0.2708
+     ],
+     [
+      0.9722,
+      0.2778
+     ],
+     [
+      0.9815,
+      0.7014
+     ],
+     [
+      0.5,
+      0.6944
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "k03_colour_book_one_page_thumb.jpg",
+   "group": "book",
+   "about": "Right page of an open colour book fills the frame, left page cut off, thumb on the right edge",
+   "pages": [
+    [
+     [
+      0.2037,
+      0.1701
+     ],
+     [
+      0.9259,
+      0.1806
+     ],
+     [
+      0.9444,
+      0.8611
+     ],
+     [
+      0.2222,
+      0.8507
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "k04_bw_book_one_page_dark.jpg",
+   "group": "book",
+   "about": "Right page of an open black and white book on a black desk, deep gutter shadow",
+   "pages": [
+    [
+     [
+      0.25,
+      0.191
+     ],
+     [
+      0.9352,
+      0.1736
+     ],
+     [
+      0.963,
+      0.8194
+     ],
+     [
+      0.2778,
+      0.8299
+     ]
+    ]
+   ]
+  },
+  {
+   "file": "k05_bw_book_spread_grey_photo.jpg",
+   "group": "book",
+   "about": "Open black and white book on concrete, photo taken in greyscale",
+   "pages": [
+    [
+     [
+      0.0741,
+      0.2083
+     ],
+     [
+      0.9259,
+      0.1667
+     ],
+     [
+      0.9815,
+      0.7778
+     ],
+     [
+      0.0278,
+      0.8194
+     ]
+    ],
+    [
+     [
+      0.0741,
+      0.2083
+     ],
+     [
+      0.5,
+      0.1875
+     ],
+     [
+      0.5046,
+      0.7986
+     ],
+     [
+      0.0278,
+      0.8194
+     ]
+    ],
+    [
+     [
+      0.5,
+      0.1875
+     ],
+     [
+      0.9259,
+      0.1667
+     ],
+     [
+      0.9815,
+      0.7778
+     ],
+     [
+      0.5046,
+      0.7986
+     ]
+    ]
+   ]
+  }
+ ]
+}

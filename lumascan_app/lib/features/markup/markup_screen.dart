@@ -26,9 +26,12 @@ import 'markup_toolbar.dart';
 /// until Done, so leaving with Back never changes the page, and Done is one
 /// undo step in the draft.
 class MarkupScreen extends ConsumerStatefulWidget {
-  const MarkupScreen({super.key, required this.pageId});
+  const MarkupScreen({super.key, required this.pageId, this.initialTool = EditorTool.pen});
 
   final String pageId;
+
+  /// The tool selected when the screen opens: Mask from ID card mode.
+  final EditorTool initialTool;
 
   @override
   ConsumerState<MarkupScreen> createState() => _MarkupScreenState();
@@ -39,7 +42,7 @@ class _MarkupScreenState extends ConsumerState<MarkupScreen> {
   Future<RenderedImage>? _image;
   List<Annotation>? _marks;
   final _undo = <List<Annotation>>[];
-  EditorTool _tool = EditorTool.pen;
+  late EditorTool _tool = widget.initialTool;
   MarkupStyle _style = const MarkupStyle();
   bool _autoMasking = false;
 

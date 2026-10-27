@@ -17,7 +17,7 @@ The five that matter most in India, where LumaScan can be better than every lega
 
 | # | Feature | What it is | Effort | Plan |
 | --- | --- | --- | --- | --- |
-| 1 | ID card mode | Front and back of an Aadhaar, PAN or licence card captured one after the other and laid out on one A4 page, ready to print. | M | Basic (free) |
+| 1 | ID card mode (built, see [id-card.md](id-card.md)) | Front and back of an Aadhaar, PAN or licence card captured one after the other and laid out on one A4 page, ready to print. | M | Basic (free) |
 | 2 | Compress to a target size | "Make this under 200 KB / 500 KB / 1 MB" for government portals, picking quality and resolution automatically and showing the real size. The pieces exist in `PdfShrinker`, which only has fixed quality levels. | M | Pro |
 | 3 | Hindi and Indian-language OCR | **In progress in PR #62** (ML Kit Devanagari plus Tesseract for other Indic scripts, offline). Listed here so it is not started twice. | M | Pro |
 | 4 | Lock a document and the app | A password on a saved PDF, plus fingerprint or face unlock for the app and for a locked folder. Genius Scan and Zoho both charge for this. | M | Pro |
