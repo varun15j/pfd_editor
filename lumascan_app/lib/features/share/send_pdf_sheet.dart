@@ -4,12 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
+import '../../app/preferences.dart';
+import '../../domain/plan.dart';
+import '../../export/pdf_lock/pdf_locker.dart';
 import '../../export/pdf_shrinker.dart';
 import '../../ui/file_size.dart';
+import '../../ui/state_views.dart';
+import '../../ui/upgrade_dialog.dart';
+import 'lock_pdf_sheet.dart';
 import 'pdf_sharer.dart';
 
-/// Offers to send a saved PDF as it is, or as a smaller copy. The saved file
-/// is never changed: the smaller copy is a separate file made for sending.
+/// Offers to send a saved PDF as it is, as a smaller copy, or (Pro) as a copy
+/// that fits under a size limit for upload forms. The saved file is never
+/// changed: each copy is a separate file made for sending.
 Future<void> showSendPdfSheet(
   BuildContext context, {
   required String pdfPath,
@@ -43,6 +50,12 @@ class _SendPdfSheetState extends ConsumerState<SendPdfSheet> {
 
   /// The smaller copy once it is made, so a second tap sends the same file.
   File? _copy;
+
+  /// The size being fitted while a target-size copy is made.
+  TargetSize? _fitting;
+
+  /// Target-size copies already made, so a second tap sends the same file.
+  final _fitted = <TargetSize, TargetSizeCopy>{};
 
   bool get _making => _progress != null;
 
@@ -138,6 +151,78 @@ class _SendPdfSheetState extends ConsumerState<SendPdfSheet> {
     await _send(tileContext, copy.path, sent: 'Smaller copy shared');
   }
 
+  Future<void> _sendUnder(BuildContext tileContext, TargetSize target) async {
+    if (_making) return;
+    if (!await ensurePlan(context, ref, PlanFeature.targetSize, what: 'Compress to a size') || !mounted) return;
+    final original = _originalSize;
+    if (original == null) {
+      setState(() => _error = 'This PDF is no longer on this device.');
+      return;
+    }
+    if (original <= target.bytes) {
+      // Already small enough: the PDF as it is keeps its quality and its text.
+      if (!tileContext.mounted) return;
+      return _send(tileContext, widget.pdfPath, sent: 'Already under ${target.label}, PDF shared as it is');
+    }
+    var made = _fitted[target];
+    if (made == null || !made.file.existsSync()) {
+      final shrinker = ref.read(pdfShrinkerProvider);
+      setState(() {
+        _progress = 0;
+        _fitting = target;
+        _error = null;
+      });
+      try {
+        made = await shrinker.makeUnder(
+          sourcePath: widget.pdfPath,
+          pageCount: widget.pageCount,
+          name: widget.name,
+          target: target,
+          onProgress: (done, total) {
+            if (mounted) setState(() => _progress = done / total);
+          },
+        );
+      } on Object catch (e) {
+        if (mounted) {
+          setState(() {
+            _progress = null;
+            _fitting = null;
+            _error = 'Could not make a copy under ${target.label}. Your saved PDF is unchanged. ($e)';
+          });
+        }
+        return;
+      }
+      if (!mounted) return;
+      final copy = made;
+      setState(() {
+        _progress = null;
+        _fitting = null;
+        _fitted[target] = copy;
+      });
+      if (!copy.fits) {
+        // Too many pages for the limit: show the smallest possible size and
+        // let a second tap send it anyway.
+        setState(
+          () => _error =
+              'The smallest copy is ${formatFileSize(copy.bytes)}, still over ${target.label}. '
+              'Tap ${target.label} again to send it anyway, or split the PDF into smaller parts.',
+        );
+        return;
+      }
+    }
+    if (!tileContext.mounted) return;
+    await _send(tileContext, made.file.path, sent: 'Copy under ${target.label} shared (${formatFileSize(made.bytes)})');
+  }
+
+  Future<void> _sendLocked() async {
+    if (!await ensurePlan(context, ref, PlanFeature.password, what: 'Document password') || !mounted) return;
+    if (!File(widget.pdfPath).existsSync()) {
+      setState(() => _error = 'This PDF is no longer on this device.');
+      return;
+    }
+    await showLockPdfSheet(context, pdfPath: widget.pdfPath, name: widget.name);
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -145,6 +230,7 @@ class _SendPdfSheetState extends ConsumerState<SendPdfSheet> {
     final original = _originalSize;
     final copy = _copy;
     final estimate = PdfShrinker.estimateBytes(widget.pageCount);
+    final hasTargetSize = ref.watch(planIncludesProvider(PlanFeature.targetSize));
     final copySubtitle = copy != null
         ? '${p.basename(copy.path)} · ${formatFileSize(copy.lengthSync())}'
         : '${PdfShrinker.copyName(widget.name)} · '
@@ -181,6 +267,54 @@ class _SendPdfSheetState extends ConsumerState<SendPdfSheet> {
                   onTap: () => _sendSmaller(tileContext),
                 ),
               ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                enabled: !_making,
+                leading: const Icon(Icons.upload_file_outlined),
+                title: Row(
+                  children: [
+                    const Flexible(child: Text('Fit under a size')),
+                    if (!hasTargetSize) ...[const SizedBox(width: 8), const PremiumBadge(label: 'Pro')],
+                  ],
+                ),
+                subtitle: const Text('For upload forms with a size limit. Picks the sharpest copy that fits.'),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 40),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    for (final target in TargetSize.values)
+                      Builder(
+                        builder: (chipContext) {
+                          final made = _fitted[target];
+                          return ActionChip(
+                            key: ValueKey('fit-${target.name}'),
+                            label: Text(
+                              made == null || !made.file.existsSync()
+                                  ? target.label
+                                  : '${target.label} · ${formatFileSize(made.bytes)}',
+                            ),
+                            onPressed: _making ? null : () => _sendUnder(chipContext, target),
+                          );
+                        },
+                      ),
+                  ],
+                ),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                enabled: !_making,
+                leading: const Icon(Icons.lock_outline),
+                title: const Text('Send with password'),
+                subtitle: Text(PdfLocker.lockedName(widget.name)),
+                // Shown to everyone; on Basic it opens the upgrade pop-up.
+                trailing: ref.watch(planIncludesProvider(PlanFeature.password))
+                    ? null
+                    : const PremiumBadge(label: 'Pro'),
+                onTap: _sendLocked,
+              ),
               const SizedBox(height: 8),
               Text(
                 'A smaller copy has lower-resolution pages, and text in it cannot be selected. '
@@ -191,7 +325,11 @@ class _SendPdfSheetState extends ConsumerState<SendPdfSheet> {
                 const SizedBox(height: 16),
                 LinearProgressIndicator(value: _progress),
                 const SizedBox(height: 8),
-                Text('Making a smaller copy…', style: textTheme.bodySmall, textAlign: TextAlign.center),
+                Text(
+                  _fitting == null ? 'Making a smaller copy…' : 'Fitting under ${_fitting!.label}…',
+                  style: textTheme.bodySmall,
+                  textAlign: TextAlign.center,
+                ),
               ],
               if (_error != null) ...[const SizedBox(height: 12), Text(_error!, style: TextStyle(color: scheme.error))],
             ],

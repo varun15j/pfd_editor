@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/app_info.dart';
 import '../../app/preferences.dart';
 import '../../app/theme.dart';
 
@@ -30,7 +31,7 @@ class ScanTipsSheet extends StatelessWidget {
   static const tips = [
     (Icons.light_mode_outlined, 'Use good light', 'Daylight or a bright room, without shadows on the page.'),
     (Icons.crop_free, 'Keep the page flat', 'Smooth out folds and fit all four corners in view.'),
-    (Icons.contrast, 'Use a dark background', 'A dark table helps LumaScan find the page edges.'),
+    (Icons.contrast, 'Use a dark background', 'A dark table helps $appName find the page edges.'),
   ];
 
   @override

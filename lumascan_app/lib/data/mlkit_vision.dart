@@ -16,7 +16,7 @@ import '../features/batch_capture/camera_frame.dart';
 /// models ship with the app, so nothing is downloaded and pages never leave
 /// the phone. Devanagari's model also reads Latin text, so English words in
 /// a Hindi or Marathi page are kept.
-class MlKitOcrEngine implements OcrEngine, OcrLayoutEngine {
+class MlKitOcrEngine implements OcrEngine, OcrLayoutEngine, OcrFileLayoutEngine {
   MlKitOcrEngine({required this.imageFor});
 
   /// The page as rendered with its crop, rotation and filter, as an image
@@ -71,8 +71,11 @@ class MlKitOcrEngine implements OcrEngine, OcrLayoutEngine {
       recognizeFile(await imageFor(page), languageCode: languageCode);
 
   @override
-  Future<OcrLayout> recognizeLayout(ScanPage page, {required String languageCode}) async {
-    final path = await imageFor(page);
+  Future<OcrLayout> recognizeLayout(ScanPage page, {required String languageCode}) async =>
+      recognizeLayoutFile(await imageFor(page), languageCode: languageCode);
+
+  @override
+  Future<OcrLayout> recognizeLayoutFile(String path, {String languageCode = 'en'}) async {
     final result = await _recognizerFor(languageCode).processImage(InputImage.fromFilePath(path));
     final buffer = await ui.ImmutableBuffer.fromUint8List(await File(path).readAsBytes());
     final descriptor = await ui.ImageDescriptor.encoded(buffer);
@@ -98,6 +101,17 @@ class MlKitOcrEngine implements OcrEngine, OcrLayoutEngine {
                     top: unit(l.boundingBox.top, h),
                     right: unit(l.boundingBox.right, w),
                     bottom: unit(l.boundingBox.bottom, h),
+                    words: [
+                      for (final e in l.elements)
+                        if (e.text.trim().isNotEmpty)
+                          OcrBox(
+                            text: e.text,
+                            left: unit(e.boundingBox.left, w),
+                            top: unit(e.boundingBox.top, h),
+                            right: unit(e.boundingBox.right, w),
+                            bottom: unit(e.boundingBox.bottom, h),
+                          ),
+                    ],
                   ),
             ],
           ),

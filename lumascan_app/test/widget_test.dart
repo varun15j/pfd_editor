@@ -124,6 +124,8 @@ void main() {
       await pumpApp(tester);
       await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
+      // The OCR language row pushes Appearance below the fold.
+      await tester.scrollUntilVisible(find.text('Dark'), 200, scrollable: find.byType(Scrollable).first);
       await tester.tap(find.text('Dark'));
       await tester.pumpAndSettle();
       final context = tester.element(find.text('Appearance'));

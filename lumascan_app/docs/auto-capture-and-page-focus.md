@@ -29,7 +29,7 @@ Reported on the OnePlus (2026-10-06): holding a page in front of the camera for 
 **Fix, two layers.**
 
 1. **Follow drift.** While waiting for the next page, every quiet frame (scene changed less than 0.15 from the frame before) becomes the new reference, as long as the page in view still reads as the page taken (page signature within 0.5 of the one at capture). Slow drift never adds up to a new page; a page turned slowly does, because its content changes. The fallback without scene signatures follows the outline and page signature the same way.
-2. **Read the page.** With auto capture on, each new photo in Docs, Book and OCR Doc is read with OCR in the background (`PageIdentity` in `page_identity.dart`), and compared with the photo before:
+2. **Read the page.** With auto capture on, each new photo in Docs, Book and OCR is read with OCR in the background (`PageIdentity` in `page_identity.dart`), and compared with the photo before:
    - page numbers: lines holding only a number ("28", "- 28 -", "(28)", "Page 28"). Different numbers mean a different page.
    - first and last lines, compared allowing for misread letters (edit distance, 80% alike).
    - words of three letters or more: two readings of one page share at least 60% (40% with the same page number); different pages of one book share far fewer.

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/preferences.dart';
 import '../domain/plan.dart';
+import '../features/plans/paywall_screen.dart';
 import 'state_views.dart';
 
 /// Whether the current plan includes [feature]. When it does not, shows the
@@ -14,8 +15,8 @@ Future<bool> ensurePlan(BuildContext context, WidgetRef ref, PlanFeature feature
   return false;
 }
 
-/// "Upgrade to Pro" pop-up for a feature the plan does not include. There
-/// is no purchase flow yet, so Upgrade says so; billing will plug in here.
+/// "Upgrade to Pro" pop-up for a feature the plan does not include. Upgrade
+/// opens the plans screen with the plan that unlocks it marked.
 Future<void> showUpgradeDialog(BuildContext context, PlanFeature feature, {required String what}) {
   final plan = feature.minimum.label;
   return showDialog<void>(
@@ -29,7 +30,11 @@ Future<void> showUpgradeDialog(BuildContext context, PlanFeature feature, {requi
         children: [
           PremiumBadge(label: '$plan plan'),
           const SizedBox(height: 12),
-          Text('$what is part of the $plan plan, and Gold includes it too.'),
+          Text(
+            feature.minimum == AppPlan.gold
+                ? '$what is part of the Gold plan.'
+                : '$what is part of the $plan plan, and Gold includes it too.',
+          ),
         ],
       ),
       actions: [
@@ -37,8 +42,7 @@ Future<void> showUpgradeDialog(BuildContext context, PlanFeature feature, {requi
         FilledButton(
           onPressed: () {
             Navigator.pop(dialogContext);
-            ScaffoldMessenger.of(context)
-                .showSnackBar(const SnackBar(content: Text('Plans cannot be bought in this version yet.')));
+            openPaywall(context, highlight: feature.minimum);
           },
           child: Text('Upgrade to $plan'),
         ),

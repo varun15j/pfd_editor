@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.13.0+32
+version: 1.22.0+42
 
 environment:
   sdk: ^3.13.1
@@ -58,6 +58,11 @@ dependencies:
   flutter_secure_storage: ^11.2.0
   http: ^1.6.0
   open_filex: ^5.0.0
+  onnxruntime_v2: ^1.23.2+2
+  pointycastle: ^4.0.0
+  in_app_purchase: ^3.3.1
+  in_app_purchase_android: ^0.5.5
+  in_app_purchase_storekit: ^0.4.15
 
 dev_dependencies:
   flutter_test:
@@ -91,7 +96,10 @@ flutter:
     - sample_photos/04_revision4_lengths.jpg
     - sample_photos/05_revision_grocery_table.jpg
     - sample_photos/book/
+    - sample_photos/edge/
+    - sample_photos/colour_book/
     - sample_scan_img/odds_book/
+    - assets/models/lcnet100_h_e_bifpn_256_fp32.onnx
 
   # To add assets to your application, add an assets section, like this:
   # assets:

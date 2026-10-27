@@ -1,7 +1,25 @@
+import java.util.Properties
+
+// The app's name comes from appName in lib/app/app_info.dart, the one place
+// it is set, so the launcher label always matches the name inside the app.
+val appName: String = Regex("""const appName = '([^']+)';""")
+    .find(rootProject.file("../lib/app/app_info.dart").readText())
+    ?.groupValues?.get(1)
+    ?: error("appName not found in lib/app/app_info.dart")
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Release signing for Google Play. android/key.properties (never committed)
+// names the upload keystore; see docs/in-app-purchases.md. Without it,
+// release builds are signed with the debug key so `flutter run --release`
+// still works, but Play rejects those bundles.
+val keyProperties = Properties().apply {
+    val file = rootProject.file("key.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
 }
 
 android {
@@ -32,13 +50,23 @@ android {
         // OneDrive sign-in returns to the app through this scheme. It must
         // match CloudConfig.microsoftRedirectUri (lib/app/cloud_config.dart).
         manifestPlaceholders["appAuthRedirectScheme"] = "com.mobi.scanner"
+        manifestPlaceholders["appName"] = appName
+    }
+
+    signingConfigs {
+        if (keyProperties.containsKey("storeFile")) {
+            create("release") {
+                storeFile = file(keyProperties.getProperty("storeFile"))
+                storePassword = keyProperties.getProperty("storePassword")
+                keyAlias = keyProperties.getProperty("keyAlias")
+                keyPassword = keyProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 }

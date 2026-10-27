@@ -66,11 +66,12 @@ final photoAnalyzerProvider = Provider<PhotoAnalyzer>(
 );
 
 /// On-device text recognition. It reads each page as rendered with its crop
-/// and filter, at a size that keeps small print legible: ML Kit for Latin and
-/// Devanagari, Tesseract for the other Indian scripts.
+/// and filter, at a size that keeps small print legible, with its masks
+/// burned in so hidden ID numbers are never read into the text: ML Kit for
+/// Latin and Devanagari, Tesseract for the other Indian scripts.
 final ocrEngineProvider = Provider<OcrEngine>((ref) {
   Future<String> imageFor(ScanPage page) async =>
-      (await ref.read(renderServiceProvider).render(page, maxDimension: 2400)).path;
+      (await ref.read(renderServiceProvider).renderMasked(page, maxDimension: 2400)).path;
   return RoutedOcrEngine(
     fallback: MlKitOcrEngine(imageFor: imageFor),
     special: TesseractOcrEngine(imageFor: imageFor),

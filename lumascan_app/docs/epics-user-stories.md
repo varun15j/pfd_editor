@@ -161,7 +161,7 @@ As a user, I want to narrow the library by type and date and order it predictabl
 
 ### Features
 
-- Camera permission guidance and camera preview with a horizontally scrollable Docs, Book, Text, OCR Doc, QR and Photo mode selector.
+- Camera permission guidance and camera preview with a horizontally scrollable Docs, ID, Book, Text, OCR, QR and Photo mode selector.
 - Auto edge detection, perspective correction, and automatic capture.
 - Manual shutter, flashlight/torch control, and visible on/off state.
 - Camera-preview quick controls for Batch mode, Auto capture, and flashlight, synchronized with a capture-settings sheet.
@@ -172,7 +172,7 @@ As a user, I want to narrow the library by type and date and order it predictabl
 - Stability/page-change prompts and manual-capture fallback.
 - Optional post-capture border adjustment and automatic straightening.
 - Book-spread capture with spine guidance, left/right page pairing, reading direction, original-spread retention and print-layout choices.
-- Two distinct text modes: low-latency live Text and full-resolution accuracy-first OCR Doc.
+- Two distinct text modes: low-latency live Text and full-resolution accuracy-first OCR.
 - QR-only detection mode with tracked reticle, decoded summary, duplicate suppression and user-confirmed payload actions.
 - Page-change detection: auto capture takes each page once and waits for the page to be turned or swapped.
 - One-page focus: a second page only partly in view is left out of the page outline, in every page mode.
@@ -242,7 +242,7 @@ As a user, I want to point the camera at text and quickly copy or use recognized
 **US-03.7 — Capture a document for accurate OCR**
 As a user, I want a high-quality document image plus editable and searchable text that preserves the page layout.
 
-- OCR Doc mode captures and perspective-corrects a full-resolution page before accuracy-oriented recognition.
+- OCR mode captures and perspective-corrects a full-resolution page before accuracy-oriented recognition.
 - Results retain blocks, lines, words, bounding geometry, reading order, confidence and user corrections.
 - Searchable PDF export aligns an invisible text layer with the visible page image; the original image remains recoverable.
 - Model download, progress, cancellation, low-confidence review and retry states are visible.
@@ -270,7 +270,7 @@ As a high-volume user scanning 20 to 50 pages, I want auto capture to take each 
 **US-03.10 — Outline only the page in focus**  
 As a user holding the camera over one page, I want the outline and the crop to cover that page only, not half of the page next to it.
 
-- Applies to Docs, Book and OCR Doc, to the live outline and to the crop saved with the page, and to imported photos.
+- Applies to Docs, Book and OCR, to the live outline and to the crop saved with the page, and to imported photos.
 - When a second page joins the page at a gutter or sheet edge and runs off the edge of the frame, and the visible part is narrower than the page (at most 85% of its width), it is left out.
 - When both pages are fully in view (an open book spread), they are kept together.
 - Book mode makes two pages only when the outline reaches across the middle of the frame (both pages in view); held over one page, it makes one page and hides the LEFT PAGE / RIGHT PAGE guides.
@@ -718,7 +718,7 @@ As a user, I want AI assistance only when enabled and appropriate.
 
 ### UC-11 — Scan a book page by page with auto capture
 
-1. User opens the camera in Docs, Book or OCR Doc with Auto on.
+1. User opens the camera in Docs, Book or OCR with Auto on.
 2. The page is outlined; once still, it is taken and the guidance reads "Turn to the next page".
 3. While the same page stays in view, nothing more is taken, even if the outline flickers or the light dips for a moment.
 4. User turns the page. The turning page sweeps over the view, so the app counts the page as changed.

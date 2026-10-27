@@ -31,6 +31,46 @@ enum PlanFeature {
   /// menu. Word to PDF stays on every plan.
   word(AppPlan.pro),
 
+  /// Auto mask: on-device OCR finds Aadhaar, VID, PAN and other ID numbers on
+  /// a page and hides all but their last four characters. Drawing a mask by
+  /// hand stays on every plan, because hiding your own ID number is basic
+  /// privacy (Varun, 2026-10-26).
+  autoMask(AppPlan.pro),
+
+  /// Exported PDFs without the "Scanned with" mark that Basic
+  /// prints at the foot of each page (Varun, 2026-10-27).
+  noWatermark(AppPlan.pro),
+
+  /// Page numbers ("2 / 5") at the foot of each page, offered as a switch
+  /// in the export sheet.
+  pageNumbers(AppPlan.pro),
+
+  /// Signature library: signatures and initials saved once and placed again
+  /// with a tap, plus date and name stamps, in the PDF editor and Markup.
+  /// Drawing a one-off signature stays on every plan.
+  signatureLibrary(AppPlan.pro),
+
+  /// Table to Excel: one photo of a table becomes an Excel (.xlsx) file.
+  /// The table is read with on-device OCR, so it costs nothing per use and
+  /// needs no usage cap; it is Gold because rivals sell it at their top
+  /// tier (improvement.md #21).
+  tableToExcel(AppPlan.gold),
+
+  /// Compress to a target size: a copy of a saved PDF made to fit under
+  /// 200 KB, 500 KB, 1 MB or 2 MB for upload forms, choosing resolution and
+  /// quality automatically. Offered in the Send PDF sheet.
+  targetSize(AppPlan.pro),
+
+  /// Document password: a copy of a saved PDF, encrypted with AES-256, that
+  /// asks for a password when opened. Offered in the Library menu and the
+  /// Send sheet.
+  password(AppPlan.pro),
+
+  /// Split a PDF into several by page ranges, or extract chosen pages into
+  /// a new PDF. Offered in Tools and the Library menu; merging stays on
+  /// every plan.
+  splitPdf(AppPlan.pro),
+
   /// Text recognition in Indian languages: Hindi, Marathi and the other
   /// Devanagari languages including neat handwriting, and Bangla, Gujarati,
   /// Tamil, Telugu, Kannada, Malayalam, Punjabi, Odia, Assamese and Urdu.
@@ -41,8 +81,3 @@ enum PlanFeature {
 
   final AppPlan minimum;
 }
-
-/// The plan every user is on until purchases exist. Billing will replace
-/// this with the plan the store reports; until then, change it here to try
-/// a plan in any build, or switch plans from the debug panel in debug builds.
-const purchasedPlan = AppPlan.basic;

@@ -4,7 +4,7 @@ import '../domain/ocr.dart';
 /// Sends each language to the engine that reads its script: [fallback]
 /// (ML Kit) for Latin and Devanagari, [special] (Tesseract) for the languages
 /// [handles] picks. Both run on the device.
-class RoutedOcrEngine implements OcrEngine, OcrLayoutEngine {
+class RoutedOcrEngine implements OcrEngine, OcrLayoutEngine, OcrFileLayoutEngine {
   RoutedOcrEngine({required this.fallback, required this.special, required this.handles});
 
   final OcrEngine fallback;
@@ -35,5 +35,13 @@ class RoutedOcrEngine implements OcrEngine, OcrLayoutEngine {
     }
     final text = await engine.recognize(page, languageCode: languageCode);
     return OcrLayout([if (text.trim().isNotEmpty) OcrBlock(text: text, left: 0, top: 0, right: 1, bottom: 1)]);
+  }
+
+  /// Table to Excel reads English tables, so the photo goes to [fallback].
+  @override
+  Future<OcrLayout> recognizeLayoutFile(String path) {
+    final engine = fallback;
+    if (engine is OcrFileLayoutEngine) return (engine as OcrFileLayoutEngine).recognizeLayoutFile(path);
+    throw UnsupportedError('This text engine cannot read the layout of a photo.');
   }
 }

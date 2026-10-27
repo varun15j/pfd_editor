@@ -6,10 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/domain/models.dart';
+import 'package:lumascan/domain/plan.dart';
 import 'package:lumascan/export/pdf_exporter.dart';
 import 'package:lumascan/export/pdf_shrinker.dart';
 import 'package:lumascan/features/library/library_actions.dart';
@@ -60,6 +62,41 @@ class _FakeRasterizer implements PdfRasterizer {
   }
 }
 
+/// Renders noisy pages whose size follows the requested resolution and
+/// quality, like a real photo, at a quarter of the requested long edge so the
+/// tests stay quick. With [fixedSide] every page is the same noisy image,
+/// whatever is asked, so no step can make it smaller.
+class _ScalingRasterizer implements PdfRasterizer {
+  _ScalingRasterizer({this.fixedSide});
+  final int? fixedSide;
+  final requests = <(int, int)>[];
+
+  @override
+  Stream<RasterPage> renderPages(
+    String path,
+    List<int> pageNumbers, {
+    required int longEdge,
+    required int jpegQuality,
+    String? password,
+  }) async* {
+    requests.add((longEdge, jpegQuality));
+    final side = fixedSide ?? longEdge ~/ 4;
+    final random = math.Random(side);
+    final image = img.Image(width: side, height: side);
+    for (final px in image) {
+      final v = random.nextInt(256);
+      px
+        ..r = v
+        ..g = v
+        ..b = v;
+    }
+    final jpeg = Uint8List.fromList(img.encodeJpg(image, quality: fixedSide == null ? jpegQuality : 95));
+    for (final _ in pageNumbers) {
+      yield RasterPage(jpeg, side, side, widthPt: 595, heightPt: 842);
+    }
+  }
+}
+
 /// A PDF whose pages are noisy photos, so it is large.
 Future<Uint8List> _bigPdf(int pages) {
   final random = math.Random(1);
@@ -81,7 +118,13 @@ void main() {
   late ProviderContainer container;
   var ready = false;
 
-  Future<void> setUpContainer({int pages = 3, int copySide = 120, bool tinyOriginal = false}) async {
+  Future<void> setUpContainer({
+    int pages = 3,
+    int copySide = 120,
+    bool tinyOriginal = false,
+    PdfRasterizer? rasterizer,
+    AppPlan plan = AppPlan.basic,
+  }) async {
     tmp = Directory.systemTemp.createTempSync('lumascan_send');
     original = File('${tmp.path}/Lease.pdf')
       ..writeAsBytesSync(
@@ -96,7 +139,8 @@ void main() {
     container = ProviderContainer(
       overrides: [
         pageStoreProvider.overrideWithValue(PageStore(rootDir: () async => tmp)),
-        pdfRasterizerProvider.overrideWithValue(_FakeRasterizer(copySide)),
+        pdfRasterizerProvider.overrideWithValue(rasterizer ?? _FakeRasterizer(copySide)),
+        planProvider.overrideWithValue(plan),
         pdfSharerProvider.overrideWithValue(sharer),
       ],
     );
@@ -239,6 +283,128 @@ void main() {
       await tester.runAsync(setUpContainer);
       await pumpSheet(tester, textScale: 2);
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Fit under a size', () {
+    // Like tapSmaller: the copies are built on an isolate.
+    Future<void> tapTarget(WidgetTester tester, TargetSize target) async {
+      await tester.tap(find.byKey(ValueKey('fit-${target.name}')));
+      for (var i = 0; i < 200; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+        if (find.textContaining('Fitting under').evaluate().isEmpty) break;
+      }
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('on Basic it is shown with a Pro badge and opens the upgrade pop-up', (tester) async {
+      await tester.runAsync(setUpContainer);
+      await pumpSheet(tester);
+      expect(find.text('Fit under a size'), findsOneWidget);
+      // Send with password has its own Pro badge on Basic.
+      expect(
+        find.descendant(of: find.widgetWithText(ListTile, 'Fit under a size'), matching: find.text('Pro')),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(ActionChip, '200 KB'));
+      await tester.pumpAndSettle();
+      expect(find.text('Upgrade to Pro'), findsWidgets);
+      expect(sharer.sent, isEmpty);
+    });
+
+    testWidgets('on Pro it shares a separate copy no larger than the limit', (tester) async {
+      final rasterizer = _ScalingRasterizer();
+      await tester.runAsync(() => setUpContainer(rasterizer: rasterizer, plan: AppPlan.pro));
+      final before = original.readAsBytesSync();
+      await pumpSheet(tester);
+      expect(find.text('Pro'), findsNothing);
+      await tapTarget(tester, TargetSize.kb200);
+
+      final copy = File(sharer.sent.single);
+      expect(copy.path, endsWith('share/Lease (under 200 KB).pdf'));
+      expect(copy.lengthSync(), lessThanOrEqualTo(200 * 1000));
+      expect(rasterizer.requests.length, lessThanOrEqualTo(PdfShrinker.maxAttempts));
+      final text = String.fromCharCodes(copy.readAsBytesSync());
+      expect(RegExp(r'/Type\s*/Page\b').allMatches(text).length, 3);
+      expect(find.textContaining('Copy under 200 KB shared'), findsOneWidget);
+      expect(original.readAsBytesSync(), before, reason: 'the saved PDF is untouched');
+    });
+
+    testWidgets('a PDF already under the limit is shared as it is', (tester) async {
+      final rasterizer = _ScalingRasterizer();
+      await tester.runAsync(() => setUpContainer(tinyOriginal: true, rasterizer: rasterizer, plan: AppPlan.gold));
+      await pumpSheet(tester);
+      await tapTarget(tester, TargetSize.kb200);
+      expect(sharer.sent, [original.path]);
+      expect(rasterizer.requests, isEmpty);
+      expect(find.text('Already under 200 KB, PDF shared as it is'), findsOneWidget);
+    });
+
+    testWidgets('when it cannot fit, it says how small it got and a second tap sends it', (tester) async {
+      await tester.runAsync(() => setUpContainer(rasterizer: _ScalingRasterizer(fixedSide: 700), plan: AppPlan.pro));
+      await pumpSheet(tester);
+      await tapTarget(tester, TargetSize.kb200);
+      expect(sharer.sent, isEmpty);
+      expect(find.textContaining('still over 200 KB'), findsOneWidget);
+      expect(find.textContaining('200 KB · '), findsOneWidget, reason: 'the chip shows the size reached');
+      await tapTarget(tester, TargetSize.kb200);
+      expect(sharer.sent.single, endsWith('share/Lease (under 200 KB).pdf'));
+    });
+
+    testWidgets('fits at 200% text size', (tester) async {
+      await tester.runAsync(() => setUpContainer(plan: AppPlan.pro));
+      await pumpSheet(tester, textScale: 2);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('target-size search', () {
+    // Sizes that follow the ladder's own model, scaled by [scale].
+    Future<int> Function(int) model(double scale, List<int> tried) => (i) async {
+      tried.add(i);
+      return (CompressionStep.ladder[i].estimateBytes(1) * scale).round();
+    };
+
+    test('keeps the best step that fits, within the attempt limit', () async {
+      for (final scale in [0.05, 0.3, 1.0, 3.0, 10.0]) {
+        for (final target in TargetSize.values) {
+          final tried = <int>[];
+          final r = await PdfShrinker.findStep(target: target, pageCount: 1, measure: model(scale, tried));
+          expect(tried.length, lessThanOrEqualTo(PdfShrinker.maxAttempts));
+          final ladder = CompressionStep.ladder;
+          final size = (ladder[r.index].estimateBytes(1) * scale).round();
+          if (r.fits) {
+            expect(size, lessThanOrEqualTo(target.bytes));
+            if (r.index > 0) {
+              final better = (ladder[r.index - 1].estimateBytes(1) * scale).round();
+              // The step above is too big, or within the headroom kept.
+              expect(better, greaterThan(target.bytes * 0.9), reason: 'scale $scale, $target');
+            }
+          } else {
+            expect(r.index, ladder.length - 1);
+            expect(size, greaterThan(target.bytes));
+          }
+        }
+      }
+    });
+
+    test('a real page smaller than the estimate moves up the ladder', () async {
+      final tried = <int>[];
+      final r = await PdfShrinker.findStep(target: TargetSize.mb1, pageCount: 1, measure: model(0.02, tried));
+      expect(r.fits, isTrue);
+      expect(r.index, 0);
+    });
+
+    test('names the copy after the document and the size', () {
+      expect(PdfShrinker.targetCopyName('Lease.pdf', TargetSize.kb200), 'Lease (under 200 KB).pdf');
+      expect(PdfShrinker.targetCopyName('Lease', TargetSize.mb1), 'Lease (under 1 MB).pdf');
+    });
+
+    test('Pro and Gold include it, Basic does not', () {
+      expect(AppPlan.basic.includes(PlanFeature.targetSize), isFalse);
+      expect(AppPlan.pro.includes(PlanFeature.targetSize), isTrue);
+      expect(AppPlan.gold.includes(PlanFeature.targetSize), isTrue);
     });
   });
 
