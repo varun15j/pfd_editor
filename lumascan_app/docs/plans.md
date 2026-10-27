@@ -26,6 +26,10 @@ Basic scans the original way: white-paper detection only, the page found in each
 
 OCR turns a draft, a saved document or any PDF of photos into a PDF of real text, with pictures kept as images (`docs/ocr-text-pdf.md`). On Basic the buttons are visible and open the upgrade pop-up (`ensurePlan` in `lib/ui/upgrade_dialog.dart`).
 
+## Split PDF and extract pages (`PlanFeature.splitPdf`, Pro and Gold)
+
+Split one PDF into several, every few pages or by typed ranges, or copy chosen pages into a new PDF (`docs/split-pdf.md`). Offered in Tools ("Split PDF") and the Library menu ("Split or extract pages"); on Basic both show Pro and open the upgrade pop-up. Merging stays on every plan.
+
 ## Which plan the app uses
 
 - `purchasedPlan` in `lib/domain/plan.dart` is the one config variable. It is `AppPlan.basic` until billing exists; billing will replace it with the plan the store reports. Change it there to try a plan in any build.

@@ -29,7 +29,12 @@ enum PlanFeature {
   /// PDF to Word: a saved PDF, a PDF from the device or the pages of a scan
   /// become a Word (.docx) file. Offered in Export, Tools and the Library
   /// menu. Word to PDF stays on every plan.
-  word(AppPlan.pro);
+  word(AppPlan.pro),
+
+  /// Split a PDF into several by page ranges, or extract chosen pages into
+  /// a new PDF. Offered in Tools and the Library menu; merging stays on
+  /// every plan.
+  splitPdf(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 
