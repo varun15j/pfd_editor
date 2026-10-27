@@ -35,7 +35,13 @@ enum PlanFeature {
   /// a page and hides all but their last four characters. Drawing a mask by
   /// hand stays on every plan, because hiding your own ID number is basic
   /// privacy (Varun, 2026-10-26).
-  autoMask(AppPlan.pro);
+  autoMask(AppPlan.pro),
+
+  /// Table to Excel: one photo of a table becomes an Excel (.xlsx) file.
+  /// The table is read with on-device OCR, so it costs nothing per use and
+  /// needs no usage cap; it is Gold because rivals sell it at their top
+  /// tier (improvement.md #21).
+  tableToExcel(AppPlan.gold);
 
   const PlanFeature(this.minimum);
 

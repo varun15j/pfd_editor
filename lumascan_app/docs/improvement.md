@@ -47,7 +47,7 @@ The five that matter most in India, where LumaScan can be better than every lega
 | 18 | Print | Print straight from the app through the system print service. | S | Basic (free) |
 | 19 | Sort and bulk actions in the library | Multi-select for move, tag, delete and share; sort by size and by page count. | S | Basic (free) |
 | 20 | Watermark and page numbers | A watermark, header, footer or page numbers added to an exported PDF. | M | Pro |
-| 21 | Scan to Excel from a photo of a table | A quicker path than #10: one photo, one spreadsheet. | L | Gold |
+| 21 | Scan to Excel from a photo of a table | A quicker path than #10: one photo, one spreadsheet. Built 2026-10-27 (Tools > Table to Excel): read with on-device ML Kit, so no cost per use and no usage cap. | L | Gold |
 | 22 | Import from WhatsApp and files, by share sheet | LumaScan appearing in the system share sheet, so a PDF or photo from another app comes straight in. | S | Basic (free) |
 
 ## What LumaScan already has that rivals charge for
