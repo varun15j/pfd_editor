@@ -11,19 +11,29 @@ import '../pages/scan_controller.dart';
 
 /// Picks photos, lets the user set their order, and adds them to the end of
 /// the draft. Returns true when pages were added.
+///
+/// [photos] skips the picker, for images that arrive another way (shared
+/// from the gallery). With [newDocument], the pages go into a new document
+/// once the user confirms; the one on screen before stays on Home.
 Future<bool> importPhotosFlow(
   BuildContext context,
   WidgetRef ref, {
   VoidCallback? onAdding,
   bool fromFiles = false,
+  List<PickedPhoto>? photos,
+  bool newDocument = false,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
   final List<PickedPhoto> picked;
-  try {
-    picked = await ref.read(photoPickerProvider).pick(fromFiles: fromFiles);
-  } catch (e) {
-    messenger.showSnackBar(SnackBar(content: Text('Could not open your photos ($e)')));
-    return false;
+  if (photos != null) {
+    picked = photos;
+  } else {
+    try {
+      picked = await ref.read(photoPickerProvider).pick(fromFiles: fromFiles);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Could not open your photos ($e)')));
+      return false;
+    }
   }
   if (picked.isEmpty || !context.mounted) return false;
 
@@ -33,6 +43,8 @@ Future<bool> importPhotosFlow(
     ),
   );
   if (choice == null || !context.mounted) return false;
+  if (newDocument) await ref.read(scanControllerProvider.notifier).startNewDocument();
+  if (!context.mounted) return false;
 
   final result = await ref
       .read(scanControllerProvider.notifier)

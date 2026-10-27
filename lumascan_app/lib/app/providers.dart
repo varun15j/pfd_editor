@@ -6,12 +6,14 @@ import '../data/mlkit_vision.dart';
 import '../data/page_store.dart';
 import '../data/photo_import_services.dart';
 import '../data/plugin_batch_camera.dart';
+import '../data/share_inbox_store.dart';
 import '../debug/image_profiler.dart';
 import '../domain/ocr.dart';
 import '../domain/photo_import.dart';
 import '../domain/plan.dart';
 import '../domain/qr_reader.dart';
 import '../domain/scanner_service.dart';
+import '../domain/share_inbox.dart';
 import '../export/jpg_exporter.dart';
 import '../export/pdf_exporter.dart';
 import '../export/text_pdf_service.dart';
@@ -58,6 +60,9 @@ final draftStoreProvider = Provider<DraftStore>((ref) => DraftStore(ref.watch(pa
 
 final photoPickerProvider = Provider<PhotoPicker>((ref) => FilePickerPhotoPicker());
 
+/// Images shared into the app from the gallery's share sheet.
+final shareInboxProvider = Provider<ShareInbox>((ref) => DirectoryShareInbox(platformShareInboxDir));
+
 final photoAnalyzerProvider = Provider<PhotoAnalyzer>(
   (ref) => DetectorPhotoAnalyzer(smart: ref.watch(planIncludesProvider(PlanFeature.smartScan))),
 );
@@ -67,8 +72,7 @@ final photoAnalyzerProvider = Provider<PhotoAnalyzer>(
 /// burned in so hidden ID numbers are never read into the text.
 final ocrEngineProvider = Provider<OcrEngine>(
   (ref) => MlKitOcrEngine(
-    imageFor: (page) async =>
-        (await ref.read(renderServiceProvider).renderMasked(page, maxDimension: 2400)).path,
+    imageFor: (page) async => (await ref.read(renderServiceProvider).renderMasked(page, maxDimension: 2400)).path,
   ),
 );
 
