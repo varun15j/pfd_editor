@@ -4,6 +4,7 @@ import '../data/cunning_scanner_service.dart';
 import '../data/library_store.dart';
 import '../data/mlkit_vision.dart';
 import '../data/routed_ocr_engine.dart';
+import '../data/platform_launch_actions.dart';
 import '../data/smart_namer.dart';
 import '../data/document_text_reader.dart';
 import '../data/document_text_store.dart';
@@ -13,6 +14,7 @@ import '../data/photo_import_services.dart';
 import '../data/plugin_batch_camera.dart';
 import '../data/share_inbox_store.dart';
 import '../debug/image_profiler.dart';
+import '../domain/launch_action.dart';
 import '../domain/models.dart';
 import '../domain/ocr.dart';
 import '../domain/photo_import.dart';
@@ -86,6 +88,9 @@ final ocrEngineProvider = Provider<OcrEngine>((ref) {
     handles: TesseractOcrEngine.handles,
   );
 });
+
+/// App icon shortcuts and the home-screen widget.
+final launchActionSourceProvider = Provider<LaunchActionSource>((ref) => PlatformLaunchActions());
 
 /// Text of saved documents for Library search (Pro).
 final documentTextStoreProvider = Provider<DocumentTextStore>((ref) => DocumentTextStore(ref.watch(pageStoreProvider)));

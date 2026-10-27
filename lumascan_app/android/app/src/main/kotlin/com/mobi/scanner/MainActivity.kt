@@ -30,6 +30,10 @@ class MainActivity : FlutterActivity() {
     private var waitedMs = 0L
     private var warned = false
 
+    /** A widget tap not yet handed to Dart; taken with "takePending". */
+    private var pendingLaunch: String? = null
+    private var launchChannel: MethodChannel? = null
+
     private val tick = Runnable { onTick() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,6 +46,7 @@ class MainActivity : FlutterActivity() {
         val debuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
         simulateHang = debuggable && intent.getBooleanExtra(EXTRA_SIMULATE_HANG, false)
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) pendingLaunch = ScanWidget.actionOf(intent)
         if (intent.getBooleanExtra(RestartActivity.EXTRA_RESTARTED, false)) {
             intent.removeExtra(RestartActivity.EXTRA_RESTARTED)
             Toast.makeText(this, "LumaScan restarted because the screen stopped loading.", Toast.LENGTH_LONG).show()
@@ -57,9 +62,36 @@ class MainActivity : FlutterActivity() {
         val tesseract = TesseractOcr()
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, TesseractOcr.CHANNEL)
             .setMethodCallHandler(tesseract::handle)
+        launchChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ScanWidget.CHANNEL).apply {
+            setMethodCallHandler { call, result ->
+                if (call.method == "takePending") {
+                    result.success(pendingLaunch)
+                    pendingLaunch = null
+                } else {
+                    result.notImplemented()
+                }
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ShareInbox.CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "inboxPath") result.success(ShareInbox.dir(this).absolutePath) else result.notImplemented()
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val action = ScanWidget.actionOf(intent) ?: return
+        // Dart is running: hand it over now. Its handler is set once the
+        // app has started; until then it asks with "takePending".
+        pendingLaunch = action
+        launchChannel?.invokeMethod("action", action, object : MethodChannel.Result {
+            override fun success(result: Any?) {
+                pendingLaunch = null
+            }
+
+            override fun error(code: String, message: String?, details: Any?) {}
+
+            override fun notImplemented() {}
+        })
     }
 
     override fun onResume() {
