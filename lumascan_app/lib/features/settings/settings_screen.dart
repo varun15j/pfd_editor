@@ -16,6 +16,7 @@ import '../onboarding/onboarding_screen.dart';
 import '../../domain/ocr_languages.dart';
 import '../plans/paywall_screen.dart';
 import 'about_section.dart';
+import 'app_lock_tile.dart';
 import 'ocr_language_screen.dart';
 import 'storage_section.dart';
 
@@ -117,6 +118,25 @@ class SettingsScreen extends ConsumerWidget {
           Text('Changes how the app looks. No files are affected.', style: text.bodySmall?.copyWith(color: c.muted)),
           const SizedBox(height: Space.xl),
           const StorageSection(),
+          const SizedBox(height: Space.xl),
+          const _Header('App lock'),
+          const AppLockTile(),
+          if (settings.appLock)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Lock again'),
+              subtitle: Text('${settings.appLockDelay.label} in the background. Opening the app always asks.'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _pick<AppLockDelay>(
+                context,
+                title: 'Lock again',
+                note: 'How long the app can be in the background before it asks again.',
+                values: AppLockDelay.values,
+                current: settings.appLockDelay,
+                label: (d) => d.label,
+                onPick: controller.setAppLockDelay,
+              ),
+            ),
           const SizedBox(height: Space.xl),
           const _Header('Privacy and intro'),
           SwitchListTile(
