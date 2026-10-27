@@ -432,7 +432,7 @@ class ScanController extends Notifier<ScanState> {
     return page;
   }
 
-  /// Keeps the text read from a page (OCR Doc mode). Like a detected crop it
+  /// Keeps the text read from a page (OCR mode). Like a detected crop it
   /// finishes the capture, so it adds no undo step.
   void setPageText(String pageId, String text) {
     if (state.pageById(pageId) == null) return;

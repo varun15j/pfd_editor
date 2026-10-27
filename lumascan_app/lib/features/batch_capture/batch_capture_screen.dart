@@ -22,6 +22,7 @@ import '../batch_edit/batch_completion.dart';
 import '../batch_edit/batch_review_screen.dart';
 import '../capture/photo_import_screen.dart';
 import '../export/export_sheet.dart';
+import '../id_card/id_card_type_screen.dart';
 import '../pages/scan_controller.dart';
 import '../../imaging/book_split.dart';
 import 'auto_capture.dart';
@@ -64,6 +65,7 @@ Future<void> openBatchCapture(
     }
     return;
   }
+  if (exit == _idCardInstead) return openIdCardStudio(context);
   if (exit == BatchOutcome.home) return saveAndGoHome(context, ref);
   final taken = !identical(ref.read(scanControllerProvider).pages, before);
   if (openDraftAfter && (taken || exit != null)) openDraft(context);
@@ -76,6 +78,9 @@ const _importPhotosInstead = #importPhotos;
 /// What the camera closes with when import from files is picked instead.
 const _importFilesInstead = #importFiles;
 
+/// What the camera closes with when the ID mode is picked.
+const _idCardInstead = #idCard;
+
 /// The camera (iOS flow prototype, screen 02 "Camera preview"; BE-01;
 /// docs/capture-modes-algorithms.md). It stays open between shots: each
 /// press of the shutter saves a page to the draft and the camera is ready
@@ -85,7 +90,7 @@ const _importFilesInstead = #importFiles;
 /// Over the preview: the guidance chip, camera settings (•••) and the Batch,
 /// Flash and Auto capture quick controls, plus the page outline and the
 /// guides of the current mode. Below it: the page count, the capture modes
-/// (Docs, Book, Text, OCR Doc, QR, Photo), and the thumbnail (opens Captured
+/// (Docs, ID, Book, Text, OCR, QR, Photo), and the thumbnail (opens Captured
 /// photos, where a page can be retaken and the batch reviewed), the shutter,
 /// and the cross that discards the photos taken in this visit. Until the
 /// document has a page, Gallery and Files import buttons stand where the
@@ -454,7 +459,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
   }
 
   /// Background work on new pages, one photo at a time: the page outline
-  /// (Docs, OCR Doc), the spine (Book), the text (OCR Doc), then, with auto
+  /// (Docs, OCR), the spine (Book), the text (OCR), then, with auto
   /// capture on, whether the photo shows the same page as the one before.
   ///
   /// With auto crop on, every page photo is cropped: to the page found in
@@ -667,6 +672,8 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
 
   void _setMode(CameraMode mode) {
     if (mode == _mode) return;
+    // ID card mode has its own camera; pages taken here stay in the draft.
+    if (mode == CameraMode.idCard) return Navigator.of(context).pop(_idCardInstead);
     setState(() {
       _mode = mode;
       _frame = const FrameAnalysis();
@@ -1675,7 +1682,7 @@ class _ImportButton extends StatelessWidget {
   }
 }
 
-/// Docs, Book, Text, OCR Doc, QR and Photo, scrolling sideways when they do
+/// Docs, ID, Book, Text, OCR, QR and Photo, scrolling sideways when they do
 /// not fit.
 class _ModeStrip extends StatefulWidget {
   const _ModeStrip({required this.mode, required this.onMode});
@@ -2094,7 +2101,7 @@ class _SettingsSheet extends StatelessWidget {
 
 /// Captured photos: every page so far, numbered, with Review all and
 /// Continue scanning. Tapping a page retakes it. When text was read from
-/// pages (OCR Doc), it can be copied from here.
+/// pages (OCR), it can be copied from here.
 class _CapturedPhotosSheet extends ConsumerWidget {
   const _CapturedPhotosSheet();
 

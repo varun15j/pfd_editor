@@ -235,7 +235,7 @@ class ScanPage {
   /// because they would no longer line up.
   final List<Annotation> annotations;
 
-  /// Text read from the page (OCR Doc mode), or null when it has not been
+  /// Text read from the page (OCR mode), or null when it has not been
   /// read. Kept with the page so it can be copied later.
   final String? text;
 
