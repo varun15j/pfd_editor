@@ -411,6 +411,27 @@ class ScanController extends Notifier<ScanState> {
     return result;
   }
 
+  /// Adds a page the app made itself, such as an ID copy or a collage, from
+  /// the JPEG at [jpegPath], which is moved into the draft. It goes at
+  /// index [at] (the end when null), or in place of [replacing] when that
+  /// page is still in the draft. It gets no filter: its pictures already
+  /// have theirs. One undo step. Returns the new page.
+  Future<ScanPage> addMadePage(String jpegPath, {int? at, String? replacing}) async {
+    final store = ref.read(pageStoreProvider);
+    final id = store.newId();
+    final page = ScanPage(id: id, originalPath: await store.adoptOriginal(jpegPath, id));
+    final pages = [...state.pages];
+    final old = replacing == null ? -1 : pages.indexWhere((p) => p.id == replacing);
+    if (old >= 0) {
+      pages[old] = page;
+    } else {
+      pages.insert((at ?? pages.length).clamp(0, pages.length), page);
+    }
+    _commit(pages);
+    ref.read(renderServiceProvider).prepare([page]);
+    return page;
+  }
+
   /// Keeps the text read from a page (OCR Doc mode). Like a detected crop it
   /// finishes the capture, so it adds no undo step.
   void setPageText(String pageId, String text) {
