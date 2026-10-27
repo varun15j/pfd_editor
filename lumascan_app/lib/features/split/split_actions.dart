@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
+import '../../app/app_info.dart';
 import '../../domain/library.dart';
 import '../../domain/plan.dart';
 import '../../ui/upgrade_dialog.dart';
@@ -35,7 +36,7 @@ Future<void> pickPdfToSplit(BuildContext context, WidgetRef ref) async {
           ListTile(
             leading: const Icon(Icons.folder_outlined),
             title: const Text('From Library'),
-            subtitle: const Text('A PDF you saved in LumaScan'),
+            subtitle: const Text('A PDF you saved in $appName'),
             onTap: () => Navigator.pop(sheet, true),
           ),
           ListTile(
