@@ -120,6 +120,9 @@ void main() {
     }
 
     Future<void> openSheet(WidgetTester tester) async {
+      // The "Drag it into place" hint covers the toolbar for a few seconds.
+      tester.state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger)).removeCurrentSnackBar();
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Sign'));
       await tester.tap(find.text('Sign'));
       await tester.pumpAndSettle();
