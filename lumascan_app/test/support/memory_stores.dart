@@ -1,10 +1,12 @@
 import 'package:lumascan/data/app_settings_store.dart';
+import 'package:lumascan/data/document_text_store.dart';
 import 'package:lumascan/data/library_store.dart';
 import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/data/plan_cache_store.dart';
 import 'package:lumascan/data/signature_library_store.dart';
 import 'package:lumascan/data/ui_prefs_store.dart';
 import 'package:lumascan/domain/app_settings.dart';
+import 'package:lumascan/domain/document_text.dart';
 import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/plan.dart';
@@ -133,4 +135,20 @@ class MemorySignatureLibraryStore extends SignatureLibraryStore {
 
   @override
   Future<void> save(SignatureLibrary library) async => this.library = library;
+}
+
+class MemoryDocumentTextStore extends DocumentTextStore {
+  MemoryDocumentTextStore([Map<String, DocumentText>? texts]) : texts = texts ?? {}, super(PageStore());
+
+  Map<String, DocumentText> texts;
+  int saves = 0;
+
+  @override
+  Future<Map<String, DocumentText>> load() async => {...texts};
+
+  @override
+  Future<void> save(Map<String, DocumentText> texts) async {
+    saves++;
+    this.texts = {...texts};
+  }
 }

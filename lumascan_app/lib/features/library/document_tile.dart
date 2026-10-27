@@ -227,12 +227,17 @@ class DocumentRow extends StatelessWidget {
     this.selecting = false,
     this.selected = false,
     this.labels,
+    this.snippet,
   });
 
   final SavedDocument document;
 
   /// Folder and tags, such as "Bills · tax, 2026", or null for none.
   final String? labels;
+
+  /// Where a search matched the text inside the document, such as
+  /// "…rent of ₹12,000 for March…", or null.
+  final String? snippet;
   final bool selecting;
   final bool selected;
   final VoidCallback onTap;
@@ -276,6 +281,10 @@ class DocumentRow extends StatelessWidget {
                     const SizedBox(height: 2),
                     const DocumentStatus(),
                     if (labels != null) ...[const SizedBox(height: 2), DocumentLabels(labels!)],
+                    if (snippet != null) ...[
+                      const SizedBox(height: 2),
+                      Text(snippet!, style: text.bodySmall?.copyWith(fontStyle: FontStyle.italic), maxLines: 2),
+                    ],
                   ],
                 ),
               ),

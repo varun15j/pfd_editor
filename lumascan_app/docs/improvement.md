@@ -29,7 +29,7 @@ The five that matter most in India, where LumaScan can be better than every lega
 | --- | --- | --- | --- | --- |
 | 6 | Signature library (built 2026-10-27) | Signatures and initials saved once and reused, instead of drawing each time. Also a date and name stamp. Built as a Sign sheet in the PDF editor and Markup; drawing a one-off signature stays free. | M | Pro |
 | 7 | Auto file naming (built 2026-10-27) | A name suggested from the text on the page (invoice number, date, title), instead of "Scan 2026-10-26". Genius Scan calls it smart rename. Built as a suggestion in the Save sheet, see [plans.md](plans.md). | M | Pro |
-| 8 | Searchable library | Search inside the text of saved documents, not only their names, folders and tags. Needs OCR text kept in the index. | M | Pro |
+| 8 | Searchable library (built 2026-10-27) | Search inside the text of saved documents, not only their names, folders and tags. Needs OCR text kept in the index. | M | Pro |
 | 9 | Book mode, finished | Curve flattening and finger removal for photographed books. The two-page split exists; pages photographed from a thick book still curve. | L | Pro |
 | 10 | Table and form extraction | A table on a page becomes a real table, exported to Excel or CSV. Adobe and CamScanner both sell this. | L | Gold |
 | 11 | Receipt mode | Receipts read into a list with date, merchant and amount, exported as a spreadsheet for expenses. | L | Gold |

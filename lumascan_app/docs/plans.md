@@ -61,6 +61,10 @@ Split one PDF into several, every few pages or by typed ranges, or copy chosen p
 
 The Save sheet suggests a name from the text on the first page instead of the date pattern: the kind of document (Invoice, Receipt, Certificate, Agreement and others) with its number and date, like "Tax Invoice INV-2041 2026-10-26", or else the page's title line. `SmartNamer` (`lib/data/smart_namer.dart`) reads the page on the device, reusing text already read in batch edit, and gives up after 8 seconds; the rules are in `suggestDocumentName` (`lib/domain/smart_name.dart`). On Pro and Gold the sheet opens with the suggestion unless the user has typed a name; the sparkle button in the name field asks again. On Basic the button shows a lock and opens the upgrade pop-up.
 
+## Search inside documents (`PlanFeature.searchText`, Pro and Gold)
+
+Library search also finds documents by the text inside them, and each match found in the text shows the words around it under the document's name. On Pro and Gold the Library reads every saved PDF in the background, one at a time: a PDF with a text layer gives its text at once, and pages that are pictures are read with on-device OCR (`DocumentTextReader`). The text is kept in `library/text-index.json` (`DocumentTextStore`), at most 60,000 characters per document, and a document is read again when it changes. While documents are still being read, the Library says how many are left. On Basic the search box says "Search by name", nothing is read, and a search with no matches mentions that Pro searches the text too.
+
 ## Which plan the app uses
 
 - The real plan is `purchasedPlanProvider` (`lib/app/purchases.dart`): the plan the app store says this account paid for. It starts on the last plan the store reported (saved in `settings/plan.json`, Basic the first time), then asks the store at every start. Buying, restore and the store setup are in `docs/in-app-purchases.md`.

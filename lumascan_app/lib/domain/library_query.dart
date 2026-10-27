@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'document_text.dart';
 import 'library.dart';
 
 enum LibrarySort {
@@ -23,7 +24,7 @@ enum DateFilter {
 }
 
 /// Search, sort and filter for the Library (US-02.2, US-02.4). Search
-/// matches file names only until OCR exists.
+/// matches names, and on Pro the text inside documents too.
 @immutable
 class LibraryQuery {
   const LibraryQuery({
@@ -98,8 +99,13 @@ class LibraryQuery {
     return '${f(from)} to ${f(to)}';
   }
 
-  List<SavedDocument> apply(List<SavedDocument> docs, DateTime now) {
+  /// [texts] is the text of documents by id; a document matches the search
+  /// when its name or its text contains it. Empty searches names only.
+  List<SavedDocument> apply(List<SavedDocument> docs, DateTime now, {Map<String, DocumentText> texts = const {}}) {
     final needle = text.trim().toLowerCase();
+    final folded = normalizeForSearch(text.trim());
+    bool matches(SavedDocument d) =>
+        needle.isEmpty || d.name.toLowerCase().contains(needle) || (texts[d.id]?.searchable.contains(folded) ?? false);
     final today = _day(now);
     final DateTime? start = switch (date) {
       DateFilter.any => null,
@@ -112,7 +118,7 @@ class LibraryQuery {
 
     final out = [
       for (final d in docs)
-        if ((needle.isEmpty || d.name.toLowerCase().contains(needle)) &&
+        if (matches(d) &&
             (types.isEmpty || types.contains(d.type)) &&
             (folderId == null || d.folderId == folderId) &&
             (tags.isEmpty || tags.every((t) => d.tags.any((dt) => dt.toLowerCase() == t))) &&

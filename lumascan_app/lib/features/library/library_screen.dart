@@ -6,13 +6,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/preferences.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
+import '../../domain/document_text.dart';
 import '../../domain/library.dart';
 import '../../domain/library_query.dart';
+import '../../domain/plan.dart';
 import '../../domain/scanner_service.dart';
 import '../../domain/ui_prefs.dart';
 import '../../ui/state_views.dart';
 import '../split/split_actions.dart';
 import '../word/word_actions.dart';
+import 'document_text_controller.dart';
 import 'document_tile.dart';
 import 'library_actions.dart';
 import 'library_controller.dart';
@@ -21,7 +24,7 @@ import 'library_query_controller.dart';
 import 'library_query_sheets.dart';
 
 /// Library tab: every saved document as a list or a grid (the choice is
-/// remembered), with search by name, sort and filters (US-02.2, US-02.4).
+/// remembered), with search by name (and by text on Pro), sort and filters (US-02.2, US-02.4).
 /// Folder chips browse one folder at a time. Long press selects several
 /// documents to share, delete, move or tag.
 class LibraryScreen extends ConsumerStatefulWidget {
@@ -91,6 +94,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final query = ref.watch(libraryQueryProvider);
     final folder = library.value?.folderById(query.folderId);
     final view = ref.watch(uiPrefsProvider.select((p) => p.libraryView));
+    // Pro and Gold: start reading documents for search as soon as the
+    // Library opens, so results are ready when the user types.
+    final searchText = ref.watch(planIncludesProvider(PlanFeature.searchText));
+    final reading = searchText ? ref.watch(documentTextProvider.select((s) => s.left)) : 0;
     // Drop selections of documents that were deleted or filtered out.
     _selected.retainAll({for (final d in docs) d.id});
 
@@ -122,6 +129,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               _searchBar(query),
               _folderBar(query),
               if (query.isSorted || query.isFiltered) _activeChips(query),
+              if (query.isSearching && searchText && reading > 0 && docs.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(Space.page, 0, Space.page, Space.xs),
+                  child: Text(
+                    'Reading $reading more document${reading == 1 ? '' : 's'} for search…',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
               Expanded(
                 child: docs.isEmpty && folder != null && !query.isSearching && !query.isFiltered
                     ? EmptyState(
@@ -136,9 +151,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     ? EmptyState(
                         icon: Icons.search_off,
                         title: 'No matches',
-                        message: query.isSearching
-                            ? 'No document name contains "${query.text.trim()}".'
-                            : 'No documents match these filters.',
+                        message: !query.isSearching
+                            ? 'No documents match these filters.'
+                            : searchText
+                            ? 'No document name or text contains "${query.text.trim()}".'
+                                  '${reading > 0 ? ' Still reading $reading document${reading == 1 ? '' : 's'}.' : ''}'
+                            : 'No document name contains "${query.text.trim()}". '
+                                  'Pro also searches the text inside documents.',
                         actionLabel: 'Show all documents',
                         actionIcon: Icons.filter_alt_off_outlined,
                         onAction: _resetAll,
@@ -239,6 +258,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   Widget _searchBar(LibraryQuery query) {
+    final searchText = ref.watch(planIncludesProvider(PlanFeature.searchText));
     final filters = (query.types.isEmpty ? 0 : 1) + (query.date == DateFilter.any ? 0 : 1);
     return Padding(
       padding: const EdgeInsets.fromLTRB(Space.page, Space.xs, Space.sm, Space.xs),
@@ -250,7 +270,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               onChanged: ref.read(libraryQueryProvider.notifier).search,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                hintText: 'Search by name',
+                hintText: searchText ? 'Search names and text' : 'Search by name',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: query.text.isEmpty
                     ? null
@@ -380,6 +400,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         key: ValueKey(doc.id),
         document: doc,
         labels: _labels(doc),
+        snippet: _snippet(doc),
         selecting: _selecting,
         selected: _selected.contains(doc.id),
         onTap: () => _onTap(doc),
@@ -388,6 +409,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       );
     },
   );
+
+  /// Where the search text was found inside [doc], when not in its name.
+  String? _snippet(SavedDocument doc) {
+    final needle = ref.read(libraryQueryProvider).text.trim();
+    if (needle.isEmpty || doc.name.toLowerCase().contains(needle.toLowerCase())) return null;
+    final text = ref.read(searchableTextsProvider)[doc.id]?.text;
+    return text == null ? null : searchSnippet(text, needle);
+  }
 
   Widget _grid(List<SavedDocument> docs) => LayoutBuilder(
     builder: (context, constraints) {
