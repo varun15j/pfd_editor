@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -13,6 +14,7 @@ enum EditorTool {
   pen(Icons.edit_outlined, 'Pen'),
   highlighter(Icons.border_color_outlined, 'Highlight'),
   text(Icons.text_fields, 'Text'),
+  mask(Icons.visibility_off_outlined, 'Mask'),
   eraser(Icons.auto_fix_normal_outlined, 'Erase');
 
   const EditorTool(this.icon, this.label);
@@ -69,6 +71,33 @@ class AnnotationLayer extends StatefulWidget {
 class _AnnotationLayerState extends State<AnnotationLayer> {
   InkAnnotation? _current;
 
+  /// The mask being dragged out, from its first corner.
+  NormPoint? _maskStart;
+  MaskAnnotation? _mask;
+
+  void _startMask(Offset local, Size size) {
+    final p = _norm(local, size);
+    setState(() {
+      _maskStart = p;
+      _mask = MaskAnnotation.between(widget.callbacks.newId(), p, p);
+    });
+  }
+
+  void _extendMask(Offset local, Size size) {
+    final start = _maskStart, m = _mask;
+    if (start == null || m == null) return;
+    setState(() => _mask = MaskAnnotation.between(m.id, start, _norm(local, size)));
+  }
+
+  void _endMask() {
+    final m = _mask;
+    setState(() {
+      _mask = null;
+      _maskStart = null;
+    });
+    if (m != null && !m.isTooSmall) widget.callbacks.onAdd(m);
+  }
+
   NormPoint _norm(Offset local, Size size) => NormPoint(local.dx / size.width, local.dy / size.height).clamp();
 
   void _startStroke(Offset local, Size size) {
@@ -99,7 +128,9 @@ class _AnnotationLayerState extends State<AnnotationLayer> {
 
   void _erase(Offset local, Size size) {
     final p = _norm(local, size);
-    final hit = hitInk(widget.page.annotations, p, aspect: size.width / size.height, tolerance: 0.02);
+    final Annotation? hit =
+        hitInk(widget.page.annotations, p, aspect: size.width / size.height, tolerance: 0.02) ??
+        hitMask(widget.page.annotations, p);
     if (hit != null) widget.callbacks.onRemove(hit.id);
   }
 
@@ -128,6 +159,15 @@ class _AnnotationLayerState extends State<AnnotationLayer> {
             onTapUp: (d) => _erase(d.localPosition, size),
             onPanUpdate: (d) => _erase(d.localPosition, size),
           );
+        } else if (tool == EditorTool.mask) {
+          input = GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            dragStartBehavior: DragStartBehavior.down,
+            onPanStart: (d) => _startMask(d.localPosition, size),
+            onPanUpdate: (d) => _extendMask(d.localPosition, size),
+            onPanEnd: (_) => _endMask(),
+            onPanCancel: _endMask,
+          );
         } else if (tool == EditorTool.text) {
           input = GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -140,6 +180,14 @@ class _AnnotationLayerState extends State<AnnotationLayer> {
           children: [
             Positioned.fill(
               child: IgnorePointer(child: CustomPaint(painter: InkPainter([...annotations, ?_current]))),
+            ),
+            // Masks are drawn above ink, as they are burned in last.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: MaskPainter([...masksIn(annotations), ?_mask], outline: tool == EditorTool.mask),
+                ),
+              ),
             ),
             // Text boxes and signatures sit above the input layer, so in Text
             // mode a tap on existing text edits it instead of adding a box.
@@ -173,6 +221,22 @@ class _AnnotationLayerState extends State<AnnotationLayer> {
                     a.copyWith(left: (a.left + dx).clamp(0.0, 1.0), top: (a.top + dy).clamp(0.0, 1.0)),
                   ),
                   child: annotationSignature(a, size.width),
+                )
+              else if (a is MaskAnnotation && tool == EditorTool.select)
+                _MovableItem(
+                  key: ValueKey(a.id),
+                  left: a.left * size.width,
+                  top: a.top * size.height,
+                  enabled: true,
+                  draggable: true,
+                  pageSize: size,
+                  onTap: () => widget.callbacks.onItemMenu(a),
+                  onMoved: (dx, dy) => widget.callbacks.onReplace(a.movedBy(dx, dy)),
+                  child: SizedBox(
+                    width: a.width * size.width,
+                    height: a.height * size.height,
+                    child: ColoredBox(color: Color(a.color)),
+                  ),
                 ),
           ],
         );
@@ -211,6 +275,7 @@ class StaticMarks extends StatelessWidget {
             clipBehavior: Clip.hardEdge,
             children: [
               Positioned.fill(child: CustomPaint(painter: InkPainter(annotations))),
+              Positioned.fill(child: CustomPaint(painter: MaskPainter(masksIn(annotations).toList()))),
               for (final a in annotations)
                 if (a is TextAnnotation)
                   Positioned(
@@ -329,6 +394,44 @@ class InkPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(InkPainter old) => old.annotations != annotations;
+}
+
+/// Paints mask boxes as solid blocks, as they will be burned into the page.
+/// With [outline], each also gets a thin light edge, so a black mask on a
+/// dark part of the page can still be seen while masking.
+class MaskPainter extends CustomPainter {
+  MaskPainter(this.masks, {this.outline = false});
+
+  final List<MaskAnnotation> masks;
+  final bool outline;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final m in masks) {
+      final rect = Rect.fromLTRB(m.left * size.width, m.top * size.height, m.right * size.width, m.bottom * size.height);
+      canvas.drawRect(rect, Paint()..color = Color(m.color));
+      if (outline) {
+        canvas.drawRect(
+          rect,
+          Paint()
+            ..color = const Color(0xCCFFFFFF)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(MaskPainter old) => old.outline != outline || !listEquals(old.masks, masks);
+}
+
+/// The topmost mask that covers [p], or null.
+MaskAnnotation? hitMask(List<Annotation> annotations, NormPoint p) {
+  for (final a in annotations.reversed) {
+    if (a is MaskAnnotation && a.contains(p)) return a;
+  }
+  return null;
 }
 
 /// Paints a signature's strokes inside its box.

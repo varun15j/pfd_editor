@@ -63,10 +63,12 @@ final photoAnalyzerProvider = Provider<PhotoAnalyzer>(
 );
 
 /// On-device text recognition. It reads each page as rendered with its crop
-/// and filter, at a size that keeps small print legible.
+/// and filter, at a size that keeps small print legible, with its masks
+/// burned in so hidden ID numbers are never read into the text.
 final ocrEngineProvider = Provider<OcrEngine>(
   (ref) => MlKitOcrEngine(
-    imageFor: (page) async => (await ref.read(renderServiceProvider).render(page, maxDimension: 2400)).path,
+    imageFor: (page) async =>
+        (await ref.read(renderServiceProvider).renderMasked(page, maxDimension: 2400)).path,
   ),
 );
 

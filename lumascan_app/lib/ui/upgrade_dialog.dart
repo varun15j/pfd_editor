@@ -30,7 +30,11 @@ Future<void> showUpgradeDialog(BuildContext context, PlanFeature feature, {requi
         children: [
           PremiumBadge(label: '$plan plan'),
           const SizedBox(height: 12),
-          Text('$what is part of the $plan plan, and Gold includes it too.'),
+          Text(
+            feature.minimum == AppPlan.gold
+                ? '$what is part of the Gold plan.'
+                : '$what is part of the $plan plan, and Gold includes it too.',
+          ),
         ],
       ),
       actions: [

@@ -577,11 +577,11 @@ void main() {
 
     testWidgets('shows Sign, Reorder pages and Merge PDFs, and nothing that is not built', (tester) async {
       await pumpTools(tester);
-      for (final title in ['Merge PDFs', 'Sign', 'Reorder pages']) {
+      for (final title in ['Merge PDFs', 'Split PDF', 'Sign', 'Reorder pages']) {
         await tester.scrollUntilVisible(find.text(title), 200);
         expect(find.text(title), findsOneWidget);
       }
-      for (final missing in ['Compress', 'Split', 'Protect', 'OCR']) {
+      for (final missing in ['Compress', 'Protect', 'OCR']) {
         expect(find.textContaining(missing), findsNothing);
       }
     });
