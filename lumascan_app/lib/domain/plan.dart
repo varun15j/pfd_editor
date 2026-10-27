@@ -59,7 +59,12 @@ enum PlanFeature {
   /// Compress to a target size: a copy of a saved PDF made to fit under
   /// 200 KB, 500 KB, 1 MB or 2 MB for upload forms, choosing resolution and
   /// quality automatically. Offered in the Send PDF sheet.
-  targetSize(AppPlan.pro);
+  targetSize(AppPlan.pro),
+
+  /// Document password: a copy of a saved PDF, encrypted with AES-256, that
+  /// asks for a password when opened. Offered in the Library menu and the
+  /// Send sheet.
+  password(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 

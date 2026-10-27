@@ -11,6 +11,7 @@ import '../../domain/plan.dart';
 import '../../export/text_pdf_service.dart';
 import '../../ui/upgrade_dialog.dart';
 import '../pdf_editor/open_pdf.dart';
+import '../share/lock_pdf_sheet.dart';
 import '../share/send_pdf_sheet.dart';
 import '../share/text_pdf_next_sheet.dart';
 import 'library_controller.dart';
@@ -172,6 +173,18 @@ class _RenameDialogState extends State<_RenameDialog> {
       ],
     );
   }
+}
+
+/// Makes a password-protected copy of a saved document to send (Pro and
+/// Gold). The document in the Library is not changed.
+Future<void> addPasswordToDocument(BuildContext context, WidgetRef ref, SavedDocument doc) async {
+  if (!await ensurePlan(context, ref, PlanFeature.password, what: 'Document password')) return;
+  if (!context.mounted) return;
+  if (!File(doc.pdfPath).existsSync()) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${doc.name} is no longer on this device.')));
+    return;
+  }
+  await showLockPdfSheet(context, pdfPath: doc.pdfPath, name: doc.name);
 }
 
 /// Reads a saved document with OCR and saves a text PDF beside it (Pro and

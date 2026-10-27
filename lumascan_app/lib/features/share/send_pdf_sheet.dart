@@ -6,10 +6,12 @@ import 'package:path/path.dart' as p;
 
 import '../../app/preferences.dart';
 import '../../domain/plan.dart';
+import '../../export/pdf_lock/pdf_locker.dart';
 import '../../export/pdf_shrinker.dart';
 import '../../ui/file_size.dart';
 import '../../ui/state_views.dart';
 import '../../ui/upgrade_dialog.dart';
+import 'lock_pdf_sheet.dart';
 import 'pdf_sharer.dart';
 
 /// Offers to send a saved PDF as it is, as a smaller copy, or (Pro) as a copy
@@ -212,6 +214,15 @@ class _SendPdfSheetState extends ConsumerState<SendPdfSheet> {
     await _send(tileContext, made.file.path, sent: 'Copy under ${target.label} shared (${formatFileSize(made.bytes)})');
   }
 
+  Future<void> _sendLocked() async {
+    if (!await ensurePlan(context, ref, PlanFeature.password, what: 'Document password') || !mounted) return;
+    if (!File(widget.pdfPath).existsSync()) {
+      setState(() => _error = 'This PDF is no longer on this device.');
+      return;
+    }
+    await showLockPdfSheet(context, pdfPath: widget.pdfPath, name: widget.name);
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -291,6 +302,18 @@ class _SendPdfSheetState extends ConsumerState<SendPdfSheet> {
                       ),
                   ],
                 ),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                enabled: !_making,
+                leading: const Icon(Icons.lock_outline),
+                title: const Text('Send with password'),
+                subtitle: Text(PdfLocker.lockedName(widget.name)),
+                // Shown to everyone; on Basic it opens the upgrade pop-up.
+                trailing: ref.watch(planIncludesProvider(PlanFeature.password))
+                    ? null
+                    : const PremiumBadge(label: 'Pro'),
+                onTap: _sendLocked,
               ),
               const SizedBox(height: 8),
               Text(
