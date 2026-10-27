@@ -75,8 +75,21 @@
 	<!-- Google Drive sign-in returns to the app through the reversed iOS
 	     client ID. It differs between debug and release builds, so it is set
 	     in ios/Flutter/Debug.xcconfig and Release.xcconfig. -->
+	<!-- The share extension saves shared images in this App Group
+	     (SHARE_APP_GROUP in the Xcode project) and opens the app through the
+	     share URL scheme below. -->
+	<key>ShareAppGroup</key>
+	<string>$(SHARE_APP_GROUP)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(PRODUCT_BUNDLE_IDENTIFIER).share</string>
+			</array>
+		</dict>
 		<dict>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>

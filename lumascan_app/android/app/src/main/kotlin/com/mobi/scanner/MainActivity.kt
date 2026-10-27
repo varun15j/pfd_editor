@@ -57,6 +57,9 @@ class MainActivity : FlutterActivity() {
         val tesseract = TesseractOcr()
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, TesseractOcr.CHANNEL)
             .setMethodCallHandler(tesseract::handle)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ShareInbox.CHANNEL).setMethodCallHandler { call, result ->
+            if (call.method == "inboxPath") result.success(ShareInbox.dir(this).absolutePath) else result.notImplemented()
+        }
     }
 
     override fun onResume() {

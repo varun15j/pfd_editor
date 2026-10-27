@@ -31,6 +31,27 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Lists the app in the share sheet when images are shared from the
+             gallery or any other app. It copies the images into the app and
+             opens it; it has no screen of its own and takes the app's name. -->
+        <activity
+            android:name=".ShareReceiverActivity"
+            android:exported="true"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="image/*"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="image/*"/>
+            </intent-filter>
+        </activity>
         <!-- Cold-restarts the app when its window never gets a frame (UX-10).
              Runs in its own process so it can kill the stuck one. -->
         <activity
