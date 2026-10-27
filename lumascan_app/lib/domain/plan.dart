@@ -48,7 +48,13 @@ enum PlanFeature {
   /// Signature library: signatures and initials saved once and placed again
   /// with a tap, plus date and name stamps, in the PDF editor and Markup.
   /// Drawing a one-off signature stays on every plan.
-  signatureLibrary(AppPlan.pro);
+  signatureLibrary(AppPlan.pro),
+
+  /// Table to Excel: one photo of a table becomes an Excel (.xlsx) file.
+  /// The table is read with on-device OCR, so it costs nothing per use and
+  /// needs no usage cap; it is Gold because rivals sell it at their top
+  /// tier (improvement.md #21).
+  tableToExcel(AppPlan.gold);
 
   const PlanFeature(this.minimum);
 

@@ -127,3 +127,9 @@ class OcrLayout {
 abstract interface class OcrLayoutEngine {
   Future<OcrLayout> recognizeLayout(ScanPage page, {required String languageCode});
 }
+
+/// An engine that can also read the layout of a photo file as it is, for
+/// Table to Excel, where the photo never becomes a page of a scan.
+abstract interface class OcrFileLayoutEngine {
+  Future<OcrLayout> recognizeLayoutFile(String path);
+}
