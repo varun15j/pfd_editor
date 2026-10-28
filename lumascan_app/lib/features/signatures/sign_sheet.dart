@@ -12,6 +12,7 @@ import '../markup/markup_actions.dart';
 import '../pdf_editor/annotation_layer.dart';
 import '../pdf_editor/signature_pad_screen.dart';
 import 'signature_library_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// Ink colour of signatures and stamps.
 const signatureInk = 0xFF14213D;
@@ -183,13 +184,13 @@ class SignSheet extends ConsumerWidget {
                 ),
               ),
             ListTile(
-              leading: const Icon(Icons.draw_outlined),
+              leading: const Icon(LumaIcons.sign),
               title: const Text('Draw a new signature'),
               subtitle: unlocked ? const Text('Saved for next time unless you switch it off') : null,
               onTap: () => pick(const DrawChoice(SignatureKind.signature)),
             ),
             ListTile(
-              leading: const Icon(Icons.short_text),
+              leading: const Icon(LumaIcons.initials),
               title: const Text('Draw initials'),
               trailing: badge,
               onTap: () => pick(const DrawChoice(SignatureKind.initials)),
@@ -200,14 +201,14 @@ class SignSheet extends ConsumerWidget {
               child: Text('Stamps', style: text.titleSmall),
             ),
             ListTile(
-              leading: const Icon(Icons.event_outlined),
+              leading: const Icon(LumaIcons.date),
               title: const Text('Date stamp'),
               subtitle: Text(stampDate(today)),
               trailing: badge,
               onTap: () => pick(const StampChoice(StampKind.date)),
             ),
             ListTile(
-              leading: const Icon(Icons.badge_outlined),
+              leading: const Icon(LumaIcons.idCard),
               title: const Text('Name stamp'),
               subtitle: Text(library.stampName.isEmpty || !unlocked ? 'Your name, typed once' : library.stampName),
               trailing:
@@ -216,7 +217,7 @@ class SignSheet extends ConsumerWidget {
                       ? null
                       : IconButton(
                           tooltip: 'Change name',
-                          icon: const Icon(Icons.edit_outlined),
+                          icon: const Icon(LumaIcons.rename),
                           onPressed: () async {
                             final typed = await askStampName(context, initial: library.stampName);
                             if (typed != null && typed.trim().isNotEmpty) {
@@ -227,7 +228,7 @@ class SignSheet extends ConsumerWidget {
               onTap: () => pick(const StampChoice(StampKind.name)),
             ),
             ListTile(
-              leading: const Icon(Icons.assignment_ind_outlined),
+              leading: const Icon(LumaIcons.nameAndDate),
               title: const Text('Name and date'),
               trailing: badge,
               onTap: () => pick(const StampChoice(StampKind.nameAndDate)),
@@ -299,7 +300,7 @@ class _SavedTile extends StatelessWidget {
                   child: IconButton(
                     tooltip: 'Delete saved ${signature.kind.label.toLowerCase()}',
                     visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.close, size: 18, color: Colors.black54),
+                    icon: const Icon(LumaIcons.close, size: 18, color: Colors.black54),
                     onPressed: onDelete,
                   ),
                 ),

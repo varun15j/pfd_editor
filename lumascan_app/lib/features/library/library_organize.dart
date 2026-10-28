@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../domain/library.dart';
 import 'library_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// Folders and tags (US-02.3): naming dialogs with inline checks, the move
 /// and tag sheets used from a row or a selection, and delete confirmations
@@ -193,7 +194,7 @@ Future<void> moveToFolderSheet(BuildContext context, WidgetRef ref, List<SavedDo
                   const RadioListTile<String>(value: none, title: Text('No folder')),
                   for (final f in folders) RadioListTile<String>(value: f.id, title: Text(f.name)),
                   ListTile(
-                    leading: const Icon(Icons.create_new_folder_outlined),
+                    leading: const Icon(LumaIcons.createNewFolder),
                     title: const Text('New folder'),
                     onTap: () async {
                       final folder = await createFolderFlow(context, ref);
@@ -297,7 +298,7 @@ class _TagsSheetState extends ConsumerState<_TagsSheet> {
                 }),
               ),
             ListTile(
-              leading: const Icon(Icons.new_label_outlined),
+              leading: const Icon(LumaIcons.newTag),
               title: const Text('New tag'),
               onTap: () async {
                 final name = await createTagFlow(context, ref);
@@ -345,7 +346,7 @@ class ManageLabelsScreen extends ConsumerWidget {
           Expanded(
             child: Semantics(header: true, child: Text(title, style: text.titleMedium)),
           ),
-          TextButton.icon(onPressed: onAdd, icon: const Icon(Icons.add), label: Text(action)),
+          TextButton.icon(onPressed: onAdd, icon: const Icon(LumaIcons.add), label: Text(action)),
         ],
       ),
     );
@@ -356,11 +357,11 @@ class ManageLabelsScreen extends ConsumerWidget {
       itemBuilder: (_) => const [
         PopupMenuItem(
           value: 0,
-          child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Rename')),
+          child: ListTile(leading: Icon(LumaIcons.rename), title: Text('Rename')),
         ),
         PopupMenuItem(
           value: 1,
-          child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Delete')),
+          child: ListTile(leading: Icon(LumaIcons.delete), title: Text('Delete')),
         ),
       ],
     );
@@ -379,7 +380,7 @@ class ManageLabelsScreen extends ConsumerWidget {
           if (index.folders.isEmpty) empty('A document can live in one folder.'),
           for (final f in index.folders)
             ListTile(
-              leading: const Icon(Icons.folder_outlined),
+              leading: const Icon(LumaIcons.folder),
               title: Text(f.name),
               subtitle: Text(count(index.documents.where((d) => d.folderId == f.id).length)),
               trailing: menu(f.name, () => renameFolderFlow(context, ref, f), () => deleteFolderFlow(context, ref, f)),
@@ -389,7 +390,7 @@ class ManageLabelsScreen extends ConsumerWidget {
           if (index.allTags.isEmpty) empty('A document can have any number of tags.'),
           for (final t in index.allTags)
             ListTile(
-              leading: const Icon(Icons.label_outline),
+              leading: const Icon(LumaIcons.tag),
               title: Text(t),
               subtitle: Text(
                 count(index.documents.where((d) => d.tags.any((x) => x.toLowerCase() == t.toLowerCase())).length),

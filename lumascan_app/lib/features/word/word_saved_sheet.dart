@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import '../../export/word/word_service.dart';
 import '../share/docx_sharer.dart';
 import '../share/pdf_sharer.dart';
+import '../../ui/luma_icons.dart';
 
 /// Asks what to do with a Word file once it is made: open it in Word or
 /// another app, share it, or save it to the Documents folder. The Word file
@@ -59,13 +60,13 @@ class WordSavedSheet extends ConsumerWidget {
               ),
             ],
             const SizedBox(height: 8),
-            _Option(icon: Icons.open_in_new, title: 'Open in Word', onTap: () => _open(context)),
+            _Option(icon: LumaIcons.openExternal, title: 'Open in Word', onTap: () => _open(context)),
             Builder(
               builder: (tileContext) =>
-                  _Option(icon: Icons.ios_share, title: 'Share', onTap: () => _share(context, ref, tileContext)),
+                  _Option(icon: LumaIcons.share, title: 'Share', onTap: () => _share(context, ref, tileContext)),
             ),
             _Option(
-              icon: Icons.folder_outlined,
+              icon: LumaIcons.folder,
               title: 'Save to Documents folder',
               subtitle: 'Choose Documents in the save dialog',
               onTap: () => _saveToDocuments(context),

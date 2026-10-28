@@ -11,6 +11,7 @@ import '../../ui/upgrade_dialog.dart';
 import '../merge/pdf_inspector.dart';
 import '../merge/pdf_picker.dart';
 import 'split_screen.dart';
+import '../../ui/luma_icons.dart';
 
 /// Library menu > Split or extract pages for a saved PDF.
 Future<void> splitDocument(BuildContext context, WidgetRef ref, SavedDocument doc) async {
@@ -34,13 +35,13 @@ Future<void> pickPdfToSplit(BuildContext context, WidgetRef ref) async {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            leading: const Icon(Icons.folder_outlined),
+            leading: const Icon(LumaIcons.folder),
             title: const Text('From Library'),
             subtitle: const Text('A PDF you saved in $appName'),
             onTap: () => Navigator.pop(sheet, true),
           ),
           ListTile(
-            leading: const Icon(Icons.smartphone_outlined),
+            leading: const Icon(LumaIcons.device),
             title: const Text('From this device'),
             subtitle: const Text('Choose a PDF file'),
             onTap: () => Navigator.pop(sheet, false),

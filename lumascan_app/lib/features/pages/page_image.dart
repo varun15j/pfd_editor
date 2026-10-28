@@ -11,6 +11,7 @@ import '../../domain/models.dart';
 import '../../imaging/page_renderer.dart';
 import '../../imaging/render_service.dart';
 import '../pdf_editor/annotation_layer.dart';
+import '../../ui/luma_icons.dart';
 
 /// Shows a page rendered with its recipe (or an override), rendering on a
 /// background isolate and keeping the previous image visible meanwhile.
@@ -130,7 +131,7 @@ class _PageImageState extends ConsumerState<PageImage> {
       future: _future,
       builder: (context, snap) {
         if (snap.hasError) {
-          return const Center(child: Icon(Icons.broken_image_outlined));
+          return const Center(child: Icon(LumaIcons.brokenImage));
         }
         final image = snap.data ?? _last;
         if (image == null) {

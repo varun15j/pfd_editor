@@ -13,6 +13,7 @@ import '../signatures/sign_sheet.dart';
 import 'annotation_layer.dart';
 import 'organize_pages_screen.dart';
 import 'save_pdf_sheet.dart';
+import '../../ui/luma_icons.dart';
 
 /// Builds the image of one source page, sized by its parent.
 typedef PageImageBuilder = Widget Function(EditorPage page, {bool thumbnail});
@@ -210,10 +211,10 @@ class _PdfEditorScreenState extends ConsumerState<PdfEditorScreen> {
           actions: [
             IconButton(
               tooltip: 'Undo',
-              icon: const Icon(Icons.undo),
+              icon: const Icon(LumaIcons.undo),
               onPressed: state.canUndo ? _controller.undo : null,
             ),
-            IconButton(tooltip: 'Organize pages', icon: const Icon(Icons.view_agenda_outlined), onPressed: _organize),
+            IconButton(tooltip: 'Organize pages', icon: const Icon(LumaIcons.organizePages), onPressed: _organize),
             Padding(
               padding: const EdgeInsets.only(right: 12, left: 4),
               child: FilledButton(onPressed: () => showSavePdfSheet(context), child: const Text('Save')),
@@ -274,9 +275,9 @@ class _PageNavigator extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        IconButton(tooltip: 'Previous page', icon: const Icon(Icons.chevron_left), onPressed: onPrevious),
+        IconButton(tooltip: 'Previous page', icon: const Icon(LumaIcons.previous), onPressed: onPrevious),
         Text('Page ${index + 1} of $count'),
-        IconButton(tooltip: 'Next page', icon: const Icon(Icons.chevron_right), onPressed: onNext),
+        IconButton(tooltip: 'Next page', icon: const Icon(LumaIcons.next), onPressed: onNext),
       ],
     );
   }

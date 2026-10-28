@@ -5,6 +5,7 @@ import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../data/page_store.dart';
 import '../../ui/file_size.dart';
+import '../../ui/luma_icons.dart';
 
 /// Space the app uses, read when Settings opens and again after clearing.
 final storageUsageProvider = FutureProvider.autoDispose<StorageUsage>((ref) => ref.watch(pageStoreProvider).usage());
@@ -57,7 +58,7 @@ class StorageSection extends ConsumerWidget {
               const SizedBox(height: Space.sm),
               OutlinedButton.icon(
                 onPressed: () => _clear(context, ref, u.cache),
-                icon: const Icon(Icons.cleaning_services_outlined),
+                icon: const Icon(LumaIcons.clearCache),
                 label: const Text('Clear cache'),
               ),
             ],

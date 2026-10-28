@@ -18,6 +18,7 @@ import '../merge/pdf_inspector.dart';
 import '../merge/pdf_picker.dart';
 import '../share/send_pdf_sheet.dart';
 import 'word_saved_sheet.dart';
+import '../../ui/luma_icons.dart';
 
 /// Converts a saved PDF to a Word file in the exports folder, then asks what
 /// to do with it. Pages with text become editable text, picture pages stay
@@ -65,7 +66,7 @@ Future<bool?> askWordKind(BuildContext context) => showModalBottomSheet<bool>(
             child: Text('Convert to Word', style: Theme.of(sheetContext).textTheme.headlineSmall),
           ),
           ListTile(
-            leading: const Icon(Icons.text_fields),
+            leading: const Icon(LumaIcons.textTool),
             title: const Text('Editable text'),
             subtitle: const Text(
               'Text PDFs and text PDFs made with OCR become text you can edit. Pages that are only a picture stay pictures',
@@ -73,7 +74,7 @@ Future<bool?> askWordKind(BuildContext context) => showModalBottomSheet<bool>(
             onTap: () => Navigator.pop(sheetContext, true),
           ),
           ListTile(
-            leading: const Icon(Icons.image_outlined),
+            leading: const Icon(LumaIcons.image),
             title: const Text('Exact look'),
             subtitle: const Text('Every page is one full-page picture, so it looks the same as the PDF'),
             onTap: () => Navigator.pop(sheetContext, false),

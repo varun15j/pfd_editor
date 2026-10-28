@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_info.dart';
 import '../../app/preferences.dart';
 import '../../app/theme.dart';
+import '../../ui/luma_icons.dart';
 
 /// Kept with the dismissed Home cards so it shows only once.
 const scanTipsId = 'scan_tips';
@@ -29,9 +30,9 @@ class ScanTipsSheet extends StatelessWidget {
   const ScanTipsSheet({super.key});
 
   static const tips = [
-    (Icons.light_mode_outlined, 'Use good light', 'Daylight or a bright room, without shadows on the page.'),
-    (Icons.crop_free, 'Keep the page flat', 'Smooth out folds and fit all four corners in view.'),
-    (Icons.contrast, 'Use a dark background', 'A dark table helps $appName find the page edges.'),
+    (LumaIcons.lightTheme, 'Use good light', 'Daylight or a bright room, without shadows on the page.'),
+    (LumaIcons.fullPage, 'Keep the page flat', 'Smooth out folds and fit all four corners in view.'),
+    (LumaIcons.contrast, 'Use a dark background', 'A dark table helps $appName find the page edges.'),
   ];
 
   @override

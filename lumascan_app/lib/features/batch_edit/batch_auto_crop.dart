@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../../domain/models.dart';
 import '../../domain/photo_import.dart';
+import '../../ui/luma_icons.dart';
 
 /// What Crop in Batch Review does to the selected pages.
 enum CropChoice {
   /// Find the page in each photo and crop to it.
-  auto('Auto crop', 'Find the page in each photo and crop to it', Icons.auto_awesome_outlined),
+  auto('Auto crop', 'Find the page in each photo and crop to it', LumaIcons.smart),
 
   /// Keep each whole photo, with no crop.
-  full('Full photo', 'Keep each whole photo, with no crop', Icons.fullscreen),
+  full('Full photo', 'Keep each whole photo, with no crop', LumaIcons.fullPhoto),
 
   /// Open the crop editor for each page in turn.
-  adjust('Adjust each page', 'Drag the corners on each page in turn', Icons.crop);
+  adjust('Adjust each page', 'Drag the corners on each page in turn', LumaIcons.crop);
 
   const CropChoice(this.label, this.detail, this.icon);
 

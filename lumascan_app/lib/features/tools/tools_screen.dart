@@ -15,10 +15,11 @@ import '../pdf_editor/pdf_editor_screen.dart';
 import '../split/split_actions.dart';
 import '../table/table_to_excel.dart';
 import '../word/word_actions.dart';
+import '../../ui/luma_icons.dart';
 
 /// Tools tab, laid out as Screens 3 and 4 of the UI/UX screenshots:
 /// "Shortcuts" with Scan, Process Files and PDF Tools sections, three square
-/// tiles to a row with the name under each. A tool that is not built yet is
+/// tiles to a row with the name under each, drawn as tinted icon squares. A tool that is not built yet is
 /// left out, not shown greyed out.
 class ToolsScreen extends ConsumerWidget {
   const ToolsScreen({super.key});
@@ -30,13 +31,13 @@ class ToolsScreen extends ConsumerWidget {
       (
         'Scan',
         [
-          _Tool(Icons.badge_outlined, 'ID Card', () => openIdCardStudio(context)),
-          _Tool(Icons.receipt_long_outlined, 'Scan Docs', () => scan(CameraMode.docs)),
-          _Tool(Icons.menu_book_outlined, 'Book', () => scan(CameraMode.book)),
-          _Tool(Icons.qr_code_scanner, 'QR Code', () => scan(CameraMode.qr)),
-          _Tool(Icons.text_fields, 'To Text', () => scan(CameraMode.text)),
+          _Tool(LumaIcons.toolIdCard, 'ID Card', () => openIdCardStudio(context)),
+          _Tool(LumaIcons.toolScanDocs, 'Scan Docs', () => scan(CameraMode.docs)),
+          _Tool(LumaIcons.toolBook, 'Book', () => scan(CameraMode.book)),
+          _Tool(LumaIcons.toolQr, 'QR Code', () => scan(CameraMode.qr)),
+          _Tool(LumaIcons.toolText, 'To Text', () => scan(CameraMode.text)),
           _Tool(
-            Icons.table_chart_outlined,
+            LumaIcons.toolTable,
             'Table to Excel',
             () => scanTableToExcel(context, ref),
             badge: ref.watch(planIncludesProvider(PlanFeature.tableToExcel)) ? null : 'Gold',
@@ -46,21 +47,21 @@ class ToolsScreen extends ConsumerWidget {
       (
         'Process Files',
         [
-          _Tool(Icons.photo_library_outlined, 'Photos to PDF', () => scanThenReview(context, ref, ScanSource.gallery)),
+          _Tool(LumaIcons.toolPhotos, 'Photos to PDF', () => scanThenReview(context, ref, ScanSource.gallery)),
           _Tool(
-            Icons.description_outlined,
+            LumaIcons.toolPdfToWord,
             'PDF to Word',
             () => pickPdfToWord(context, ref),
             badge: ref.watch(planIncludesProvider(PlanFeature.word)) ? null : 'Pro',
           ),
-          _Tool(Icons.picture_as_pdf_outlined, 'Word to PDF', () => importWordFile(context, ref)),
+          _Tool(LumaIcons.toolWordToPdf, 'Word to PDF', () => importWordFile(context, ref)),
           _Tool(
-            Icons.library_add_outlined,
+            LumaIcons.toolMerge,
             'Merge PDFs',
             () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const MergeScreen())),
           ),
           _Tool(
-            Icons.call_split,
+            LumaIcons.toolSplit,
             'Split PDF',
             () => pickPdfToSplit(context, ref),
             badge: ref.watch(planIncludesProvider(PlanFeature.splitPdf)) ? null : 'Pro',
@@ -70,10 +71,10 @@ class ToolsScreen extends ConsumerWidget {
       (
         'PDF Tools',
         [
-          _Tool(Icons.draw_outlined, 'Sign', () => pickAndEditPdf(context, ref, entry: PdfEditorEntry.sign)),
-          _Tool(Icons.edit_document, 'Edit a PDF', () => pickAndEditPdf(context, ref)),
+          _Tool(LumaIcons.toolSign, 'Sign', () => pickAndEditPdf(context, ref, entry: PdfEditorEntry.sign)),
+          _Tool(LumaIcons.toolEditPdf, 'Edit a PDF', () => pickAndEditPdf(context, ref)),
           _Tool(
-            Icons.view_agenda_outlined,
+            LumaIcons.toolReorder,
             'Reorder pages',
             () => pickAndEditPdf(context, ref, entry: PdfEditorEntry.organize),
           ),
@@ -88,7 +89,7 @@ class ToolsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(Space.page, 0, Space.page, Space.xxl * 2),
         children: [
-          for (final (title, tools) in sections) ...[
+          for (final (index, (title, tools)) in sections.indexed) ...[
             Padding(
               padding: const EdgeInsets.only(top: Space.lg, bottom: Space.md),
               child: Semantics(header: true, child: Text(title, style: text.headlineSmall)),
@@ -100,7 +101,13 @@ class ToolsScreen extends ConsumerWidget {
                 return Wrap(
                   spacing: Space.md,
                   runSpacing: Space.lg,
-                  children: [for (final tool in tools) SizedBox(width: width, child: _ToolTile(tool))],
+                  children: [
+                    for (final tool in tools)
+                      SizedBox(
+                        width: width,
+                        child: _ToolTile(tool, tint: _ToolTint.forSection(index)),
+                      ),
+                  ],
                 );
               },
             ),
@@ -114,7 +121,7 @@ class ToolsScreen extends ConsumerWidget {
 class _Tool {
   const _Tool(this.icon, this.title, this.onTap, {this.badge});
 
-  final IconData icon;
+  final LumaDuotone icon;
   final String title;
   final VoidCallback onTap;
 
@@ -122,65 +129,74 @@ class _Tool {
   final String? badge;
 }
 
-/// A square picture of the tool with its name under it (Screen 3). The
-/// picture is a light panel with the tool's icon in the green circle the
-/// screenshots use.
+/// Tint of a tool tile: one colour per section, the way CamScanner-style
+/// tool grids group their tools.
+class _ToolTint {
+  const _ToolTint(this.dark, this.light);
+
+  /// Background and icon colour on the dark theme, then on the light one.
+  final (Color, Color) dark;
+  final (Color, Color) light;
+
+  static const _tints = [
+    _ToolTint((Color(0xFF173456), Color(0xFF8CC2FF)), (Color(0xFFE2EDFC), Color(0xFF1C5BB8))), // Scan: blue
+    _ToolTint((Color(0xFF163D2A), Color(0xFF7FE0A6)), (Color(0xFFDDF4E6), Color(0xFF167A3F))), // Process Files: green
+    _ToolTint((Color(0xFF45330F), Color(0xFFFFD27A)), (Color(0xFFFCEFD4), Color(0xFF8A5A00))), // PDF Tools: amber
+  ];
+
+  static _ToolTint forSection(int index) => _tints[index % _tints.length];
+}
+
+/// The tool's two-tone icon on a tinted rounded square with its name under
+/// it, in the CamScanner-style tools grid.
 class _ToolTile extends StatelessWidget {
-  const _ToolTile(this.tool);
+  const _ToolTile(this.tool, {required this.tint});
 
   final _Tool tool;
+  final _ToolTint tint;
 
   @override
   Widget build(BuildContext context) {
-    final c = LumaColors.of(context);
     final text = Theme.of(context).textTheme;
+    final (background, foreground) = Theme.of(context).brightness == Brightness.dark ? tint.dark : tint.light;
     return Semantics(
       button: true,
       label: tool.title,
       excludeSemantics: true,
       child: InkWell(
+        borderRadius: BorderRadius.circular(Radii.lg),
         onTap: tool.onTap,
-        child: Column(
-          children: [
-            AspectRatio(
-              aspectRatio: 0.9,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: c.surfaceRaised,
-                  border: Border.all(color: c.line),
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    if (tool.badge != null)
-                      Positioned(
-                        top: Space.sm,
-                        right: Space.sm,
-                        child: PremiumBadge(label: tool.badge!),
-                      ),
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: LumaColors.scan,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: LumaColors.onScan, width: 2),
-                      ),
-                      child: Icon(tool.icon, color: LumaColors.onScan, size: 28),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: Space.sm),
+          child: Column(
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(18)),
+                    child: DuotoneIcon(tool.icon, color: foreground, size: 32),
+                  ),
+                  if (tool.badge != null)
+                    Positioned(
+                      top: -Space.sm,
+                      right: -Space.lg,
+                      child: PremiumBadge(label: tool.badge!),
                     ),
-                  ],
-                ),
+                ],
               ),
-            ),
-            const SizedBox(height: Space.sm),
-            Text(
-              tool.title,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: text.titleMedium,
-            ),
-          ],
+              const SizedBox(height: Space.sm),
+              Text(
+                tool.title,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: text.titleSmall,
+              ),
+            ],
+          ),
         ),
       ),
     );

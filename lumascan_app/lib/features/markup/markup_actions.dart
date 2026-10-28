@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../pdf_edit/annotations.dart';
+import '../../ui/luma_icons.dart';
 
 /// What the user picked in the menu for a text box or signature.
 enum AnnotationMenuAction { edit, larger, smaller, delete }
@@ -16,22 +17,22 @@ Future<AnnotationMenuAction?> showAnnotationMenu(BuildContext context, Annotatio
           children: [
             if (a is TextAnnotation)
               ListTile(
-                leading: const Icon(Icons.edit_outlined),
+                leading: const Icon(LumaIcons.rename),
                 title: const Text('Edit text'),
                 onTap: () => Navigator.pop(context, AnnotationMenuAction.edit),
               ),
             ListTile(
-              leading: const Icon(Icons.zoom_in),
+              leading: const Icon(LumaIcons.zoomIn),
               title: const Text('Larger'),
               onTap: () => Navigator.pop(context, AnnotationMenuAction.larger),
             ),
             ListTile(
-              leading: const Icon(Icons.zoom_out),
+              leading: const Icon(LumaIcons.zoomOut),
               title: const Text('Smaller'),
               onTap: () => Navigator.pop(context, AnnotationMenuAction.smaller),
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline),
+              leading: const Icon(LumaIcons.delete),
               title: const Text('Delete'),
               onTap: () => Navigator.pop(context, AnnotationMenuAction.delete),
             ),

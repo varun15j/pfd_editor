@@ -9,6 +9,7 @@ import '../../ui/undo_toast.dart';
 import '../crop/crop_screen.dart';
 import '../pages/page_image.dart';
 import '../pages/scan_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// Enhance screen (S04): filter presets, brightness and contrast, rotation and
 /// before/after. Edits are kept local until Apply, which asks which pages they
@@ -77,18 +78,18 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
         actions: [
           IconButton(
             tooltip: 'Crop',
-            icon: const Icon(Icons.crop),
+            icon: const Icon(LumaIcons.crop),
             onPressed: () =>
                 Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => CropScreen(pageId: page.id))),
           ),
           IconButton(
             tooltip: 'Rotate left',
-            icon: const Icon(Icons.rotate_left),
+            icon: const Icon(LumaIcons.rotateLeft),
             onPressed: () => setState(() => _draft = draft.copyWith(quarterTurns: draft.quarterTurns + 3)),
           ),
           IconButton(
             tooltip: 'Rotate right',
-            icon: const Icon(Icons.rotate_right),
+            icon: const Icon(LumaIcons.rotateRight),
             onPressed: () => setState(() => _draft = draft.copyWith(quarterTurns: draft.quarterTurns + 1)),
           ),
         ],
@@ -301,7 +302,7 @@ class _FilterChoice extends StatelessWidget {
                       child: Container(
                         decoration: BoxDecoration(color: teal, shape: BoxShape.circle),
                         padding: const EdgeInsets.all(2),
-                        child: const Icon(Icons.check, size: 14, color: Colors.white),
+                        child: const Icon(LumaIcons.check, size: 14, color: Colors.white),
                       ),
                     ),
                 ],
@@ -443,7 +444,7 @@ class _ScopeOption extends StatelessWidget {
       child: ListTile(
         contentPadding: EdgeInsets.zero,
         onTap: onTap,
-        leading: Icon(selected ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+        leading: Icon(selected ? LumaIcons.radioOn : LumaIcons.radioOff),
         title: Text(label),
       ),
     );

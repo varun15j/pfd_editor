@@ -16,6 +16,7 @@ import '../pdf_editor/annotation_layer.dart';
 import 'id_card_capture_screen.dart';
 import 'id_card_saved_screen.dart';
 import 'id_card_session.dart';
+import '../../ui/luma_icons.dart';
 
 /// Review the copy (ID-06): a black header with Back, the two-line title
 /// and Help; the white A4 page with every side where it will print, and
@@ -218,7 +219,7 @@ class _IdCardReviewScreenState extends ConsumerState<IdCardReviewScreen> {
               ),
             ),
           ),
-          actions: [IconButton(tooltip: 'Help', icon: const Icon(Icons.help_outline), onPressed: _help)],
+          actions: [IconButton(tooltip: 'Help', icon: const Icon(LumaIcons.help), onPressed: _help)],
         ),
         body: SafeArea(
           child: Column(
@@ -261,11 +262,11 @@ class _IdCardReviewScreenState extends ConsumerState<IdCardReviewScreen> {
 }
 
 enum _EditAction {
-  crop(Icons.crop, 'Crop or resize', 'Move the corners to fit the card'),
-  rotate(Icons.rotate_right, 'Rotate', 'A quarter turn to the right'),
-  mask(Icons.visibility_off_outlined, 'Hide a number', 'Draw a mask over your Aadhaar or any number'),
-  retake(Icons.photo_camera_outlined, 'Retake', null),
-  swap(Icons.swap_vert, 'Swap front and back', null);
+  crop(LumaIcons.crop, 'Crop or resize', 'Move the corners to fit the card'),
+  rotate(LumaIcons.rotateRight, 'Rotate', 'A quarter turn to the right'),
+  mask(LumaIcons.hide, 'Hide a number', 'Draw a mask over your Aadhaar or any number'),
+  retake(LumaIcons.retake, 'Retake', null),
+  swap(LumaIcons.reorder, 'Swap front and back', null);
 
   const _EditAction(this.icon, this.label, this.hint);
 
@@ -381,7 +382,7 @@ class _SideSlot extends StatelessWidget {
                       padding: const EdgeInsets.all(8),
                       child: Column(
                         children: [
-                          const Icon(Icons.add_a_photo_outlined, color: Colors.black54),
+                          const Icon(LumaIcons.addPhoto, color: Colors.black54),
                           Text('Take the ${name.toLowerCase()}', style: const TextStyle(color: Colors.black87)),
                         ],
                       ),
@@ -506,12 +507,12 @@ class _Toolbar extends StatelessWidget {
       child: Row(
         children: [
           tool(
-            hasWatermark ? Icons.branding_watermark : Icons.branding_watermark_outlined,
+            hasWatermark ? LumaIcons.watermarkFilled : LumaIcons.watermark,
             'Add Watermark',
             onWatermark,
           ),
-          tool(Icons.crop_rotate, 'Edit', onEdit, semantics: 'Edit: crop, resize or rotate the selected side'),
-          tool(Icons.auto_fix_high_outlined, 'Filter', onFilter),
+          tool(LumaIcons.edit, 'Edit', onEdit, semantics: 'Edit: crop, resize or rotate the selected side'),
+          tool(LumaIcons.enhance, 'Filter', onFilter),
           Expanded(
             child: Center(
               child: Semantics(
@@ -529,7 +530,7 @@ class _Toolbar extends StatelessWidget {
                             padding: EdgeInsets.all(14),
                             child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
                           )
-                        : const Icon(Icons.check, color: Colors.white, size: 30),
+                        : const Icon(LumaIcons.check, color: Colors.white, size: 30),
                   ),
                 ),
               ),

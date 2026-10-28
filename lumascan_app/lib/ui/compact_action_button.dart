@@ -73,7 +73,7 @@ class CompactActionButton extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(icon, size: ControlMetrics.icon, color: foreground),
+                    Icon(icon, size: ControlMetrics.toolbarIcon, color: foreground),
                     const SizedBox(height: 2),
                     Text(
                       label,

@@ -5,6 +5,7 @@ import '../app/preferences.dart';
 import '../domain/plan.dart';
 import '../features/plans/paywall_screen.dart';
 import 'state_views.dart';
+import 'luma_icons.dart';
 
 /// Whether the current plan includes [feature]. When it does not, shows the
 /// upgrade pop-up and returns false, so a locked button can be shown and
@@ -22,7 +23,7 @@ Future<void> showUpgradeDialog(BuildContext context, PlanFeature feature, {requi
   return showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      icon: const Icon(Icons.workspace_premium_outlined),
+      icon: const Icon(LumaIcons.pro),
       title: Text('Upgrade to $plan'),
       content: Column(
         mainAxisSize: MainAxisSize.min,

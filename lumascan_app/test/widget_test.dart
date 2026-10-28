@@ -18,6 +18,7 @@ import 'package:lumascan/ui/state_views.dart';
 import 'support/fake_batch_camera.dart';
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
+import 'package:lumascan/ui/luma_icons.dart';
 
 /// A camera whose access is turned off; it never takes a photo.
 FakeBatchCamera _blockedCamera() => FakeBatchCamera(Directory.systemTemp, deny: true);
@@ -290,7 +291,7 @@ void main() {
       await pumpIn(
         tester,
         EmptyState(
-          icon: Icons.inbox,
+          icon: LumaIcons.inbox,
           title: 'Nothing here',
           message: 'Add one',
           actionLabel: 'Add',
@@ -316,7 +317,7 @@ void main() {
     testWidgets('premium badge says Premium, not colour alone', (tester) async {
       await pumpIn(tester, const Center(child: PremiumBadge()));
       expect(find.text('Premium'), findsOneWidget);
-      expect(find.byIcon(Icons.workspace_premium_outlined), findsOneWidget);
+      expect(find.byIcon(LumaIcons.pro), findsOneWidget);
     });
   });
 }

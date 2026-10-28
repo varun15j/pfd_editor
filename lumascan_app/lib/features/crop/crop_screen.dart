@@ -13,6 +13,7 @@ import '../../imaging/page_renderer.dart';
 import '../../ui/upgrade_dialog.dart';
 import '../pages/marks_notice.dart';
 import '../pages/scan_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// Where a page sits in a guided crop queue: [index] counts from 0.
 @immutable
@@ -265,13 +266,13 @@ class _CropScreenState extends ConsumerState<CropScreen> {
                     TextButton.icon(
                       style: TextButton.styleFrom(foregroundColor: Colors.white, minimumSize: const Size(48, 48)),
                       onPressed: _resetToDetected,
-                      icon: const Icon(Icons.auto_fix_high),
+                      icon: const Icon(LumaIcons.enhance),
                       label: const Text('Reset to detected'),
                     ),
                     TextButton.icon(
                       style: TextButton.styleFrom(foregroundColor: Colors.white, minimumSize: const Size(48, 48)),
                       onPressed: () => setState(() => _quad = CropQuad.full),
-                      icon: const Icon(Icons.crop_free),
+                      icon: const Icon(LumaIcons.fullPage),
                       label: const Text('Full page'),
                     ),
                     Semantics(
@@ -284,10 +285,10 @@ class _CropScreenState extends ConsumerState<CropScreen> {
                         onPressed: _toggleBookFix,
                         icon: Icon(
                           _bookFix
-                              ? Icons.check_circle
+                              ? LumaIcons.selected
                               : ref.watch(planIncludesProvider(PlanFeature.bookFix))
-                              ? Icons.menu_book_outlined
-                              : Icons.lock_outline,
+                              ? LumaIcons.book
+                              : LumaIcons.proBadge,
                         ),
                         label: const Text('Flatten book page'),
                       ),
@@ -296,7 +297,7 @@ class _CropScreenState extends ConsumerState<CropScreen> {
                       TextButton.icon(
                         style: TextButton.styleFrom(foregroundColor: Colors.white, minimumSize: const Size(48, 48)),
                         onPressed: () => setState(() => _quad = _initialQuad),
-                        icon: const Icon(Icons.restore),
+                        icon: const Icon(LumaIcons.reset),
                         label: const Text('Reset'),
                       ),
                   ],

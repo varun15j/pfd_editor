@@ -11,6 +11,7 @@ import '../pages/scan_controller.dart';
 import '../share/image_sharer.dart';
 import '../word/word_actions.dart';
 import 'export_sheet.dart';
+import '../../ui/luma_icons.dart';
 
 /// Export: the scan is already saved as page images, so this only makes a
 /// copy, as one PDF, as one Word file, or as one JPG per page.
@@ -51,13 +52,13 @@ class _ExportChoiceSheet extends StatelessWidget {
             child: Text('Export', style: Theme.of(context).textTheme.headlineSmall),
           ),
           ListTile(
-            leading: const Icon(Icons.picture_as_pdf_outlined),
+            leading: const Icon(LumaIcons.pdf),
             title: const Text('Export as PDF'),
             subtitle: const Text('All pages in one file, saved to your Library'),
             onTap: () => Navigator.pop(context, _ExportKind.pdf),
           ),
           ListTile(
-            leading: const Icon(Icons.description_outlined),
+            leading: const Icon(LumaIcons.document),
             title: const Text('Export as Word'),
             // Shown to everyone; on Basic it opens the upgrade pop-up.
             trailing: ProviderScope.containerOf(context).read(planIncludesProvider(PlanFeature.word))
@@ -67,7 +68,7 @@ class _ExportChoiceSheet extends StatelessWidget {
             onTap: () => Navigator.pop(context, _ExportKind.word),
           ),
           ListTile(
-            leading: const Icon(Icons.image_outlined),
+            leading: const Icon(LumaIcons.image),
             title: const Text('JPG images'),
             subtitle: const Text('One photo per page, to save to the gallery or send'),
             onTap: () => Navigator.pop(context, _ExportKind.jpg),
@@ -156,7 +157,7 @@ class _JpgExportSheetState extends ConsumerState<JpgExportSheet> {
                   Text('Markup is kept only in PDFs.', style: text.bodySmall),
                 ],
                 const SizedBox(height: 16),
-                FilledButton.icon(onPressed: _send, icon: const Icon(Icons.ios_share), label: const Text('Send')),
+                FilledButton.icon(onPressed: _send, icon: const Icon(LumaIcons.share), label: const Text('Send')),
               ],
               if (error != null) ...[
                 const SizedBox(height: 8),

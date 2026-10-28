@@ -4,6 +4,7 @@ import '../../app/theme.dart';
 import '../../ui/compact_action_button.dart';
 import 'batch_actions.dart';
 import 'batch_selection.dart';
+import '../../ui/luma_icons.dart';
 
 /// Persistent action bar under the Batch Review grid (BE-03). Unavailable
 /// actions stay visible; tapping one explains how to enable it.
@@ -72,7 +73,7 @@ class BatchActionBar extends StatelessWidget {
               Expanded(
                 child: CompactActionButton(
                   label: 'More',
-                  icon: Icons.more_horiz,
+                  icon: LumaIcons.more,
                   semanticsLabel: 'More actions',
                   onPressed: () => _showMore(context),
                 ),

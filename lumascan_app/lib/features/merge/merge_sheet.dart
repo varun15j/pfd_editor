@@ -9,6 +9,7 @@ import '../share/send_pdf_sheet.dart';
 import 'merge_controller.dart';
 import '../../export/pdf_merger.dart';
 import '../../ui/file_size.dart';
+import '../../ui/luma_icons.dart';
 
 /// Names and saves the merged PDF. Resolves to true once it is saved and the
 /// user taps Done, so the merge screen can close.
@@ -132,7 +133,7 @@ class _MergeSheetState extends ConsumerState<MergeSheet> {
                   Text(_error!, style: TextStyle(color: scheme.error)),
                 ],
                 const SizedBox(height: 16),
-                FilledButton.icon(onPressed: _send, icon: const Icon(Icons.ios_share), label: const Text('Send')),
+                FilledButton.icon(onPressed: _send, icon: const Icon(LumaIcons.share), label: const Text('Send')),
                 const SizedBox(height: 8),
                 TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Done')),
               ] else ...[

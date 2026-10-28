@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../library/library_controller.dart';
 import 'merge_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// Pick saved documents to add to a merge. Returns the chosen ones, in the
 /// order they were ticked.
@@ -44,7 +45,7 @@ class _LibraryPickScreenState extends ConsumerState<LibraryPickScreen> {
                   CheckboxListTile(
                     value: _chosen.contains(doc.id),
                     onChanged: (v) => setState(() => v == true ? _chosen.add(doc.id) : _chosen.remove(doc.id)),
-                    secondary: const Icon(Icons.picture_as_pdf_outlined),
+                    secondary: const Icon(LumaIcons.pdf),
                     title: Text(doc.name, maxLines: 2, overflow: TextOverflow.ellipsis),
                     subtitle: Text('${doc.pageCount} page${doc.pageCount == 1 ? '' : 's'}'),
                     controlAffinity: ListTileControlAffinity.trailing,

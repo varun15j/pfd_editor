@@ -6,6 +6,7 @@ import 'package:lumascan/features/library/document_tile.dart';
 
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
+import 'package:lumascan/ui/luma_icons.dart';
 
 final now = DateTime.now();
 DateTime daysAgo(int n) => now.subtract(Duration(days: n));
@@ -121,7 +122,7 @@ void main() {
       await openLibrary(tester);
       await tester.tap(find.byTooltip('Sort: Newest first'));
       await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.check), findsOneWidget);
+      expect(find.byIcon(LumaIcons.check), findsOneWidget);
       await tester.tap(find.text('Name A to Z'));
       await tester.pumpAndSettle();
       expect(shownNames(tester), ['electricity bill', 'Lease agreement', 'Passport', 'Signed lease']);

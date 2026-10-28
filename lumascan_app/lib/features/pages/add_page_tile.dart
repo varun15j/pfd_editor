@@ -5,6 +5,7 @@ import '../../app/theme.dart';
 import '../../domain/scanner_service.dart';
 import 'scan_actions.dart';
 import 'scan_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// The empty page after a document's last page: "Add a new page". Tapping it
 /// opens the camera, and the photos taken join the end of this document.
@@ -36,7 +37,7 @@ class AddPageTile extends ConsumerWidget {
           onTap: busy ? null : () => runScan(context, ref, ScanSource.camera),
           child: Center(
             child: compact
-                ? Icon(Icons.add, color: colors.accent)
+                ? Icon(LumaIcons.add, color: colors.accent)
                 : Padding(
                     padding: const EdgeInsets.all(8),
                     // Shrinks to fit small tiles and large text.
@@ -49,7 +50,7 @@ class AddPageTile extends ConsumerWidget {
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(color: colors.accent, shape: BoxShape.circle),
-                            child: Icon(Icons.add_a_photo_outlined, color: colors.onAccent, size: 22),
+                            child: Icon(LumaIcons.addPhoto, color: colors.onAccent, size: 22),
                           ),
                           const SizedBox(height: 8),
                           Text(

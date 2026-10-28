@@ -4,6 +4,7 @@ import '../../ui/compact_action_button.dart';
 import '../../ui/state_views.dart';
 import '../pdf_editor/annotation_layer.dart';
 import 'markup_style.dart';
+import '../../ui/luma_icons.dart';
 
 /// The toolbar under a page being marked up: one colour and thickness picker
 /// for the pen, highlighter and text tools, and a scrollable row of tools
@@ -146,7 +147,7 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
                           ),
                         if (widget.onSignature != null)
                           CompactActionButton(
-                            icon: Icons.draw_outlined,
+                            icon: LumaIcons.sign,
                             label: 'Sign',
                             selected: false,
                             minWidth: 60,
@@ -183,7 +184,7 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
               onPressed: widget.autoMaskBusy ? null : onAutoMask,
               icon: widget.autoMaskBusy
                   ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.badge_outlined),
+                  : const Icon(LumaIcons.idCard),
               label: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

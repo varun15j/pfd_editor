@@ -17,6 +17,7 @@ import '../../ui/upgrade_dialog.dart';
 import '../library/library_controller.dart';
 import '../pages/scan_controller.dart';
 import '../share/send_pdf_sheet.dart';
+import '../../ui/luma_icons.dart';
 
 export '../../ui/file_size.dart';
 
@@ -259,7 +260,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
                   Text(_error!, style: TextStyle(color: scheme.error)),
                 ],
                 const SizedBox(height: 16),
-                FilledButton.icon(onPressed: _send, icon: const Icon(Icons.ios_share), label: const Text('Send')),
+                FilledButton.icon(onPressed: _send, icon: const Icon(LumaIcons.share), label: const Text('Send')),
                 const SizedBox(height: 8),
                 TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
               ] else ...[
@@ -286,7 +287,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
                           )
                         : IconButton(
                             tooltip: hasSmartName ? 'Name from page text' : 'Name from page text · Pro',
-                            icon: Icon(hasSmartName ? Icons.auto_awesome_outlined : Icons.lock_outline),
+                            icon: Icon(hasSmartName ? LumaIcons.smart : LumaIcons.proBadge),
                             onPressed: saving || pageCount == 0 ? null : _suggestName,
                           ),
                   ),
@@ -294,10 +295,10 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
                 const SizedBox(height: 16),
                 SegmentedButton<bool>(
                   segments: [
-                    const ButtonSegment(value: false, icon: Icon(Icons.picture_as_pdf_outlined), label: Text('PDF')),
+                    const ButtonSegment(value: false, icon: Icon(LumaIcons.pdf), label: Text('PDF')),
                     ButtonSegment(
                       value: true,
-                      icon: Icon(hasTextPdf ? Icons.text_snippet_outlined : Icons.lock_outline),
+                      icon: Icon(hasTextPdf ? LumaIcons.textResult : LumaIcons.proBadge),
                       label: Text(hasTextPdf ? 'Text PDF' : 'Text PDF · Pro'),
                     ),
                   ],
@@ -334,7 +335,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     dense: true,
-                    secondary: Icon(hasPageNumbers ? Icons.format_list_numbered : Icons.lock_outline),
+                    secondary: Icon(hasPageNumbers ? LumaIcons.pageNumbers : LumaIcons.proBadge),
                     title: Text(hasPageNumbers ? 'Page numbers' : 'Page numbers · Pro'),
                     subtitle: const Text('Adds "2 / 5" at the foot of each page'),
                     value: _pageNumbers && hasPageNumbers,
@@ -360,7 +361,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
                 ],
                 FilledButton.icon(
                   onPressed: pageCount == 0 || saving || !_nameValid ? null : _export,
-                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                  icon: const Icon(LumaIcons.pdf),
                   label: Text(saving ? 'Saving…' : (_textPdf ? 'Save text PDF' : 'Save PDF')),
                 ),
                 if (_error != null) ...[
@@ -396,7 +397,7 @@ class _QualityTile extends StatelessWidget {
         dense: true,
         enabled: onTap != null,
         onTap: onTap,
-        leading: Icon(selected ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+        leading: Icon(selected ? LumaIcons.radioOn : LumaIcons.radioOff),
         title: Text(quality.label),
         subtitle: Text(quality.hint),
         trailing: Text('about $size'),
