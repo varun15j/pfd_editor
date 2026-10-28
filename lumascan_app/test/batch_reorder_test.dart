@@ -5,6 +5,7 @@ import 'package:lumascan/features/batch_edit/batch_review_screen.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 
 import 'support/screen_harness.dart';
+import 'package:lumascan/ui/luma_icons.dart';
 
 void main() {
   final harness = ScreenHarness();
@@ -17,7 +18,7 @@ void main() {
     final ids = order();
     await harness.pumpRoute(tester, (_) => BatchReorderScreen(selectedIds: {ids[0]}));
 
-    expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.arrow_upward).first).onPressed, isNull);
+    expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, LumaIcons.moveUp).first).onPressed, isNull);
     await tester.tap(find.byTooltip('Move page 1 down'));
     await tester.pump();
     await tester.tap(find.byTooltip('Move page 2 down'));

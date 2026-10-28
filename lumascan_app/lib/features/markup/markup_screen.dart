@@ -20,6 +20,7 @@ import 'markup_actions.dart';
 import 'markup_canvas.dart';
 import 'markup_style.dart';
 import 'markup_toolbar.dart';
+import '../../ui/luma_icons.dart';
 
 /// Pen, highlighter, text, mask, eraser and signature on a scanned page. It uses the
 /// same overlay and toolbar as the PDF editor. Marks are kept on the screen
@@ -215,7 +216,7 @@ class _MarkupScreenState extends ConsumerState<MarkupScreen> {
         appBar: AppBar(
           title: const Text('Markup'),
           actions: [
-            IconButton(tooltip: 'Undo', icon: const Icon(Icons.undo), onPressed: _dirty ? _undoLast : null),
+            IconButton(tooltip: 'Undo', icon: const Icon(LumaIcons.undo), onPressed: _dirty ? _undoLast : null),
             Padding(
               padding: const EdgeInsets.only(right: 12, left: 4),
               child: FilledButton(onPressed: _done, child: const Text('Done')),
@@ -226,7 +227,7 @@ class _MarkupScreenState extends ConsumerState<MarkupScreen> {
           future: _image,
           builder: (context, snap) {
             final image = snap.data;
-            if (snap.hasError) return const Center(child: Icon(Icons.broken_image_outlined));
+            if (snap.hasError) return const Center(child: Icon(LumaIcons.brokenImage));
             if (image == null) return const Center(child: CircularProgressIndicator());
             // Only the page's proportions matter to the overlay.
             final editorPage = EditorPage(

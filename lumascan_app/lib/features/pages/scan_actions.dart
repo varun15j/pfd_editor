@@ -7,6 +7,7 @@ import '../../domain/scanner_service.dart';
 import '../batch_capture/batch_capture_screen.dart';
 import '../capture/photo_import_screen.dart';
 import 'scan_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// Runs the scanner (or photo import) into the current draft and reports the
 /// outcome: a snackbar for added pages and failures, a dialog when the camera
@@ -58,7 +59,7 @@ Future<CameraGuideChoice?> showCameraPermissionGuide(BuildContext context, {requ
     showDialog<CameraGuideChoice>(
       context: context,
       builder: (context) => AlertDialog(
-        icon: const Icon(Icons.no_photography_outlined),
+        icon: const Icon(LumaIcons.noCamera),
         title: const Text('Camera access needed'),
         content: Text(
           permanently

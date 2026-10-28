@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/app/theme.dart';
 import 'package:lumascan/ui/compact_action_button.dart';
+import 'package:lumascan/ui/luma_icons.dart';
 
 void main() {
   Widget app(Widget child) => MaterialApp(
@@ -18,7 +19,7 @@ void main() {
     await tester.pumpWidget(
       app(
         CompactActionButton(
-          icon: Icons.crop,
+          icon: LumaIcons.crop,
           label: 'Crop',
           selected: true,
           onPressed: () => taps++,
@@ -30,8 +31,8 @@ void main() {
     expect(size.width, greaterThanOrEqualTo(minTapTarget));
     expect(size.height, greaterThanOrEqualTo(minTapTarget));
     expect(
-      tester.widget<Icon>(find.byIcon(Icons.crop)).size,
-      ControlMetrics.icon,
+      tester.widget<Icon>(find.byIcon(LumaIcons.crop)).size,
+      ControlMetrics.toolbarIcon,
     );
 
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
@@ -53,18 +54,18 @@ void main() {
           children: [
             FilledButton.icon(
               onPressed: () {},
-              icon: const Icon(Icons.ios_share),
+              icon: const Icon(LumaIcons.share),
               label: const Text('Export'),
             ),
             OutlinedButton.icon(
               onPressed: () {},
-              icon: const Icon(Icons.add),
+              icon: const Icon(LumaIcons.add),
               label: const Text('Add'),
             ),
             IconButton(
               tooltip: 'Search',
               onPressed: () {},
-              icon: const Icon(Icons.search),
+              icon: const Icon(LumaIcons.search),
             ),
           ],
         ),
@@ -90,7 +91,7 @@ void main() {
         MediaQuery(
           data: const MediaQueryData(textScaler: TextScaler.linear(2)),
           child: CompactActionButton(
-            icon: Icons.document_scanner_outlined,
+            icon: LumaIcons.scan,
             label: 'Scan document',
             onPressed: () {},
           ),

@@ -201,8 +201,12 @@ abstract final class ControlMetrics {
   static const tapTarget = 48.0;
   static const visualHeight = 36.0;
   static const icon = 20.0;
+
+  /// Icons in toolbars with a label under them, as in CamScanner-style
+  /// scanner apps.
+  static const toolbarIcon = 24.0;
   static const smallIcon = 18.0;
-  static const radius = 10.0;
+  static const radius = 14.0;
   static const horizontalPadding = 12.0;
 }
 

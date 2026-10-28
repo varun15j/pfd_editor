@@ -3,13 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../pages/scan_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// What the user chose when finishing Batch Review (BE-09).
 enum BatchOutcome {
-  camera('Return to camera', 'Scan more pages into this document', Icons.document_scanner_outlined),
-  review('Review document', 'Go back to the document pages', Icons.description_outlined),
-  home('Save and go home', 'Keep this document and start a new one from Home', Icons.home_outlined),
-  export('Export PDF', 'Choose the PDF settings and save it', Icons.picture_as_pdf_outlined);
+  camera('Return to camera', 'Scan more pages into this document', LumaIcons.scan),
+  review('Review document', 'Go back to the document pages', LumaIcons.document),
+  home('Save and go home', 'Keep this document and start a new one from Home', LumaIcons.home),
+  export('Export PDF', 'Choose the PDF settings and save it', LumaIcons.pdf);
 
   const BatchOutcome(this.label, this.hint, this.icon);
 
@@ -48,9 +49,9 @@ class DraftSaveIndicator extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = LumaColors.of(context);
     final (icon, color, label) = switch (ref.watch(draftSaveStatusProvider)) {
-      DraftSaveStatus.saved => (Icons.check_circle_outline, colors.success, 'Saved on this device'),
-      DraftSaveStatus.saving => (Icons.sync, colors.muted, 'Saving'),
-      DraftSaveStatus.failed => (Icons.error_outline, colors.danger, 'Not saved yet'),
+      DraftSaveStatus.saved => (LumaIcons.checkCircle, colors.success, 'Saved on this device'),
+      DraftSaveStatus.saving => (LumaIcons.sync, colors.muted, 'Saving'),
+      DraftSaveStatus.failed => (LumaIcons.error, colors.danger, 'Not saved yet'),
     };
     return Semantics(
       liveRegion: true,

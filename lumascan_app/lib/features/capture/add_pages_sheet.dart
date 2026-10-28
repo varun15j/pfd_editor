@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../domain/scanner_service.dart';
 import '../pages/scan_actions.dart';
+import '../../ui/luma_icons.dart';
 
 /// "Add pages" on a document being reviewed: camera or photos. New pages go
 /// to the end, where they can be dragged into place.
@@ -29,13 +30,13 @@ Future<void> showAddPagesSheet(BuildContext context, WidgetRef ref) async {
           ),
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: Space.xl),
-            leading: const Icon(Icons.document_scanner_outlined),
+            leading: const Icon(LumaIcons.scan),
             title: const Text('Scan with camera'),
             onTap: () => Navigator.pop(sheet, ScanSource.camera),
           ),
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: Space.xl),
-            leading: const Icon(Icons.photo_library_outlined),
+            leading: const Icon(LumaIcons.gallery),
             title: const Text('Import photos'),
             onTap: () => Navigator.pop(sheet, ScanSource.gallery),
           ),

@@ -8,6 +8,7 @@ import '../../app/theme.dart';
 import '../../domain/library.dart';
 import '../../domain/plan.dart';
 import '../../ui/state_views.dart';
+import '../../ui/luma_icons.dart';
 
 enum DocumentMenuAction { rename, move, tags, share, password, textPdf, word, split, delete }
 
@@ -27,7 +28,7 @@ class DocumentThumbnail extends StatelessWidget {
       child: thumb != null && File(thumb).existsSync()
           ? Image.file(File(thumb), fit: BoxFit.cover, excludeFromSemantics: true)
           : Center(
-              child: Icon(Icons.picture_as_pdf_outlined, color: c.accent, size: iconSize),
+              child: Icon(LumaIcons.pdf, color: c.accent, size: iconSize),
             ),
     );
   }
@@ -45,7 +46,7 @@ class DocumentStatus extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.smartphone, size: 14, color: c.muted),
+        Icon(LumaIcons.device, size: 14, color: c.muted),
         const SizedBox(width: Space.xs),
         Flexible(
           child: Text('On device', style: style, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -67,7 +68,7 @@ class DocumentLabels extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.label_outline, size: 14, color: c.muted),
+        Icon(LumaIcons.tag, size: 14, color: c.muted),
         const SizedBox(width: Space.xs),
         Flexible(
           child: Text(text, style: Theme.of(context).textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -123,24 +124,24 @@ class _DocumentInteraction {
       itemBuilder: (menuContext) => [
         PopupMenuItem(
           value: DocumentMenuAction.rename,
-          child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Rename')),
+          child: ListTile(leading: Icon(LumaIcons.rename), title: Text('Rename')),
         ),
         PopupMenuItem(
           value: DocumentMenuAction.move,
-          child: ListTile(leading: Icon(Icons.drive_file_move_outlined), title: Text('Move to folder')),
+          child: ListTile(leading: Icon(LumaIcons.moveToFolder), title: Text('Move to folder')),
         ),
         PopupMenuItem(
           value: DocumentMenuAction.tags,
-          child: ListTile(leading: Icon(Icons.label_outline), title: Text('Tags')),
+          child: ListTile(leading: Icon(LumaIcons.tag), title: Text('Tags')),
         ),
         PopupMenuItem(
           value: DocumentMenuAction.share,
-          child: ListTile(leading: Icon(Icons.ios_share), title: Text('Share')),
+          child: ListTile(leading: Icon(LumaIcons.share), title: Text('Share')),
         ),
         PopupMenuItem(
           value: DocumentMenuAction.password,
           child: ListTile(
-            leading: const Icon(Icons.lock_outline),
+            leading: const Icon(LumaIcons.password),
             title: const Text('Add password'),
             // Shown to everyone; on Basic it opens the upgrade pop-up.
             trailing: ProviderScope.containerOf(menuContext).read(planIncludesProvider(PlanFeature.password))
@@ -151,7 +152,7 @@ class _DocumentInteraction {
         PopupMenuItem(
           value: DocumentMenuAction.textPdf,
           child: ListTile(
-            leading: const Icon(Icons.text_snippet_outlined),
+            leading: const Icon(LumaIcons.textResult),
             title: const Text('Create text PDF'),
             // Shown to everyone; on Basic it opens the upgrade pop-up.
             trailing: ProviderScope.containerOf(menuContext).read(planIncludesProvider(PlanFeature.textPdf))
@@ -162,7 +163,7 @@ class _DocumentInteraction {
         PopupMenuItem(
           value: DocumentMenuAction.word,
           child: ListTile(
-            leading: const Icon(Icons.description_outlined),
+            leading: const Icon(LumaIcons.document),
             title: const Text('Convert to Word'),
             // Shown to everyone; on Basic it opens the upgrade pop-up.
             trailing: ProviderScope.containerOf(menuContext).read(planIncludesProvider(PlanFeature.word))
@@ -173,7 +174,7 @@ class _DocumentInteraction {
         PopupMenuItem(
           value: DocumentMenuAction.split,
           child: ListTile(
-            leading: const Icon(Icons.call_split),
+            leading: const Icon(LumaIcons.split),
             title: const Text('Split or extract pages'),
             // Shown to everyone; on Basic it opens the upgrade pop-up.
             trailing: ProviderScope.containerOf(menuContext).read(planIncludesProvider(PlanFeature.splitPdf))
@@ -183,7 +184,7 @@ class _DocumentInteraction {
         ),
         const PopupMenuItem(
           value: DocumentMenuAction.delete,
-          child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Delete')),
+          child: ListTile(leading: Icon(LumaIcons.delete), title: Text('Delete')),
         ),
       ],
     );

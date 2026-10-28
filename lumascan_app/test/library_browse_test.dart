@@ -15,6 +15,7 @@ import 'package:path/path.dart' as path;
 
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
+import 'package:lumascan/ui/luma_icons.dart';
 
 SavedDocument doc(String id, String name, {int day = 7}) => SavedDocument(
   id: id,
@@ -51,7 +52,7 @@ void main() {
       expect(find.text('Lease'), findsWidgets);
       expect(find.text('9 Mar 2026 · 3 pages'), findsOneWidget);
       expect(find.text('On device'), findsNWidgets(3));
-      expect(find.byIcon(Icons.picture_as_pdf_outlined), findsWidgets);
+      expect(find.byIcon(LumaIcons.pdf), findsWidgets);
       expect(find.bySemanticsLabel(RegExp(r'^Lease, 9 Mar 2026, 3 pages, on device')), findsOneWidget);
     });
 
@@ -90,7 +91,7 @@ void main() {
     testWidgets('view toggle is off while the library is empty', (tester) async {
       await pumpApp(tester);
       await openLibrary(tester);
-      final button = tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.grid_view_outlined));
+      final button = tester.widget<IconButton>(find.widgetWithIcon(IconButton, LumaIcons.gridView));
       expect(button.onPressed, isNull);
     });
   });

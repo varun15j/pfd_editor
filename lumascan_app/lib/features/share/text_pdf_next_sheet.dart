@@ -7,6 +7,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 
 import 'pdf_sharer.dart';
+import '../../ui/luma_icons.dart';
 
 /// Asks what to do with a text PDF once it is built: keep it in the app's
 /// library, open it in another PDF app, share it, or save it to the Documents
@@ -50,25 +51,25 @@ class TextPdfNextSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             _NextOption(
-              icon: Icons.collections_bookmark_outlined,
+              icon: LumaIcons.library,
               title: 'Save to library',
               subtitle: 'Keep it with your documents',
               onTap: () => _saveToLibrary(context),
             ),
             _NextOption(
-              icon: Icons.open_in_new,
+              icon: LumaIcons.openExternal,
               title: 'Open in another PDF app',
               onTap: () => _open(context),
             ),
             Builder(
               builder: (tileContext) => _NextOption(
-                icon: Icons.ios_share,
+                icon: LumaIcons.share,
                 title: 'Share',
                 onTap: () => _share(context, ref, tileContext),
               ),
             ),
             _NextOption(
-              icon: Icons.folder_outlined,
+              icon: LumaIcons.folder,
               title: 'Save to Documents folder',
               subtitle: 'Choose Documents in the save dialog',
               onTap: () => _saveToDocuments(context),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_info.dart';
 import '../../app/preferences.dart';
 import '../../app/theme.dart';
+import '../../ui/luma_icons.dart';
 
 /// First-run intro: three short pages, then one question about usage data.
 /// Skip goes to that question, and the answer never limits what the app can
@@ -22,17 +23,17 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   static const _pages = <_IntroPage>[
     _IntroPage(
-      Icons.document_scanner_outlined,
+      LumaIcons.scan,
       'Scan anything',
       'Point your camera at a page. $appName finds the edges and cleans it up, or turn photos you already have into pages.',
     ),
     _IntroPage(
-      Icons.edit_document,
+      LumaIcons.editPdf,
       'Edit and sign',
       'Mark up a page, add text, or sign a PDF. Your original stays as it was until you save.',
     ),
     _IntroPage(
-      Icons.ios_share,
+      LumaIcons.share,
       'Save and send',
       'Keep your PDFs on this device, and send one as it is or as a smaller copy when you are ready.',
     ),
@@ -182,7 +183,7 @@ class _ConsentView extends StatelessWidget {
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(color: c.accentSoft, shape: BoxShape.circle),
-                child: Icon(Icons.insights_outlined, size: 56, color: c.accent),
+                child: Icon(LumaIcons.insights, size: 56, color: c.accent),
               ),
             ),
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
+import 'luma_icons.dart';
 
 /// Shared empty, loading, error and premium widgets, so every screen states
 /// these the same way (spec US-02.1: empty, loading, offline and error states
@@ -53,7 +54,7 @@ class EmptyState extends StatelessWidget {
               const SizedBox(height: Space.xl),
               FilledButton.icon(
                 onPressed: onAction,
-                icon: Icon(actionIcon ?? Icons.arrow_forward),
+                icon: Icon(actionIcon ?? LumaIcons.forward),
                 label: Text(actionLabel!),
               ),
             ],
@@ -129,7 +130,7 @@ class ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 40, color: c.danger),
+            Icon(LumaIcons.error, size: 40, color: c.danger),
             const SizedBox(height: Space.md),
             Text(title, style: text.titleLarge, textAlign: TextAlign.center),
             const SizedBox(height: Space.sm),
@@ -140,7 +141,7 @@ class ErrorState extends StatelessWidget {
             ),
             if (onRetry != null) ...[
               const SizedBox(height: Space.xl),
-              OutlinedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Try again')),
+              OutlinedButton.icon(onPressed: onRetry, icon: const Icon(LumaIcons.retry), label: const Text('Try again')),
             ],
           ],
         ),
@@ -165,7 +166,7 @@ class PremiumBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.workspace_premium_outlined, size: 14, color: c.onPremium),
+          Icon(LumaIcons.pro, size: 14, color: c.onPremium),
           const SizedBox(width: Space.xs),
           Text(
             label,

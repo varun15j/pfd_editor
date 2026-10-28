@@ -9,6 +9,7 @@ import 'merge_controller.dart';
 import 'merge_sheet.dart';
 import 'pdf_inspector.dart';
 import 'pdf_picker.dart';
+import '../../ui/luma_icons.dart';
 
 /// Merge PDFs: add files from the Library or the device, drag them into
 /// order, and save the result as a new document. Files that are locked or
@@ -43,13 +44,13 @@ class MergeScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.folder_outlined),
+              leading: const Icon(LumaIcons.folder),
               title: const Text('From Library'),
               subtitle: const Text('PDFs you saved in $appName'),
               onTap: () => Navigator.pop(sheet, true),
             ),
             ListTile(
-              leading: const Icon(Icons.smartphone_outlined),
+              leading: const Icon(LumaIcons.device),
               title: const Text('From this device'),
               subtitle: const Text('Choose PDF files'),
               onTap: () => Navigator.pop(sheet, false),
@@ -83,7 +84,7 @@ class MergeScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    ExcludeSemantics(child: Icon(Icons.library_add_outlined, size: 56, color: c.accent)),
+                    ExcludeSemantics(child: Icon(LumaIcons.merge, size: 56, color: c.accent)),
                     const SizedBox(height: Space.lg),
                     Text('Combine PDFs into one', style: text.titleLarge, textAlign: TextAlign.center),
                     const SizedBox(height: Space.sm),
@@ -149,7 +150,7 @@ class MergeScreen extends ConsumerWidget {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () => _add(context, ref),
-                      icon: const Icon(Icons.add),
+                      icon: const Icon(LumaIcons.add),
                       label: const Text('Add PDFs'),
                     ),
                   ),
@@ -214,14 +215,14 @@ class _SourceTile extends StatelessWidget {
           index: index,
           child: Padding(
             padding: const EdgeInsets.all(Space.md),
-            child: Icon(Icons.drag_handle, semanticLabel: 'Drag to reorder ${source.name}'),
+            child: Icon(LumaIcons.dragHandle, semanticLabel: 'Drag to reorder ${source.name}'),
           ),
         ),
         title: Text(source.name, maxLines: 2, overflow: TextOverflow.ellipsis),
         subtitle: Row(
           children: [
             if (problem != null) ...[
-              Icon(problem == PdfProblem.locked ? Icons.lock_outline : Icons.error_outline, size: 16, color: c.danger),
+              Icon(problem == PdfProblem.locked ? LumaIcons.password : LumaIcons.error, size: 16, color: c.danger),
               const SizedBox(width: Space.xs),
             ],
             Expanded(
@@ -229,7 +230,7 @@ class _SourceTile extends StatelessWidget {
             ),
           ],
         ),
-        trailing: IconButton(tooltip: 'Remove ${source.name}', icon: const Icon(Icons.close), onPressed: onRemove),
+        trailing: IconButton(tooltip: 'Remove ${source.name}', icon: const Icon(LumaIcons.close), onPressed: onRemove),
       ),
     );
   }

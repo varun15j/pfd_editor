@@ -10,6 +10,7 @@ import '../library/library_controller.dart';
 import '../library/library_organize.dart';
 import '../share/send_pdf_sheet.dart';
 import 'cloud_importer.dart';
+import '../../ui/luma_icons.dart';
 
 /// Where an imported document goes: a Library folder, or the top level when
 /// [folderId] is null.
@@ -54,7 +55,7 @@ Future<ImportDestination?> pickImportFolder(BuildContext context, String fileNam
                   const RadioListTile<String>(value: top, title: Text('Library (no folder)')),
                   for (final f in folders) RadioListTile<String>(value: f.id, title: Text(f.name)),
                   ListTile(
-                    leading: const Icon(Icons.create_new_folder_outlined),
+                    leading: const Icon(LumaIcons.createNewFolder),
                     title: const Text('New folder'),
                     onTap: () async {
                       final folder = await createFolderFlow(context, ref);

@@ -5,6 +5,7 @@ import '../features/pages/pages_screen.dart';
 import '../features/pages/scan_controller.dart';
 import 'debug_panel.dart';
 import 'sample_pages.dart';
+import '../ui/luma_icons.dart';
 
 /// Adds a bundled set of sample photos ([set]) as a new document through the normal
 /// photo import, with auto-crop, and opens the draft: pages to try batch
@@ -58,7 +59,7 @@ class _SamplePagesTileState extends ConsumerState<SamplePagesTile> {
     contentPadding: widget.contentPadding,
     leading: _adding
         ? const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2))
-        : Icon(widget.set != mathSamples ? Icons.menu_book_outlined : Icons.collections_outlined),
+        : Icon(widget.set != mathSamples ? LumaIcons.book : LumaIcons.samplePages),
     title: Text(widget.set.title),
     subtitle: Text(widget.set.subtitle),
     onTap: _adding ? null : _add,

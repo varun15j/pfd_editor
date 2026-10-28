@@ -22,6 +22,7 @@ import 'library_controller.dart';
 import 'library_organize.dart';
 import 'library_query_controller.dart';
 import 'library_query_sheets.dart';
+import '../../ui/luma_icons.dart';
 
 /// Library tab: every saved document as a list or a grid (the choice is
 /// remembered), with search by name (and by text on Pro), sort and filters (US-02.2, US-02.4).
@@ -117,11 +118,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             onRetry: () => ref.invalidate(libraryProvider),
           ),
           AsyncValue(hasValue: true) when all.isEmpty => EmptyState(
-            icon: Icons.folder_open_outlined,
+            icon: LumaIcons.folderOpen,
             title: 'No saved documents yet',
             message: 'PDFs you save will appear here, ready to find and share.',
             actionLabel: 'Scan a document',
-            actionIcon: Icons.document_scanner_outlined,
+            actionIcon: LumaIcons.scan,
             onAction: () => scanThenReview(context, ref, ScanSource.camera),
           ),
           AsyncValue(hasValue: true) => Column(
@@ -140,16 +141,16 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               Expanded(
                 child: docs.isEmpty && folder != null && !query.isSearching && !query.isFiltered
                     ? EmptyState(
-                        icon: Icons.folder_open_outlined,
+                        icon: LumaIcons.folderOpen,
                         title: '${folder.name} is empty',
                         message: 'Use Move to folder on a document to add it here.',
                         actionLabel: 'Show all documents',
-                        actionIcon: Icons.folder_copy_outlined,
+                        actionIcon: LumaIcons.allFolders,
                         onAction: () => ref.read(libraryQueryProvider.notifier).openFolder(null),
                       )
                     : docs.isEmpty
                     ? EmptyState(
-                        icon: Icons.search_off,
+                        icon: LumaIcons.noResults,
                         title: 'No matches',
                         message: !query.isSearching
                             ? 'No documents match these filters.'
@@ -159,7 +160,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                             : 'No document name contains "${query.text.trim()}". '
                                   'Pro also searches the text inside documents.',
                         actionLabel: 'Show all documents',
-                        actionIcon: Icons.filter_alt_off_outlined,
+                        actionIcon: LumaIcons.clearFilter,
                         onAction: _resetAll,
                       )
                     : view == LibraryView.grid
@@ -181,13 +182,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       actions: [
         IconButton(
           tooltip: 'Folders and tags',
-          icon: const Icon(Icons.label_outline),
+          icon: const Icon(LumaIcons.tag),
           onPressed: () =>
               Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ManageLabelsScreen())),
         ),
         IconButton(
           tooltip: grid ? 'Show as list' : 'Show as grid',
-          icon: Icon(grid ? Icons.view_list_outlined : Icons.grid_view_outlined),
+          icon: Icon(grid ? LumaIcons.listView : LumaIcons.gridView),
           onPressed: enabled
               ? () => ref.read(uiPrefsProvider.notifier).setLibraryView(grid ? LibraryView.list : LibraryView.grid)
               : null,
@@ -200,24 +201,24 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final picked = _selectedDocs(docs);
     final all = picked.length == docs.length;
     return AppBar(
-      leading: IconButton(tooltip: 'Cancel selection', icon: const Icon(Icons.close), onPressed: _clearSelection),
+      leading: IconButton(tooltip: 'Cancel selection', icon: const Icon(LumaIcons.close), onPressed: _clearSelection),
       title: Semantics(liveRegion: true, child: Text('${picked.length} selected')),
       actions: [
         IconButton(
           tooltip: all ? 'Select none' : 'Select all',
-          icon: Icon(all ? Icons.deselect : Icons.select_all),
+          icon: Icon(all ? LumaIcons.deselect : LumaIcons.selectAll),
           onPressed: () => setState(() => all ? _selected.clear() : _selected.addAll(docs.map((d) => d.id))),
         ),
         Builder(
           builder: (buttonContext) => IconButton(
             tooltip: 'Share selected',
-            icon: const Icon(Icons.ios_share),
+            icon: const Icon(LumaIcons.share),
             onPressed: () => shareDocuments(buttonContext, _selectedDocs(ref.read(filteredDocumentsProvider))),
           ),
         ),
         IconButton(
           tooltip: 'Delete selected',
-          icon: const Icon(Icons.delete_outline),
+          icon: const Icon(LumaIcons.delete),
           onPressed: () {
             // Read at tap time so a selection change in the same frame counts.
             final docs = _selectedDocs(ref.read(filteredDocumentsProvider));
@@ -235,11 +236,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           itemBuilder: (_) => const [
             PopupMenuItem(
               value: 0,
-              child: ListTile(leading: Icon(Icons.drive_file_move_outlined), title: Text('Move to folder')),
+              child: ListTile(leading: Icon(LumaIcons.moveToFolder), title: Text('Move to folder')),
             ),
             PopupMenuItem(
               value: 1,
-              child: ListTile(leading: Icon(Icons.label_outline), title: Text('Tags')),
+              child: ListTile(leading: Icon(LumaIcons.tag), title: Text('Tags')),
             ),
           ],
         ),
@@ -271,12 +272,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
                 hintText: searchText ? 'Search names and text' : 'Search by name',
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: const Icon(LumaIcons.search),
                 suffixIcon: query.text.isEmpty
                     ? null
                     : IconButton(
                         tooltip: 'Clear search',
-                        icon: const Icon(Icons.close),
+                        icon: const Icon(LumaIcons.close),
                         onPressed: () {
                           _search.clear();
                           ref.read(libraryQueryProvider.notifier).search('');
@@ -287,12 +288,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           ),
           IconButton(
             tooltip: 'Sort: ${query.sort.label}',
-            icon: const Icon(Icons.sort),
+            icon: const Icon(LumaIcons.sort),
             onPressed: () => showSortSheet(context),
           ),
           IconButton(
             tooltip: filters == 0 ? 'Filter' : 'Filter, $filters active',
-            icon: Badge(isLabelVisible: filters > 0, label: Text('$filters'), child: const Icon(Icons.filter_list)),
+            icon: Badge(isLabelVisible: filters > 0, label: Text('$filters'), child: const Icon(LumaIcons.filter)),
             onPressed: () => showFilterSheet(context),
           ),
         ],
@@ -321,7 +322,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           ],
           const SizedBox(width: Space.sm),
           ActionChip(
-            avatar: const Icon(Icons.create_new_folder_outlined, size: 18),
+            avatar: const Icon(LumaIcons.createNewFolder, size: 18),
             label: const Text('New folder'),
             onPressed: () async {
               final folder = await createFolderFlow(context, ref);
@@ -347,7 +348,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         children: [
           if (query.isSorted)
             InputChip(
-              avatar: const Icon(Icons.sort, size: 18),
+              avatar: const Icon(LumaIcons.sort, size: 18),
               label: Text(query.sort.label),
               onPressed: () => showSortSheet(context),
               onDeleted: () => q.sortBy(LibrarySort.newest),
@@ -367,7 +368,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             ),
           if (query.tags.isNotEmpty)
             InputChip(
-              avatar: const Icon(Icons.label_outline, size: 18),
+              avatar: const Icon(LumaIcons.tag, size: 18),
               label: Text(query.tags.join(', ')),
               onPressed: () => showFilterSheet(context),
               onDeleted: q.clearTags,
@@ -375,7 +376,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             ),
           if (query.date != DateFilter.any)
             InputChip(
-              avatar: const Icon(Icons.event, size: 18),
+              avatar: const Icon(LumaIcons.removeDate, size: 18),
               label: Text(query.dateLabel),
               onPressed: () => showFilterSheet(context),
               onDeleted: q.clearDate,

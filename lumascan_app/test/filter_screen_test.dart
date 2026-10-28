@@ -16,6 +16,7 @@ import 'package:lumascan/imaging/page_renderer.dart';
 import 'package:lumascan/imaging/render_service.dart';
 
 import 'support/memory_stores.dart';
+import 'package:lumascan/ui/luma_icons.dart';
 
 class _FakeScanner implements ScannerService {
   _FakeScanner(this.paths);
@@ -139,11 +140,11 @@ void main() {
   testWidgets('the selected preset has a border and a check, and only one does', (tester) async {
     await pumpEnhance(tester);
     // Original starts selected.
-    expect(find.byIcon(Icons.check), findsOneWidget);
+    expect(find.byIcon(LumaIcons.check), findsOneWidget);
 
     await choose(tester, 'Grayscale');
-    expect(find.byIcon(Icons.check), findsOneWidget);
-    final selected = find.ancestor(of: find.byIcon(Icons.check), matching: find.byType(Stack)).first;
+    expect(find.byIcon(LumaIcons.check), findsOneWidget);
+    final selected = find.ancestor(of: find.byIcon(LumaIcons.check), matching: find.byType(Stack)).first;
     final box = find.descendant(of: selected, matching: find.byType(Container));
     final borders = tester
         .widgetList<Container>(box)
@@ -152,7 +153,7 @@ void main() {
         .where((d) => d.border != null && d.border!.top.color != Colors.transparent);
     expect(borders, hasLength(1));
     // The check sits in Grayscale's tile, not Original's.
-    final tile = find.ancestor(of: find.byIcon(Icons.check), matching: find.byType(Column)).first;
+    final tile = find.ancestor(of: find.byIcon(LumaIcons.check), matching: find.byType(Column)).first;
     expect(find.descendant(of: tile, matching: find.text('Grayscale')), findsOneWidget);
   });
 

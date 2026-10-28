@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'image_profiler.dart';
 import 'profile_sample.dart';
+import '../ui/luma_icons.dart';
 
 /// Debug builds only: everything the image-loading profiler has saved,
 /// averaged per kind of work and per screen, with the time of each step.
@@ -36,9 +37,9 @@ class _ProfilingReportScreenState extends ConsumerState<ProfilingReportScreen> {
       appBar: AppBar(
         title: const Text('Image loading profile'),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), tooltip: 'Refresh', onPressed: () => setState(_load)),
+          IconButton(icon: const Icon(LumaIcons.retry), tooltip: 'Refresh', onPressed: () => setState(_load)),
           IconButton(
-            icon: const Icon(Icons.delete_outline),
+            icon: const Icon(LumaIcons.delete),
             tooltip: 'Clear profiling data',
             onPressed: () async {
               await profiler.clear();

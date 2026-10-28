@@ -18,6 +18,7 @@ import '../plans/paywall_screen.dart';
 import 'about_section.dart';
 import 'ocr_language_screen.dart';
 import 'storage_section.dart';
+import '../../ui/luma_icons.dart';
 
 /// Settings tab: preferences for new scans and saves, appearance, storage,
 /// help and about. Every preference says whether it changes files that
@@ -38,18 +39,18 @@ class SettingsScreen extends ConsumerWidget {
         children: [
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.workspace_premium_outlined),
+            leading: const Icon(LumaIcons.pro),
             title: const Text('Plan'),
             subtitle: Text('${ref.watch(purchasedPlanProvider).label}. See Pro and Gold, or restore a purchase.'),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(LumaIcons.next),
             onTap: () => openPaywall(context),
           ),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.cloud_outlined),
+            leading: const Icon(LumaIcons.cloud),
             title: const Text('Accounts'),
             subtitle: const Text('Google Drive, OneDrive and iCloud Drive. Import documents into your Library.'),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(LumaIcons.next),
             onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountsScreen())),
           ),
           const SizedBox(height: Space.lg),
@@ -58,7 +59,7 @@ class SettingsScreen extends ConsumerWidget {
             contentPadding: EdgeInsets.zero,
             title: const Text('Default filter'),
             subtitle: Text('${settings.defaultFilter.label}. New scans only; pages already scanned keep their filter.'),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(LumaIcons.next),
             onTap: () => _chooseFilter(context, settings.defaultFilter, controller.setDefaultFilter),
           ),
           SwitchListTile(
@@ -88,7 +89,7 @@ class SettingsScreen extends ConsumerWidget {
               '${settings.fileNamePattern.label}, like ${settings.fileNamePattern.example}. '
               'Given to new scans; existing documents keep their names.',
             ),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(LumaIcons.next),
             onTap: () => _choosePattern(context, settings.fileNamePattern, controller.setFileNamePattern),
           ),
           ListTile(
@@ -98,7 +99,7 @@ class SettingsScreen extends ConsumerWidget {
               '${OcrLanguage.of(ref.watch(ocrLanguageProvider)).label}. Used when text is read from pages; '
               'text already read is kept.',
             ),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(LumaIcons.next),
             onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const OcrLanguageScreen())),
           ),
           const SizedBox(height: Space.xl),
@@ -106,9 +107,9 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: Space.sm),
           SegmentedButton<ThemeMode>(
             segments: const [
-              ButtonSegment(value: ThemeMode.system, label: Text('System'), icon: Icon(Icons.brightness_auto)),
-              ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.light_mode_outlined)),
-              ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.dark_mode_outlined)),
+              ButtonSegment(value: ThemeMode.system, label: Text('System'), icon: Icon(LumaIcons.themeSystem)),
+              ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(LumaIcons.lightTheme)),
+              ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(LumaIcons.darkTheme)),
             ],
             selected: {settings.themeMode},
             onSelectionChanged: (s) => controller.setThemeMode(s.single),
@@ -133,7 +134,7 @@ class SettingsScreen extends ConsumerWidget {
             contentPadding: EdgeInsets.zero,
             title: const Text('Replay intro'),
             subtitle: const Text('See the welcome screens again'),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(LumaIcons.next),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (context) => OnboardingScreen(onDone: () => Navigator.pop(context))),
             ),
@@ -143,13 +144,13 @@ class SettingsScreen extends ConsumerWidget {
             const _Header('Developer (debug builds only)'),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.speed_outlined),
+              leading: const Icon(LumaIcons.speed),
               title: const Text('Image loading profile'),
               subtitle: const Text(
                 'Average render, filter, resize and thumbnail times per screen, and photo sizes. '
                 'Turn profiling on from the debug panel: swipe in from the left edge.',
               ),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: const Icon(LumaIcons.next),
               onTap: () =>
                   Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ProfilingReportScreen())),
             ),

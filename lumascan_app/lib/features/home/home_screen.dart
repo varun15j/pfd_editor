@@ -14,6 +14,7 @@ import '../library/library_screen.dart';
 import '../settings/settings_screen.dart';
 import '../pages/scan_controller.dart';
 import 'home_documents.dart';
+import '../../ui/luma_icons.dart';
 
 /// Docs tab, laid out as Screen 1 of the UI/UX screenshots: the avatar
 /// (Settings), the app name and Search at the top, then "All docs(N)" with
@@ -52,7 +53,7 @@ class HomeScreen extends ConsumerWidget {
             icon: CircleAvatar(
               radius: 18,
               backgroundColor: c.surfaceRaised,
-              child: Icon(Icons.person, color: c.ink),
+              child: Icon(LumaIcons.profile, color: c.ink),
             ),
             onPressed: () =>
                 Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen())),
@@ -63,7 +64,7 @@ class HomeScreen extends ConsumerWidget {
           style: text.titleLarge?.copyWith(color: c.success, fontWeight: FontWeight.w800),
         ),
         actions: [
-          IconButton(tooltip: 'Search', icon: const Icon(Icons.search), onPressed: () => _openLibrary(context)),
+          IconButton(tooltip: 'Search', icon: const Icon(LumaIcons.search), onPressed: () => _openLibrary(context)),
           const SizedBox(width: Space.xs),
         ],
       ),
@@ -92,7 +93,7 @@ class HomeScreen extends ConsumerWidget {
                               style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
                             ),
                           ),
-                          Icon(Icons.arrow_drop_down, color: c.success),
+                          Icon(LumaIcons.dropDown, color: c.success),
                         ],
                       ),
                     ),
@@ -101,12 +102,12 @@ class HomeScreen extends ConsumerWidget {
               ),
               IconButton(
                 tooltip: 'Create',
-                icon: const Icon(Icons.note_add_outlined),
+                icon: const Icon(LumaIcons.create),
                 onPressed: busy ? null : () => showCreateSheet(context, ref),
               ),
               IconButton(
                 tooltip: 'Sort',
-                icon: const Icon(Icons.sort),
+                icon: const Icon(LumaIcons.sort),
                 onPressed: () async {
                   await showSortSheet(context);
                   if (context.mounted) _openLibrary(context);
@@ -114,14 +115,14 @@ class HomeScreen extends ConsumerWidget {
               ),
               IconButton(
                 tooltip: grid ? 'Show as list' : 'Show as gallery',
-                icon: Icon(grid ? Icons.view_list_outlined : Icons.grid_view_outlined),
+                icon: Icon(grid ? LumaIcons.listView : LumaIcons.gridView),
                 onPressed: docs.isEmpty
                     ? null
                     : () => ref.read(uiPrefsProvider.notifier).setHomeView(grid ? LibraryView.list : LibraryView.grid),
               ),
               IconButton(
                 tooltip: 'Select',
-                icon: const Icon(Icons.check_box_outlined),
+                icon: const Icon(LumaIcons.select),
                 onPressed: docs.isEmpty ? null : () => _openLibrary(context),
               ),
             ],
@@ -146,7 +147,7 @@ class HomeScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: Space.xxl),
               child: Column(
                 children: [
-                  Icon(Icons.description_outlined, size: 48, color: c.muted),
+                  Icon(LumaIcons.document, size: 48, color: c.muted),
                   const SizedBox(height: Space.md),
                   Text('Your scans will show up here.', style: text.bodyLarge?.copyWith(color: c.muted)),
                   const SizedBox(height: Space.xs),
@@ -185,7 +186,7 @@ class _DiscoveryCard {
   static final all = [
     _DiscoveryCard(
       id: 'photos_to_pdf',
-      icon: Icons.photo_library_outlined,
+      icon: LumaIcons.gallery,
       title: 'Turn photos into a PDF',
       message: 'Pick photos of documents you already took.',
       run: (context, ref) => scanThenReview(context, ref, ScanSource.gallery),
@@ -238,7 +239,7 @@ class _DiscoveryCardView extends StatelessWidget {
               ),
             ),
           ),
-          IconButton(tooltip: 'Dismiss ${card.title}', icon: const Icon(Icons.close), onPressed: onDismiss),
+          IconButton(tooltip: 'Dismiss ${card.title}', icon: const Icon(LumaIcons.close), onPressed: onDismiss),
         ],
       ),
     );
