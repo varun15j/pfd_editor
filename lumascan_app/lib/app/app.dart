@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../debug/debug_panel.dart';
 import '../features/capture/launch_actions_listener.dart';
 import '../features/capture/shared_images_listener.dart';
+import '../features/onboarding/eula_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import 'app_info.dart';
 import 'preferences.dart';
@@ -30,9 +31,10 @@ class LumaScanApp extends ConsumerWidget {
   }
 }
 
-/// Picks the first screen once the saved choices are read: the intro until it
-/// has been seen, then the app. Waiting avoids flashing the intro at someone
-/// who has already seen it.
+/// Picks the first screen once the saved choices are read: the End User
+/// Licence Agreement until its current version is accepted, then the intro
+/// until it has been seen, then the app. Waiting avoids flashing either at
+/// someone who has already been through them.
 class StartGate extends ConsumerWidget {
   const StartGate({super.key});
 
@@ -42,6 +44,8 @@ class StartGate extends ConsumerWidget {
     ref.listen(purchasesProvider, (_, _) {});
     final ready = ref.watch(appSettingsReadyProvider);
     if (!ready.hasValue) return const Scaffold(body: SizedBox.shrink());
+    final eula = ref.watch(appSettingsProvider.select((s) => (s.eulaAccepted, s.eulaAcceptedVersion)));
+    if (!eula.$1) return EulaScreen.gate(updated: eula.$2 > 0);
     final seen = ref.watch(appSettingsProvider.select((s) => s.onboardingSeen));
     // Images shared from the gallery wait until the intro has been seen.
     return seen
