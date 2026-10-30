@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/app/app.dart';
 import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/domain/app_settings.dart';
+import 'package:lumascan/domain/eula.dart';
 import 'package:lumascan/features/onboarding/onboarding_screen.dart';
 import 'package:lumascan/features/settings/settings_screen.dart';
 
@@ -14,7 +15,7 @@ void main() {
   late MemoryAppSettingsStore store;
 
   Future<void> firstRun(WidgetTester tester, {double textScale = 1, AppSettings? saved}) async {
-    store = MemoryAppSettingsStore(saved ?? const AppSettings());
+    store = MemoryAppSettingsStore(saved ?? const AppSettings(eulaAcceptedVersion: eulaVersion));
     await pumpApp(tester, settings: store, textScale: textScale);
   }
 
@@ -95,13 +96,13 @@ void main() {
     });
 
     testWidgets('is not shown again once seen', (tester) async {
-      await firstRun(tester, saved: const AppSettings(onboardingSeen: true));
+      await firstRun(tester, saved: const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true));
       expect(find.byType(OnboardingScreen), findsNothing);
       expect(find.text('Docs'), findsWidgets);
     });
 
     testWidgets('waits for the saved choice instead of flashing the intro', (tester) async {
-      store = MemoryAppSettingsStore(const AppSettings(onboardingSeen: true));
+      store = MemoryAppSettingsStore(const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true));
       tester.view.physicalSize = const Size(1080, 2340);
       tester.view.devicePixelRatio = 2.6;
       addTearDown(tester.view.reset);
@@ -129,7 +130,9 @@ void main() {
 
   group('from Settings', () {
     Future<void> openSettings(WidgetTester tester, {AppSettings? saved}) async {
-      store = MemoryAppSettingsStore(saved ?? const AppSettings(onboardingSeen: true));
+      store = MemoryAppSettingsStore(
+        saved ?? const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true),
+      );
       await pumpApp(tester, settings: store);
       await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
@@ -158,7 +161,10 @@ void main() {
     });
 
     testWidgets('Replay intro shows the intro again and returns to Settings', (tester) async {
-      await openSettings(tester, saved: const AppSettings(onboardingSeen: true, analytics: true));
+      await openSettings(
+        tester,
+        saved: const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, analytics: true),
+      );
       await tester.ensureVisible(find.text('Replay intro'));
       await tester.tap(find.text('Replay intro'));
       await tester.pumpAndSettle();
@@ -174,7 +180,10 @@ void main() {
     });
 
     testWidgets('leaving a replay with Back changes nothing', (tester) async {
-      await openSettings(tester, saved: const AppSettings(onboardingSeen: true, analytics: true));
+      await openSettings(
+        tester,
+        saved: const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, analytics: true),
+      );
       await tester.ensureVisible(find.text('Replay intro'));
       await tester.tap(find.text('Replay intro'));
       await tester.pumpAndSettle();
@@ -187,7 +196,7 @@ void main() {
 
   group('values', () {
     test('survive a JSON round trip, and no answer stays no answer', () {
-      const answered = AppSettings(onboardingSeen: true, analytics: false);
+      const answered = AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, analytics: false);
       expect(AppSettings.fromJson(answered.toJson()), answered);
       expect(const AppSettings().toJson().containsKey('analytics'), isFalse);
       expect(AppSettings.fromJson(const {}).analytics, isNull);
@@ -204,7 +213,9 @@ void main() {
     test('completing keeps an earlier answer when none is given', () async {
       final container = ProviderContainer(
         overrides: [
-          appSettingsStoreProvider.overrideWithValue(MemoryAppSettingsStore(const AppSettings(analytics: true))),
+          appSettingsStoreProvider.overrideWithValue(
+            MemoryAppSettingsStore(const AppSettings(eulaAcceptedVersion: eulaVersion, analytics: true)),
+          ),
         ],
       );
       addTearDown(container.dispose);

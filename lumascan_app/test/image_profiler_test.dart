@@ -12,6 +12,7 @@ import 'package:lumascan/debug/profile_location.dart';
 import 'package:lumascan/debug/profile_sample.dart';
 import 'package:lumascan/debug/profile_store.dart';
 import 'package:lumascan/domain/app_settings.dart';
+import 'package:lumascan/domain/eula.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/features/pages/page_image.dart';
 import 'package:lumascan/imaging/page_renderer.dart';
@@ -321,7 +322,7 @@ void main() {
     Future<void> openSettings(WidgetTester tester, {required bool debug}) async {
       await pumpApp(
         tester,
-        settings: MemoryAppSettingsStore(const AppSettings(onboardingSeen: true)),
+        settings: MemoryAppSettingsStore(const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true)),
         overrides: [
           imageProfilerProvider.overrideWithValue(ImageProfiler(store: MemoryProfileStore(), available: debug)),
         ],

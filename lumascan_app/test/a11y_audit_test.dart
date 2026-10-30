@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/domain/app_settings.dart';
+import 'package:lumascan/domain/eula.dart';
 import 'package:lumascan/domain/ui_prefs.dart';
 
 import 'library_browse_test.dart' show threeDocs;
@@ -34,7 +35,9 @@ void main() {
         await pumpApp(
           tester,
           library: MemoryLibraryStore(threeDocs()),
-          settings: MemoryAppSettingsStore(AppSettings(onboardingSeen: true, themeMode: mode)),
+          settings: MemoryAppSettingsStore(
+            AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, themeMode: mode),
+          ),
         );
         await openScreen(tester, tab);
         await expectAccessible(tester);
@@ -48,7 +51,9 @@ void main() {
         tester,
         library: MemoryLibraryStore(threeDocs()),
         prefs: MemoryUiPrefsStore(const UiPrefs(libraryView: LibraryView.grid)),
-        settings: MemoryAppSettingsStore(AppSettings(onboardingSeen: true, themeMode: mode)),
+        settings: MemoryAppSettingsStore(
+          AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, themeMode: mode),
+        ),
       );
       await openScreen(tester, 'Library');
       await expectAccessible(tester);
@@ -60,7 +65,9 @@ void main() {
       await pumpApp(
         tester,
         library: MemoryLibraryStore(threeDocs()),
-        settings: MemoryAppSettingsStore(AppSettings(onboardingSeen: true, themeMode: mode)),
+        settings: MemoryAppSettingsStore(
+          AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, themeMode: mode),
+        ),
       );
       await openScreen(tester, 'Library');
       await tester.longPress(find.text('Lease').last);
@@ -71,7 +78,10 @@ void main() {
 
     testWidgets('Intro and usage question in ${mode.name}: guidelines', (tester) async {
       final handle = tester.ensureSemantics();
-      await pumpApp(tester, settings: MemoryAppSettingsStore(AppSettings(themeMode: mode)));
+      await pumpApp(
+        tester,
+        settings: MemoryAppSettingsStore(AppSettings(eulaAcceptedVersion: eulaVersion, themeMode: mode)),
+      );
       await expectAccessible(tester);
       await tester.tap(find.text('Skip'));
       await tester.pumpAndSettle();

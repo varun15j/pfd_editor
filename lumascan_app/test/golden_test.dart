@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/domain/app_settings.dart';
+import 'package:lumascan/domain/eula.dart';
 import 'package:lumascan/features/crop/crop_screen.dart';
 import 'package:lumascan/features/export/export_sheet.dart';
 import 'package:lumascan/features/filters/filter_screen.dart';
@@ -34,7 +35,9 @@ void main() {
           await pumpApp(
             tester,
             library: MemoryLibraryStore(threeDocs()),
-            settings: MemoryAppSettingsStore(AppSettings(onboardingSeen: true, themeMode: mode)),
+            settings: MemoryAppSettingsStore(
+              AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, themeMode: mode),
+            ),
           );
           // Home is the Docs tab; the Library opens from Search and
           // Settings from the avatar.

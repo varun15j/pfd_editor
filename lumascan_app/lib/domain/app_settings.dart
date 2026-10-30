@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 
+import 'eula.dart';
 import 'models.dart';
 import 'ocr_languages.dart';
 import 'plan.dart';
@@ -74,6 +75,7 @@ class AppSettings {
     this.autoCaptureSteadiness = AutoCaptureSteadiness.normal,
     this.debugPlan,
     this.ocrLanguage = 'en',
+    this.eulaAcceptedVersion = 0,
   });
 
   /// Looks only. Does not touch any file.
@@ -129,6 +131,13 @@ class AppSettings {
   /// Applies to the next read; text already recognised is kept.
   final String ocrLanguage;
 
+  /// Version of the End User Licence Agreement the user last accepted; 0 when
+  /// they never have. Below [eulaVersion], the agreement is shown at start.
+  final int eulaAcceptedVersion;
+
+  /// Whether the current agreement has been accepted.
+  bool get eulaAccepted => eulaAcceptedVersion >= eulaVersion;
+
   AppSettings copyWith({
     ThemeMode? themeMode,
     DocumentFilter? defaultFilter,
@@ -143,6 +152,7 @@ class AppSettings {
     AutoCaptureSteadiness? autoCaptureSteadiness,
     Object? debugPlan = _keep,
     String? ocrLanguage,
+    int? eulaAcceptedVersion,
   }) => AppSettings(
     themeMode: themeMode ?? this.themeMode,
     defaultFilter: defaultFilter ?? this.defaultFilter,
@@ -157,6 +167,7 @@ class AppSettings {
     autoCaptureSteadiness: autoCaptureSteadiness ?? this.autoCaptureSteadiness,
     debugPlan: identical(debugPlan, _keep) ? this.debugPlan : debugPlan as AppPlan?,
     ocrLanguage: ocrLanguage ?? this.ocrLanguage,
+    eulaAcceptedVersion: eulaAcceptedVersion ?? this.eulaAcceptedVersion,
   );
 
   static const Object _keep = Object();
@@ -181,6 +192,7 @@ class AppSettings {
     'autoCaptureSteadiness': autoCaptureSteadiness.name,
     if (debugPlan != null) 'debugPlan': debugPlan!.name,
     'ocrLanguage': ocrLanguage,
+    'eulaAcceptedVersion': eulaAcceptedVersion,
   };
 
   /// Unknown or missing values fall back to the defaults, so a settings file
@@ -200,6 +212,7 @@ class AppSettings {
         AutoCaptureSteadiness.values.asNameMap()[json['autoCaptureSteadiness']] ?? AutoCaptureSteadiness.normal,
     debugPlan: AppPlan.values.asNameMap()[json['debugPlan']],
     ocrLanguage: OcrLanguage.byCode(json['ocrLanguage'] as String? ?? '')?.code ?? 'en',
+    eulaAcceptedVersion: (json['eulaAcceptedVersion'] as num?)?.toInt() ?? 0,
   );
 
   /// Files before 3 always held Date and time, the default then, chosen or
@@ -237,7 +250,8 @@ class AppSettings {
       other.captureHaptics == captureHaptics &&
       other.autoCaptureSteadiness == autoCaptureSteadiness &&
       other.debugPlan == debugPlan &&
-      other.ocrLanguage == ocrLanguage;
+      other.ocrLanguage == ocrLanguage &&
+      other.eulaAcceptedVersion == eulaAcceptedVersion;
 
   @override
   int get hashCode => Object.hash(
@@ -254,5 +268,6 @@ class AppSettings {
     autoCaptureSteadiness,
     debugPlan,
     ocrLanguage,
+    eulaAcceptedVersion,
   );
 }
