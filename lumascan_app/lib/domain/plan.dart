@@ -31,8 +31,11 @@ enum PlanFeature {
   /// menu. Word to PDF stays on every plan.
   word(AppPlan.pro),
 
-  /// Auto mask: on-device OCR finds Aadhaar, VID, PAN and other ID numbers on
-  /// a page and hides all but their last four characters. Drawing a mask by
+  /// Auto mask: on-device OCR finds Aadhaar, VID, PAN, passport, Social
+  /// Security, card and other ID numbers and dates of birth, from any
+  /// country, and crosses out all but their last four characters with Xs;
+  /// a number it cannot read gets a black box. In Markup and, for many pages
+  /// at once, as Mask IDs in Batch Review. Drawing a mask by
   /// hand stays on every plan, because hiding your own ID number is basic
   /// privacy (Varun, 2026-10-26).
   autoMask(AppPlan.pro),

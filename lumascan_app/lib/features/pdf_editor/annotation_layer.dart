@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../domain/models.dart';
+import '../../imaging/masking.dart';
 import '../../pdf_edit/annotations.dart';
 import '../markup/markup_style.dart';
 
@@ -235,7 +236,20 @@ class _AnnotationLayerState extends State<AnnotationLayer> {
                   child: SizedBox(
                     width: a.width * size.width,
                     height: a.height * size.height,
-                    child: ColoredBox(color: Color(a.color)),
+                    // The same look as on the page, drawn in the item's own box.
+                    child: CustomPaint(
+                      painter: MaskPainter([
+                        MaskAnnotation(
+                          id: a.id,
+                          left: 0,
+                          top: 0,
+                          right: 1,
+                          bottom: 1,
+                          color: a.color,
+                          crosses: a.crosses,
+                        ),
+                      ]),
+                    ),
                   ),
                 ),
           ],
@@ -408,8 +422,28 @@ class MaskPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     for (final m in masks) {
-      final rect = Rect.fromLTRB(m.left * size.width, m.top * size.height, m.right * size.width, m.bottom * size.height);
-      canvas.drawRect(rect, Paint()..color = Color(m.color));
+      final rect = Rect.fromLTRB(
+        m.left * size.width,
+        m.top * size.height,
+        m.right * size.width,
+        m.bottom * size.height,
+      );
+      if (m.crossesOut) {
+        // The page is shown as it is, so its paper colour is not known here;
+        // white is close, and the saved file uses the real one.
+        canvas.drawRect(rect, Paint()..color = const Color(0xFFFFFFFF));
+        final ink = Paint()
+          ..color = const Color(crossInkOnLight)
+          ..strokeCap = StrokeCap.round;
+        for (final c in crossCells(rect.left, rect.top, rect.right, rect.bottom, m.crosses)) {
+          ink.strokeWidth = c.stroke;
+          canvas
+            ..drawLine(Offset(c.left, c.top), Offset(c.right, c.bottom), ink)
+            ..drawLine(Offset(c.left, c.bottom), Offset(c.right, c.top), ink);
+        }
+      } else {
+        canvas.drawRect(rect, Paint()..color = Color(m.color));
+      }
       if (outline) {
         canvas.drawRect(
           rect,

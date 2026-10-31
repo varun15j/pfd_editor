@@ -13,6 +13,7 @@ enum BatchAction {
   retake('Retake', Icons.camera_alt_outlined, 'retake', singlePage: true),
   markup('Markup', Icons.draw_outlined, 'mark up', singlePage: true),
   duplicate('Duplicate', Icons.copy_outlined, 'duplicate', singlePage: true),
+  maskIds('Mask IDs', Icons.visibility_off_outlined, 'mask ID numbers on'),
   reorder('Reorder', Icons.swap_vert, 'reorder', needsSelection: false);
 
   const BatchAction(this.label, this.icon, this.verb, {this.singlePage = false, this.needsSelection = true});
@@ -31,7 +32,7 @@ enum BatchAction {
 
   /// Shown in the action bar; the others are under More.
   static const bar = [enhance, rotate, crop, ocr, delete];
-  static const more = [retake, markup, duplicate, reorder];
+  static const more = [retake, markup, duplicate, maskIds, reorder];
 }
 
 /// Whether an action can run on the current selection, and if not, what the

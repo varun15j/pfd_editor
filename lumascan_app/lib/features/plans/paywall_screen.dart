@@ -202,7 +202,7 @@ class _PlanCard extends StatelessWidget {
     PlanFeature.smartScan => 'Smart scanning: better page detection and auto crop',
     PlanFeature.textPdf => 'Text PDF: searchable text from scans',
     PlanFeature.word => 'PDF to Word',
-    PlanFeature.autoMask => 'Auto mask: hide ID numbers on a page',
+    PlanFeature.autoMask => 'Auto mask: cross out ID, card and birth date numbers',
     PlanFeature.noWatermark => 'No "Scanned with" mark on exported PDFs',
     PlanFeature.pageNumbers => 'Page numbers on exported PDFs',
     PlanFeature.signatureLibrary => 'Saved signatures, initials and date stamps',

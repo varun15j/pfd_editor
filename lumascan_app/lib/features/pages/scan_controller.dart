@@ -533,6 +533,22 @@ class ScanController extends Notifier<ScanState> {
     ]);
   }
 
+  /// Adds [added] marks to each page they name, all as one undo step. Text
+  /// read from those pages earlier is dropped, as in [setAnnotations].
+  void addAnnotations(Map<String, List<Annotation>> added) {
+    if (added.values.every((a) => a.isEmpty)) return;
+    _commit([
+      for (final p in state.pages)
+        if (added[p.id] case final more? when more.isNotEmpty)
+          p.copyWith(
+            annotations: List.unmodifiable([...p.annotations, ...more]),
+            clearText: more.any((a) => a is MaskAnnotation),
+          )
+        else
+          p,
+    ]);
+  }
+
   void rotate(String pageId, {bool clockwise = true}) {
     final page = state.pageById(pageId);
     if (page == null) return;
