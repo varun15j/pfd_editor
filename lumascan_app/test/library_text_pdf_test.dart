@@ -13,6 +13,7 @@ import 'package:lumascan/export/text_pdf_service.dart';
 
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
+import 'support/temp_dir.dart';
 
 class _FakeTextPdf implements TextPdfService {
   _FakeTextPdf(this.output);
@@ -63,7 +64,7 @@ void main() {
     );
   });
 
-  tearDown(() => tmp.deleteSync(recursive: true));
+  tearDown(() => deleteTemp(tmp));
 
   Future<void> openMenu(WidgetTester tester, AppPlan plan) async {
     await pumpApp(

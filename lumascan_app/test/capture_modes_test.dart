@@ -23,6 +23,7 @@ import 'package:lumascan/imaging/rgb_image.dart';
 import 'support/fake_batch_camera.dart';
 import 'support/fake_photos.dart';
 import 'support/screen_harness.dart';
+import 'support/temp_dir.dart';
 
 const _page = CropQuad(NormPoint(0.2, 0.15), NormPoint(0.8, 0.15), NormPoint(0.8, 0.85), NormPoint(0.2, 0.85));
 const _left = CropQuad(NormPoint(0.1, 0.1), NormPoint(0.48, 0.1), NormPoint(0.48, 0.9), NormPoint(0.1, 0.9));
@@ -329,7 +330,7 @@ void main() {
 
     tearDown(() {
       harness.dispose();
-      shots.deleteSync(recursive: true);
+      deleteTemp(shots);
     });
 
     Future<void> open(

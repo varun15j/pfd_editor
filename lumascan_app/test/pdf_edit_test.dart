@@ -13,6 +13,7 @@ import 'package:lumascan/pdf_edit/pdf_edit_controller.dart';
 import 'package:lumascan/pdf_edit/pdf_flattener.dart';
 import 'package:lumascan/pdf_edit/pdf_saver.dart';
 import 'package:path/path.dart' as path;
+import 'support/temp_dir.dart';
 
 /// Renders source page N as a flat colour so tests can tell pages apart.
 class FakeRasterizer implements PdfRasterizer {
@@ -55,7 +56,7 @@ void main() {
 
   tearDown(() {
     container.dispose();
-    tmp.deleteSync(recursive: true);
+    deleteTemp(tmp);
   });
 
   PdfEditController controller() => container.read(pdfEditControllerProvider.notifier);

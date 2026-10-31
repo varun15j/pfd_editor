@@ -16,6 +16,7 @@ import 'package:lumascan/imaging/page_renderer.dart';
 import 'package:lumascan/imaging/render_service.dart';
 
 import 'support/fake_photos.dart';
+import 'support/temp_dir.dart';
 
 class _FakeScanner implements ScannerService {
   _FakeScanner(this.paths);
@@ -67,7 +68,7 @@ void main() {
     if (!ready) return;
     ready = false;
     container.dispose();
-    tmp.deleteSync(recursive: true);
+    deleteTemp(tmp);
   });
 
   CropQuad savedCrop() => container.read(scanControllerProvider).pages.single.recipe.crop;

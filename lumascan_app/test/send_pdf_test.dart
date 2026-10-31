@@ -20,6 +20,7 @@ import 'package:lumascan/features/share/send_pdf_sheet.dart';
 import 'package:lumascan/pdf_edit/pdf_edit_controller.dart';
 import 'package:lumascan/pdf_edit/pdf_saver.dart';
 import 'package:lumascan/ui/file_size.dart';
+import 'support/temp_dir.dart';
 
 class _FakeSharer implements PdfSharer {
   final sent = <String>[];
@@ -150,7 +151,7 @@ void main() {
     if (!ready) return;
     ready = false;
     container.dispose();
-    tmp.deleteSync(recursive: true);
+    deleteTemp(tmp);
   });
 
   Future<void> pumpSheet(WidgetTester tester, {double textScale = 1}) async {

@@ -8,6 +8,7 @@ import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/ocr.dart';
 import 'package:lumascan/export/text_pdf_service.dart';
 import 'package:lumascan/pdf_edit/pdf_saver.dart';
+import 'support/temp_dir.dart';
 
 class _Pages implements PdfRasterizer {
   _Pages(this.jpeg);
@@ -56,7 +57,7 @@ void main() {
   late Directory tmp;
 
   setUp(() => tmp = Directory.systemTemp.createTempSync('lumascan_textpdf_svc'));
-  tearDown(() => tmp.deleteSync(recursive: true));
+  tearDown(() => deleteTemp(tmp));
 
   test('a saved PDF is rendered, read, and unreadable pages are kept as images', () async {
     final jpeg = Uint8List.fromList(

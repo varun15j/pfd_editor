@@ -10,10 +10,12 @@ import 'package:lumascan/domain/photo_import.dart';
 import 'package:lumascan/domain/share_inbox.dart';
 import 'package:lumascan/features/capture/photo_import_screen.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
+import 'package:path/path.dart' as p;
 
 import 'support/fake_photos.dart';
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
+import 'support/temp_dir.dart';
 
 /// Holds shares in memory and records which were discarded.
 class FakeShareInbox implements ShareInbox {
@@ -48,7 +50,7 @@ void main() {
     late Directory tmp;
 
     setUp(() => tmp = Directory.systemTemp.createTempSync('share_inbox'));
-    tearDown(() => tmp.deleteSync(recursive: true));
+    tearDown(() => deleteTemp(tmp));
 
     void share(String folder, List<String> files) {
       final dir = Directory('${tmp.path}/$folder')..createSync();
@@ -62,7 +64,7 @@ void main() {
       share('1700000000100', ['001.jpg']);
       share('.incoming-1700000000300', ['001.jpg']);
       final batches = await DirectoryShareInbox(() async => tmp).pending();
-      expect(batches.map((b) => b.id.split('/').last), ['1700000000100', '1700000000200']);
+      expect(batches.map((b) => p.basename(b.id)), ['1700000000100', '1700000000200']);
       expect(batches[1].photos.map((p) => p.name), ['001.png', '002.jpg']);
     });
 

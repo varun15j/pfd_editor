@@ -23,6 +23,7 @@ import 'package:lumascan/features/pdf_editor/annotation_layer.dart';
 import 'package:lumascan/imaging/page_renderer.dart';
 import 'package:lumascan/imaging/render_service.dart';
 import 'package:lumascan/pdf_edit/annotations.dart';
+import 'support/temp_dir.dart';
 
 class _FakeScanner implements ScannerService {
   _FakeScanner(this.paths);
@@ -97,7 +98,7 @@ void main() {
     if (!ready) return;
     ready = false;
     container.dispose();
-    tmp.deleteSync(recursive: true);
+    deleteTemp(tmp);
   });
 
   ScanController controller() => container.read(scanControllerProvider.notifier);

@@ -11,6 +11,7 @@ import 'package:lumascan/export/word/docx_writer.dart';
 import 'package:lumascan/export/word/word_service.dart';
 import 'package:lumascan/pdf_edit/pdf_saver.dart';
 import 'package:path/path.dart' as p;
+import 'support/temp_dir.dart';
 
 Uint8List _jpeg(int width, int height, int shade) =>
     img.encodeJpg(img.Image(width: width, height: height)..clear(img.ColorRgb8(shade, shade, shade)));
@@ -140,7 +141,7 @@ void main() {
       store = PageStore(rootDir: () async => tmp);
     });
 
-    tearDown(() => tmp.deleteSync(recursive: true));
+    tearDown(() => deleteTemp(tmp));
 
     test('a saved PDF becomes a Word file with one picture per page, and back again', () async {
       final service = WordService(store, _FakeRasterizer(2));

@@ -17,6 +17,7 @@ import 'support/fake_batch_camera.dart';
 import 'support/fake_photos.dart';
 import 'support/memory_stores.dart';
 import 'support/screen_harness.dart';
+import 'support/temp_dir.dart';
 
 void main() {
   group('ScanController captures', () {
@@ -37,7 +38,7 @@ void main() {
 
     tearDown(() {
       container.dispose();
-      tmp.deleteSync(recursive: true);
+      deleteTemp(tmp);
     });
 
     ScanController controller() => container.read(scanControllerProvider.notifier);
@@ -101,7 +102,7 @@ void main() {
 
     tearDown(() {
       harness.dispose();
-      shots.deleteSync(recursive: true);
+      deleteTemp(shots);
     });
 
     /// [fromHome] opens the camera the way Home's Scan does, so the document

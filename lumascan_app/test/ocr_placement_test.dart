@@ -6,6 +6,7 @@ import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/ocr.dart';
 import 'package:lumascan/export/ocr_pdf_builder.dart';
+import 'support/temp_dir.dart';
 
 /// Line boxes per sample photo, read with tesseract (see the fixture's
 /// note in the PR): fractions of the photo's width and height. They stand in
@@ -80,7 +81,7 @@ void main() {
   test('a keep-layout PDF of a book page is one page with the text and its picture', () async {
     final path = fixtures.keys.firstWhere((k) => k.endsWith('05_bend_a_straw.jpg'));
     final tmp = Directory.systemTemp.createTempSync('lumascan_placed');
-    addTearDown(() => tmp.deleteSync(recursive: true));
+    addTearDown(() => deleteTemp(tmp));
     final out = await OcrPdfBuilder(PageStore(rootDir: () async => tmp))
         .build([_pageFor(path, fixtures[path]!)], fileName: 'placed.pdf', keepLayout: true);
     expect(out.pageCount, 1);
@@ -93,7 +94,7 @@ void main() {
   test('without keepLayout the text is not made transparent, as in Basic', () async {
     final path = fixtures.keys.firstWhere((k) => k.endsWith('05_bend_a_straw.jpg'));
     final tmp = Directory.systemTemp.createTempSync('lumascan_flow');
-    addTearDown(() => tmp.deleteSync(recursive: true));
+    addTearDown(() => deleteTemp(tmp));
     final out = await OcrPdfBuilder(PageStore(rootDir: () async => tmp))
         .build([_pageFor(path, fixtures[path]!)], fileName: 'flow.pdf');
     expect(latin1.decode(out.file.readAsBytesSync()), isNot(contains('/ca 0')));

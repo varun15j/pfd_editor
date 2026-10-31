@@ -25,6 +25,7 @@ import 'package:lumascan/pdf_edit/annotations.dart';
 import 'package:lumascan/pdf_edit/pdf_flattener.dart';
 
 import 'support/memory_stores.dart';
+import 'support/temp_dir.dart';
 
 /// A valid Aadhaar number (it passes the Verhoeff check), as the test data.
 const _aadhaar = '234567890120';
@@ -313,7 +314,7 @@ void main() {
       );
       addTearDown(() {
         container.dispose();
-        tmp.deleteSync(recursive: true);
+        deleteTemp(tmp);
       });
       await container.read(scanControllerProvider.notifier).scan(ScanSource.camera);
     }

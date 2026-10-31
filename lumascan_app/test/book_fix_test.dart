@@ -6,6 +6,7 @@ import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/imaging/book_fix.dart';
 import 'package:lumascan/imaging/geometry.dart';
 import 'package:lumascan/imaging/rgb_image.dart';
+import 'package:path/path.dart' as p;
 
 const _paper = 235;
 const _skin = (224, 168, 136);
@@ -152,7 +153,7 @@ void main() {
     // Page 13 of the book set: an open book, a curved page, a thumb.
     final file = File('sample_photos/book/13_light_meter.jpg');
     final photos = Directory('sample_photos/book').listSync().whereType<File>().toList();
-    final source = file.existsSync() ? file : photos.firstWhere((f) => f.path.contains('/13_'));
+    final source = file.existsSync() ? file : photos.firstWhere((f) => p.basename(f.path).startsWith('13_'));
     final photo = RgbImage.decode(source.readAsBytesSync(), maxDimension: 1400);
     const quad = CropQuad(NormPoint(0.04, 0.15), NormPoint(0.68, 0.24), NormPoint(0.73, 0.86), NormPoint(0, 0.88));
     final page = warpPerspective(photo, quad);

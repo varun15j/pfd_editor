@@ -15,6 +15,7 @@ import 'package:lumascan/imaging/page_renderer.dart';
 import 'package:lumascan/imaging/render_service.dart';
 
 import 'memory_stores.dart';
+import 'temp_dir.dart';
 
 class _FakeScanner implements ScannerService {
   _FakeScanner(this.paths);
@@ -69,7 +70,7 @@ class ScreenHarness {
 
   void dispose() {
     container.dispose();
-    tmp.deleteSync(recursive: true);
+    deleteTemp(tmp);
   }
 
   List<ScanPage> get pages => container.read(scanControllerProvider).pages;

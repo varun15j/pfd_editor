@@ -19,8 +19,10 @@ import 'package:lumascan/features/split/split_screen.dart';
 import 'package:lumascan/features/tools/tools_screen.dart';
 import 'package:lumascan/pdf_edit/pdf_edit_controller.dart';
 import 'package:lumascan/pdf_edit/pdf_saver.dart';
+import 'package:path/path.dart' as p;
 
 import 'support/memory_stores.dart';
+import 'support/temp_dir.dart';
 
 /// Renders each page as a small image whose width in points is 100 times
 /// its page number, so the pages in each output can be read back from the
@@ -129,7 +131,7 @@ void main() {
       rasterizer = _FakeRasterizer();
       source = File('${tmp.path}/Book.pdf')..writeAsBytesSync(List.filled(64, 7));
     });
-    tearDown(() => tmp.deleteSync(recursive: true));
+    tearDown(() => deleteTemp(tmp));
 
     test('writes one PDF per part with only its pages, and leaves the source alone', () async {
       final before = source.readAsBytesSync();
@@ -137,7 +139,7 @@ void main() {
         SplitPart(pages: [1, 2], name: 'Book part 1'),
         SplitPart(pages: [3], name: 'Book part 2'),
       ]);
-      expect(files.map((f) => f.path.split('/').last), ['Book part 1.pdf', 'Book part 2.pdf']);
+      expect(files.map((f) => p.basename(f.path)), ['Book part 1.pdf', 'Book part 2.pdf']);
       expect(pagesIn(files[0]), [1, 2]);
       expect(pagesIn(files[1]), [3]);
       expect(source.readAsBytesSync(), before);
@@ -175,7 +177,7 @@ void main() {
 
     void makeContainer({AppPlan plan = AppPlan.pro, PdfInfo info = const PdfInfo.ok(5)}) {
       tmp = Directory.systemTemp.createTempSync('lumascan_split_ui');
-      addTearDown(() => tmp.deleteSync(recursive: true));
+      addTearDown(() => deleteTemp(tmp));
       source = File('${tmp.path}/Notes.pdf')..writeAsBytesSync(List.filled(64, 7));
       rasterizer = _FakeRasterizer();
       library = MemoryLibraryStore(const LibraryIndex());

@@ -20,6 +20,8 @@ import 'package:lumascan/features/share/pdf_sharer.dart';
 import 'package:lumascan/features/share/send_pdf_sheet.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pointycastle/export.dart';
+import 'package:path/path.dart' as p;
+import 'support/temp_dir.dart';
 
 class _FakeSharer implements PdfSharer {
   final sent = <String>[];
@@ -196,7 +198,7 @@ void main() {
       );
       addTearDown(() {
         container.dispose();
-        tmp.deleteSync(recursive: true);
+        deleteTemp(tmp);
       });
     }
 
@@ -264,7 +266,7 @@ void main() {
 
       await tester.tap(find.text('Send'));
       await tester.pumpAndSettle();
-      expect(sharer.sent, [copy.path]);
+      expect(sharer.sent.map(p.normalize), [p.normalize(copy.path)]);
       expect(find.text('Locked PDF shared'), findsOneWidget);
     });
 

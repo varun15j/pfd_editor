@@ -21,6 +21,7 @@ import 'package:lumascan/features/export/export_sheet.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 
 import 'support/memory_stores.dart';
+import 'support/temp_dir.dart';
 
 class _FakeScanner implements ScannerService {
   _FakeScanner(this.paths);
@@ -134,7 +135,7 @@ void main() {
 
   tearDown(() {
     container.dispose();
-    tmp.deleteSync(recursive: true);
+    deleteTemp(tmp);
   });
 
   Future<void> pumpSheet(WidgetTester tester) async {

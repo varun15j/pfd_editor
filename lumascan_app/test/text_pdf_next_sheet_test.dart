@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/features/share/pdf_sharer.dart';
 import 'package:lumascan/features/share/text_pdf_next_sheet.dart';
+import 'support/temp_dir.dart';
 
 class _FakeSharer implements PdfSharer {
   final sent = <String>[];
@@ -29,7 +30,7 @@ void main() {
     saved = 0;
   });
 
-  tearDown(() => tmp.deleteSync(recursive: true));
+  tearDown(() => deleteTemp(tmp));
 
   Future<void> openSheet(WidgetTester tester) async {
     await tester.pumpWidget(

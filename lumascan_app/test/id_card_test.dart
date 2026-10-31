@@ -23,6 +23,7 @@ import 'package:lumascan/pdf_edit/annotations.dart';
 
 import 'support/fake_batch_camera.dart';
 import 'support/screen_harness.dart';
+import 'support/temp_dir.dart';
 
 class _NoCard implements PhotoAnalyzer {
   @override
@@ -153,7 +154,7 @@ void main() {
   group('composed page', () {
     late Directory tmp;
     setUp(() => tmp = Directory.systemTemp.createTempSync('lumascan_idcopy'));
-    tearDown(() => tmp.deleteSync(recursive: true));
+    tearDown(() => deleteTemp(tmp));
 
     testWidgets('each side lands in its slot on white A4 at 200 dpi, and the watermark marks it', (tester) async {
       final front = File('${tmp.path}/front.jpg')..writeAsBytesSync(_jpeg(172, 108, img.ColorRgb8(200, 20, 20)));
@@ -221,7 +222,7 @@ void main() {
 
     tearDown(() {
       harness.dispose();
-      shots.deleteSync(recursive: true);
+      deleteTemp(shots);
     });
 
     Future<void> open(WidgetTester tester, {bool deny = false}) async {

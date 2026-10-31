@@ -12,11 +12,12 @@ import 'support/fake_batch_camera.dart';
 import 'support/fake_photos.dart';
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
+import 'support/temp_dir.dart';
 
 /// A camera in a fresh temp folder, removed after the test.
 FakeBatchCamera tempCamera({bool deny = false}) {
   final shots = Directory.systemTemp.createTempSync('lumascan_shots');
-  addTearDown(() => shots.deleteSync(recursive: true));
+  addTearDown(() => deleteTemp(shots));
   return FakeBatchCamera(shots, deny: deny);
 }
 
@@ -134,7 +135,7 @@ void main() {
   testWidgets('the camera, its sheets and the discard question fit at 200% text', (tester) async {
     final camera = tempCamera();
     final root = Directory.systemTemp.createTempSync('lumascan_root');
-    addTearDown(() => root.deleteSync(recursive: true));
+    addTearDown(() => deleteTemp(root));
     await pumpApp(
       tester,
       textScale: 2,
