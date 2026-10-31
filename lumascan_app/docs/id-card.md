@@ -35,6 +35,17 @@ the selected side. A side whose page is gone shows "Take the back page" and the 
 - Tapping 01 opens the review again; ✓ there makes the copy again in its place. Tapping another page opens
   its page menu (crop, filter, markup, and so on).
 
+### Keeping the copy up to date
+
+The ID copy setup (type, which pages are the sides and which is the copy page, watermark, paper and size)
+is kept with the document, in `ScanDocInfo.idCopy`, so it is saved with the draft and with documents set
+aside on Home. Opening a finished ID copy from Home opens the saved grid.
+
+A side replaced in place stays that side wherever it is retaken (the ID screens, the page menu, the batch
+camera), and an undo of the retake follows back (`IdCopyDraft.followPages`). When a side of a finished copy
+changes in any way (retaken, cropped, filtered, masked, rotated, swapped), the copy page is made again from
+the sides as they are now, in its place. That follows from the change, so it is not an undo step of its own.
+
 ## Layout
 
 `idCopySlots` in `lib/domain/id_copy.dart` puts each side at its printed size: ISO/IEC 7810 ID-1
@@ -64,5 +75,3 @@ replaces that file and keeps the Library entry.
 
 - Live edge, glare and blur hints on the camera (the photo is cropped to the card found in it, or to the
   guide when none is found).
-- Resuming the ID review after the app is closed: the pages are kept on Home, but the type and watermark
-  live in memory only.
