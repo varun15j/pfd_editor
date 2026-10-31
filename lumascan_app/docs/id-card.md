@@ -33,7 +33,9 @@ the selected side. A side whose page is gone shows "Take the back page" and the 
 - **Edit PDF**: saves the PDF and opens it in the PDF editor.
 - **More**: Save as PDF, Word or JPG; Open all pages (the normal page screen); Rename; Done.
 - Tapping 01 opens the review again; ✓ there makes the copy again in its place. Tapping another page opens
-  its page menu (crop, filter, markup, and so on).
+  its page menu (crop, filter, markup, and so on). When that page is a side and the action changed it (a
+  mask, crop, rotation, filter or retake), the copy is made again in its place, so a number hidden on a
+  side is never left readable on the copy.
 
 ## Layout
 
