@@ -62,7 +62,32 @@ class _IdCardSavedScreenState extends ConsumerState<IdCardSavedScreen> {
       await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const IdCardReviewScreen(fromSaved: true)));
       return;
     }
+    final side = ref.read(idCopyDraftProvider)?.sideIds.indexOf(page.id) ?? -1;
+    final count = ref.read(scanControllerProvider).pages.length;
     await showPageActions(context, ref, page, index);
+    if (side >= 0 && mounted) await _remakeAfterSideChange(page, side, index, count);
+  }
+
+  /// A side changed from its page menu (a mask, crop, filter or retake)
+  /// must show on the copy too, or a number hidden on the side would still
+  /// be readable on the copy that gets shared. Makes the copy again in its
+  /// place. A retaken side is a new page in the same place (the page count
+  /// unchanged, unlike a delete), so the draft is pointed at it first.
+  Future<void> _remakeAfterSideChange(ScanPage before, int side, int index, int countBefore) async {
+    final scan = ref.read(scanControllerProvider);
+    var now = scan.pageById(before.id);
+    if (now == null && scan.pages.length == countBefore) {
+      final draft = ref.read(idCopyDraftProvider);
+      final replacement = scan.pages[index];
+      if (draft == null || draft.sideIds.contains(replacement.id) || replacement.id == draft.compositeId) return;
+      _session.update((d) => d.withSide(side, replacement.id));
+      now = replacement;
+    }
+    if (now == null || identical(now, before) || ref.read(idCopyDraftProvider)?.compositeId == null) return;
+    await _busy(() async {
+      await _session.makeCopyPage();
+      _snack('ID copy updated with your change.');
+    });
   }
 
   Future<void> _makeCollage() async {

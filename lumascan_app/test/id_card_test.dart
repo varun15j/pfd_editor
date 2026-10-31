@@ -346,6 +346,31 @@ void main() {
       expect(harness.pages, hasLength(3));
     });
 
+    testWidgets('changing a side from the saved grid makes the copy again; leaving it alone does not', (tester) async {
+      await open(tester);
+      await tap(tester, find.text('Make it now'));
+      await tap(tester, find.bySemanticsLabel('Take front page'));
+      await tap(tester, find.bySemanticsLabel('Take back page'));
+      await tap(tester, find.bySemanticsLabel('Save the copy'));
+      await until(tester, find.text('Collage'));
+      expect(composed, hasLength(1));
+      final copy = harness.pages.first.id;
+
+      // Duplicate leaves the side itself as it was: the copy stays.
+      await tap(tester, find.bySemanticsLabel('Page 02, Front page'));
+      await tap(tester, find.text('Duplicate'));
+      expect(composed, hasLength(1));
+
+      // Rotate changes the side, so the copy is made again in its place.
+      await tap(tester, find.bySemanticsLabel('Page 02, Front page'));
+      await tap(tester, find.text('Rotate'));
+      await until(tester, find.text('ID copy updated with your change.'));
+      expect(composed, hasLength(2));
+      expect(harness.pages.first.id, isNot(copy), reason: 'a new copy page');
+      expect(harness.pages.map((p) => p.id), isNot(contains(copy)), reason: 'in place of the old one');
+      expect(harness.container.read(idCopyDraftProvider)!.compositeId, harness.pages.first.id);
+    });
+
     testWidgets('with the camera off, it says so and offers Import and settings', (tester) async {
       await open(tester, deny: true);
       await tap(tester, find.text('Make it now'));
