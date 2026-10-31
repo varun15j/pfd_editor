@@ -36,7 +36,7 @@ On screen, previews and thumbnails draw masks as boxes instead of burning them i
 Updated 2026-10-31 (Varun: "replace the character by cross X; if OCR does not recognise the number, put a black box").
 
 - **Crossed out with Xs.** When OCR read the characters, the mask is filled with the colour of the paper around it (the median of a ring of pixels just outside the box) and gets one X per hidden character, in near-black on light paper or near-white on dark paper. A number printed in groups gets one mask per group, so the Xs sit on the digits and not on the spaces. The last four characters stay readable, as on UIDAI's masked Aadhaar.
-- **Black box.** When a label such as "DOB" or "Passport No" is followed by something with digits that OCR could not read cleanly (`0l/?1/l9B0`), that part is covered with a solid black box instead. A box drawn by hand is black too.
+- **Black box.** When a label such as "DOB" or "Passport No" is followed by something with digits that OCR could not read cleanly (`0l/?1/l9B0`), that part is covered with a solid black box instead. For an ID number the box still stops before the last four characters, so they stay readable as on a clean number; a date of birth is covered whole. A box drawn by hand is black too.
 
 `MaskAnnotation.crosses` holds the number of Xs; 0 is a solid box. The Xs are burned into the pixels the same way as a black box (`burnMasks`), and the editor draws them on white so they can still be moved.
 

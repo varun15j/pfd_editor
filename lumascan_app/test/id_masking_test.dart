@@ -270,6 +270,16 @@ void main() {
       expect(finder.findInLine(_line('Passport No: ????')), isEmpty, reason: 'nothing number-like to hide');
     });
 
+    test('an unreadable ID after a label still shows its last four characters', () {
+      final line = _line('ID No: OOlISBZOO');
+      final hit = finder.findInLine(line).single;
+      expect(hit.unreadable, isTrue);
+      final word = line.words.last;
+      expect(hit.left, lessThan(word.left + 0.001));
+      expect(hit.right, lessThan(word.right - (word.right - word.left) * 3 / 9), reason: 'the last four stay visible');
+      expect(hit.right, greaterThan(word.left + (word.right - word.left) * 4 / 9));
+    });
+
     test('a number already found by its shape is not masked again by its label', () {
       final hits = finder.findInLine(_line('Aadhaar No: 2345 6789 0120'));
       expect(hits.single.kind, IdKind.aadhaar);

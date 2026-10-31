@@ -40,6 +40,9 @@ class IdPiece {
   final double bottom;
   final int chars;
 
+  /// The same box, filled solid black instead of crossed out.
+  IdPiece solid() => IdPiece(left: left, top: top, right: right, bottom: bottom);
+
   @override
   String toString() => 'IdPiece(${left.toStringAsFixed(3)}..${right.toStringAsFixed(3)}, x$chars)';
 }
@@ -87,6 +90,8 @@ class IdMatch {
 /// 3. **Unreadable after a label**: when a label is followed by something
 ///    with digits in it that is not a clean number, that part of the line is
 ///    hidden with a solid box instead, so a misread number is still covered.
+///    Its last four characters stay readable, as for a clean number, when
+///    there are enough of them; a date of birth is hidden whole.
 ///
 /// When the engine gives no word boxes, they are estimated from the line's
 /// box and the position of each letter.
@@ -395,7 +400,15 @@ class IdNumberFinder {
     }
     if (run.isEmpty) return null;
     final span = [for (final k in run) words[k]];
-    return IdMatch(kind: kind, text: '', pieces: [_piece(span.first.left, span.last.right, span, 0)]);
+    // Keep the last characters readable here too, as for a clean number,
+    // unless there are too few to tell which ones they are.
+    final counts = [for (final w in span) w.text.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').length];
+    final total = counts.fold<int>(0, (a, b) => a + b);
+    if (kind.visible == 0 || total < kind.visible + 2) {
+      return IdMatch(kind: kind, text: '', pieces: [_piece(span.first.left, span.last.right, span, 0)]);
+    }
+    final spread = _spread(kind, 'x' * total, span, chars: counts);
+    return IdMatch(kind: kind, text: '', pieces: [for (final p in spread.pieces) p.solid()]);
   }
 
   // ---- Boxes ----
