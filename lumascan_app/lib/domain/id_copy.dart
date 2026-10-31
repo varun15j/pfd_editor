@@ -74,10 +74,7 @@ List<Rect> idCopySlots(IdCopyType type, {PdfPageSize paper = PdfPageSize.a4, IdC
   final n = type.sides;
   var w = type.widthMm * scale.factor, h = type.heightMm * scale.factor;
   final gap = _gapMm * (n - 1);
-  final fit = math.min(
-    1.0,
-    math.min((page.width - 2 * _marginMm) / w, (page.height - 2 * _marginMm - gap) / (h * n)),
-  );
+  final fit = math.min(1.0, math.min((page.width - 2 * _marginMm) / w, (page.height - 2 * _marginMm - gap) / (h * n)));
   w *= fit;
   h *= fit;
   final left = (page.width - w) / 2;
@@ -180,14 +177,8 @@ class IdCopyDraft {
     compositeId: compositeId,
   );
 
-  IdCopyDraft withComposite(String? id) => IdCopyDraft(
-    type: type,
-    sideIds: sideIds,
-    watermark: watermark,
-    paper: paper,
-    scale: scale,
-    compositeId: id,
-  );
+  IdCopyDraft withComposite(String? id) =>
+      IdCopyDraft(type: type, sideIds: sideIds, watermark: watermark, paper: paper, scale: scale, compositeId: id);
 
   IdCopyDraft _copy({List<String>? sideIds, PdfPageSize? paper, IdCopyScale? scale}) => IdCopyDraft(
     type: type,
@@ -199,4 +190,72 @@ class IdCopyDraft {
   );
 
   IdCopyDraft withLayout({PdfPageSize? paper, IdCopyScale? scale}) => _copy(paper: paper, scale: scale);
+
+  /// Keeps the copy pointing at its pages when the draft goes from [before]
+  /// to [after] (page ids, in order). A side or the copy page that was
+  /// replaced in place, as a retake does, follows to the page now in its
+  /// place, and an undo of that follows back. A page that was removed stays
+  /// missing, so the review asks for it again.
+  IdCopyDraft followPages(List<String> before, List<String> after) {
+    if (before.length != after.length) return this;
+    final present = after.toSet();
+    final earlier = before.toSet();
+    String? follow(String? id) {
+      if (id == null || present.contains(id)) return id;
+      final at = before.indexOf(id);
+      return at >= 0 && !earlier.contains(after[at]) ? after[at] : id;
+    }
+
+    final sides = [for (final id in sideIds) follow(id)!];
+    final composite = follow(compositeId);
+    if (listEquals(sides, sideIds) && composite == compositeId) return this;
+    return IdCopyDraft(
+      type: type,
+      sideIds: List.unmodifiable(sides),
+      watermark: watermark,
+      paper: paper,
+      scale: scale,
+      compositeId: composite,
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'type': type.id,
+    'sideIds': sideIds,
+    if (watermark != null) 'watermark': watermark,
+    'paper': paper.name,
+    'scale': scale.name,
+    if (compositeId != null) 'compositeId': compositeId,
+  };
+
+  /// Null when [json] is not an ID copy this version understands.
+  static IdCopyDraft? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final type = IdCopyType.values.where((t) => t.id == json['type']).firstOrNull;
+    if (type == null) return null;
+    final sides = json['sideIds'];
+    final watermark = json['watermark'];
+    final composite = json['compositeId'];
+    return IdCopyDraft(
+      type: type,
+      sideIds: List.unmodifiable(sides is List ? sides.whereType<String>() : const <String>[]),
+      watermark: watermark is String ? watermark : null,
+      paper: PdfPageSize.values.where((p) => p.name == json['paper']).firstOrNull ?? PdfPageSize.a4,
+      scale: IdCopyScale.values.where((s) => s.name == json['scale']).firstOrNull ?? IdCopyScale.actual,
+      compositeId: composite is String ? composite : null,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is IdCopyDraft &&
+      other.type == type &&
+      listEquals(other.sideIds, sideIds) &&
+      other.watermark == watermark &&
+      other.paper == paper &&
+      other.scale == scale &&
+      other.compositeId == compositeId;
+
+  @override
+  int get hashCode => Object.hash(type, Object.hashAll(sideIds), watermark, paper, scale, compositeId);
 }

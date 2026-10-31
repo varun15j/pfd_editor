@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../data/library_store.dart';
+import '../../domain/id_copy.dart';
 import '../../domain/models.dart';
 import '../../domain/photo_import.dart';
 import '../../domain/scan_document.dart';
@@ -645,6 +646,7 @@ class ScanController extends Notifier<ScanState> {
       undoStack: stack,
       redoStack: [...state.redoStack, state.pages],
       unsaved: true,
+      info: _followed(state.pages, previous, state.info),
     );
     _persistDraft();
   }
@@ -653,7 +655,13 @@ class ScanController extends Notifier<ScanState> {
     if (!state.canRedo) return;
     final stack = [...state.redoStack];
     final next = stack.removeLast();
-    state = state.copyWith(pages: next, redoStack: stack, undoStack: [...state.undoStack, state.pages], unsaved: true);
+    state = state.copyWith(
+      pages: next,
+      redoStack: stack,
+      undoStack: [...state.undoStack, state.pages],
+      unsaved: true,
+      info: _followed(state.pages, next, state.info),
+    );
     _persistDraft();
   }
 
@@ -765,7 +773,11 @@ class ScanController extends Notifier<ScanState> {
     // setting: "11-Oct-2026_16-47_SCAN" unless the user picked another.
     final now = DateTime.now();
     final name = ref.read(appSettingsProvider).fileNamePattern.format(now);
-    final info = state.info ?? (pages.isEmpty ? null : ScanDocInfo(name: name, createdAt: now));
+    final info = _followed(
+      state.pages,
+      pages,
+      state.info ?? (pages.isEmpty ? null : ScanDocInfo(name: name, createdAt: now)),
+    );
     state = state.copyWith(
       pages: List.unmodifiable(pages),
       undoStack: stack,
@@ -774,5 +786,51 @@ class ScanController extends Notifier<ScanState> {
       info: info,
     );
     _persistDraft();
+  }
+
+  /// [info] with its ID copy still pointing at its pages after the draft
+  /// went from [before] to [after]: a side retaken in place, here or in the
+  /// ID card screens, stays that side (see [IdCopyDraft.followPages]).
+  static ScanDocInfo? _followed(List<ScanPage> before, List<ScanPage> after, ScanDocInfo? info) {
+    final copy = info?.idCopy;
+    if (copy == null) return info;
+    final followed = copy.followPages([for (final p in before) p.id], [for (final p in after) p.id]);
+    return identical(followed, copy) ? info : info!.copyWith(idCopy: followed);
+  }
+
+  /// Makes the document an ID copy, or no longer one with null. Starting
+  /// one names the document if it has no name yet. Not an undo step.
+  void setIdCopy(IdCopyDraft? copy) {
+    final info = state.info;
+    if (info?.idCopy == copy) return;
+    final now = DateTime.now();
+    final base = info ?? ScanDocInfo(name: ref.read(appSettingsProvider).fileNamePattern.format(now), createdAt: now);
+    state = state.copyWith(info: base.copyWith(idCopy: copy));
+    _persistDraft();
+  }
+
+  /// Puts the JPEG at [jpegPath] in place of the page [pageId] the app made
+  /// itself (an ID copy made again after one of its sides changed). It
+  /// follows from that change rather than being one of its own, so it adds
+  /// no undo step and replaces the page in every undo snapshot too. Returns
+  /// the new page, or null when [pageId] is no longer in the draft.
+  Future<ScanPage?> replaceMadePage(String pageId, String jpegPath) async {
+    if (state.pageById(pageId) == null) return null;
+    final store = ref.read(pageStoreProvider);
+    final id = store.newId();
+    final page = ScanPage(id: id, originalPath: await store.adoptOriginal(jpegPath, id));
+    if (!ref.mounted || state.pageById(pageId) == null) return null;
+    List<ScanPage> patch(List<ScanPage> pages) => List.unmodifiable([for (final p in pages) p.id == pageId ? page : p]);
+    final copy = state.info?.idCopy;
+    state = state.copyWith(
+      pages: patch(state.pages),
+      undoStack: [for (final s in state.undoStack) patch(s)],
+      redoStack: [for (final s in state.redoStack) patch(s)],
+      unsaved: true,
+      info: copy?.compositeId == pageId ? state.info!.copyWith(idCopy: copy!.withComposite(id)) : state.info,
+    );
+    _persistDraft();
+    ref.read(renderServiceProvider).prepare([page]);
+    return page;
   }
 }

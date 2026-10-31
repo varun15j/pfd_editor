@@ -8,6 +8,7 @@ import '../../app/theme.dart';
 import '../../data/library_store.dart';
 import '../../domain/library.dart';
 import '../../domain/models.dart';
+import '../id_card/id_card_saved_screen.dart';
 import '../library/document_tile.dart';
 import '../library/library_actions.dart';
 import '../pages/page_image.dart';
@@ -137,7 +138,14 @@ class HomeDocumentsView extends ConsumerWidget {
         await openDocument(context, ref, document);
       case ScanHomeDoc(:final parkedId):
         if (parkedId != null) await ref.read(scanControllerProvider.notifier).openParked(parkedId);
-        if (context.mounted) openDraft(context);
+        if (!context.mounted) return;
+        // A finished ID copy opens where it was saved, so a side can be
+        // changed and the copy made again.
+        if (ref.read(scanControllerProvider).info?.idCopy?.compositeId != null) {
+          await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const IdCardSavedScreen()));
+        } else {
+          openDraft(context);
+        }
     }
   }
 }
