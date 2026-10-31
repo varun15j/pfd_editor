@@ -14,6 +14,8 @@ import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/ocr.dart';
 import 'package:lumascan/domain/plan.dart';
 import 'package:lumascan/domain/scanner_service.dart';
+import 'package:lumascan/features/batch_edit/batch_review_screen.dart';
+import 'package:lumascan/features/markup/auto_mask.dart';
 import 'package:lumascan/features/markup/markup_screen.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 import 'package:lumascan/features/pdf_editor/annotation_layer.dart';
@@ -25,6 +27,7 @@ import 'package:lumascan/pdf_edit/annotations.dart';
 import 'package:lumascan/pdf_edit/pdf_flattener.dart';
 
 import 'support/memory_stores.dart';
+import 'support/screen_harness.dart';
 
 /// A valid Aadhaar number (it passes the Verhoeff check), as the test data.
 const _aadhaar = '234567890120';
@@ -53,8 +56,7 @@ OcrLine _line(String text, {double top = 0.5, double bottom = 0.56, double left 
 }
 
 OcrLayout _layout(List<OcrLine> lines) => OcrLayout([
-  for (final l in lines)
-    OcrBlock(text: l.text, left: l.left, top: l.top, right: l.right, bottom: l.bottom, lines: [l]),
+  for (final l in lines) OcrBlock(text: l.text, left: l.left, top: l.top, right: l.right, bottom: l.bottom, lines: [l]),
 ]);
 
 /// Answers with a fixed layout, so Auto mask can be tested without ML Kit.
@@ -107,9 +109,12 @@ void main() {
       expect(hits, hasLength(1));
       final hit = hits.single;
       expect((hit.kind, hit.text), (IdKind.aadhaar, _aadhaar));
-      // The mask stops before the last group, which stays readable.
-      final lastGroup = _line('2345 6789 0120').words.last;
-      expect(hit.right, lessThanOrEqualTo(lastGroup.left + 0.001));
+      // One box per hidden group, four Xs each; the last group stays.
+      final words = _line('2345 6789 0120').words;
+      expect(hit.pieces.map((p) => p.chars), [4, 4]);
+      expect(hit.pieces.first.right, closeTo(words[0].right, 0.001));
+      expect(hit.pieces.last.left, lessThan(words[1].left));
+      expect(hit.right, lessThanOrEqualTo(words.last.left + 0.001));
       expect(hit.left, lessThanOrEqualTo(0.11));
     });
 
@@ -119,6 +124,7 @@ void main() {
       final word = _line(_aadhaar).words.single;
       final eighth = word.left + (word.right - word.left) * 8 / 12;
       expect(hit.right, closeTo(eighth, 0.001));
+      expect(hit.pieces.single.chars, 8);
     });
 
     test('a 16-digit VID is found, and four groups of four are read as a VID not an Aadhaar', () {
@@ -151,7 +157,10 @@ void main() {
         'Pin code 560001',
         '0123 4567 8912', // Aadhaar numbers never start with 0
         '1234 5678 9012', // nor with 1
-        'Date of birth 01/01/1990',
+        'Issued 01/01/1990',
+        'Total 4111111111111112', // one run that fails the Luhn check
+        'Call 123-45-6789x', // not an SSN shape
+        'Order 900-12-3456', // SSNs never start with 9
         'Phone 9876543210',
       ]) {
         expect(finder.findInLine(_line(text)), isEmpty, reason: text);
@@ -172,6 +181,109 @@ void main() {
       expect(hit.right, inInclusiveRange(0.55, 0.62));
     });
 
+    test('card numbers that pass the Luhn check keep their last four digits', () {
+      final hit = finder.findInLine(_line('4111 1111 1111 1111')).single;
+      expect(hit.kind, IdKind.card);
+      expect(hit.pieces.map((p) => p.chars), [4, 4, 4]);
+      expect(finder.findInLine(_line('Visa 4111111111111111')).single.kind, IdKind.card);
+      expect(finder.findInLine(_line('3782 822463 10005')).single.kind, IdKind.card, reason: 'Amex 4-6-5');
+      expect(IdNumberFinder.luhnValid('4111111111111111'), isTrue);
+      expect(IdNumberFinder.luhnValid('4111111111111112'), isFalse);
+    });
+
+    test('US Social Security numbers are found, written with dashes or spaces', () {
+      final dashed = finder.findInLine(_line('SSN 123-45-6789'));
+      expect(dashed.single.kind, IdKind.ssn);
+      expect(dashed.single.pieces.single.chars, 5);
+      expect(finder.findInLine(_line('123 45 6789')).single.kind, IdKind.ssn);
+      expect(finder.findInLine(_line('000-12-3456')), isEmpty);
+      expect(finder.findInLine(_line('666-12-3456')), isEmpty);
+    });
+
+    test('a UK National Insurance number is found', () {
+      expect(finder.findInLine(_line('NI AB123456C')).single.kind, IdKind.nationalId);
+    });
+
+    test('a date of birth after a label is crossed out whole', () {
+      for (final text in [
+        'DOB: 01/01/1990',
+        'जन्म तिथि/DOB: 01/01/1990',
+        'Date of Birth 1990-01-31',
+        'D.O.B 31.01.1990',
+      ]) {
+        final hit = finder.findInLine(_line(text)).single;
+        expect(hit.kind, IdKind.dateOfBirth, reason: text);
+        expect(hit.pieces.single.chars, hit.text.length, reason: 'nothing of a birth date is left: $text');
+      }
+      final spelled = finder.findInLine(_line('Born 12 Jan 1990')).single;
+      expect(spelled.pieces, hasLength(3));
+      expect(finder.findInLine(_line('Year of Birth 1990')).single.kind, IdKind.dateOfBirth);
+      expect(finder.findInLine(_line('DOB:01/01/1990')).single.text, '01/01/1990');
+    });
+
+    test('a date without a birth label is left alone', () {
+      expect(finder.findInLine(_line('Issue date 01/01/2020')), isEmpty);
+    });
+
+    test('a labelled number from any country is masked, keeping its last four', () {
+      for (final text in [
+        'Passport No. X1234567',
+        'Document No: AB 1234567',
+        'ID Number 9001015009087',
+        'National ID 1234-5678-9',
+        'SIN 046 454 286',
+        'Card No 1234567890',
+        'Licence No DL-0420110149646',
+      ]) {
+        final hits = finder.findInLine(_line(text));
+        expect(hits, isNotEmpty, reason: text);
+        final hit = hits.last;
+        final hidden = hit.pieces.fold<int>(0, (n, p) => n + p.chars);
+        expect(hidden, hit.text.length - 4, reason: text);
+      }
+    });
+
+    test('a label alone on its line masks the number on the line below', () {
+      final hits = finder.find(
+        OcrLayout([
+          OcrBlock(
+            text: 'Passport No.\nZ9876543',
+            left: 0.1,
+            top: 0.4,
+            right: 0.9,
+            bottom: 0.6,
+            lines: [_line('Passport No.', top: 0.4, bottom: 0.45), _line('Z9876543', top: 0.5, bottom: 0.55)],
+          ),
+        ]),
+      );
+      // Z9876543 is also an Indian passport shape, so it may be found on its
+      // own line too; either way it is masked.
+      expect(hits, isNotEmpty);
+      expect(hits.every((h) => h.top >= 0.45), isTrue);
+    });
+
+    test('a number after a label that OCR could not read gets a black box', () {
+      final hit = finder.findInLine(_line('DOB: 0l/?1/l9B0')).single;
+      expect(hit.kind, IdKind.dateOfBirth);
+      expect(hit.unreadable, isTrue);
+      expect(hit.pieces.single.chars, 0, reason: '0 means a solid box');
+      expect(finder.findInLine(_line('Passport No: ????')), isEmpty, reason: 'nothing number-like to hide');
+    });
+
+    test('a number already found by its shape is not masked again by its label', () {
+      final hits = finder.findInLine(_line('Aadhaar No: 2345 6789 0120'));
+      expect(hits.single.kind, IdKind.aadhaar);
+      final card = finder.findInLine(_line('Card No 4111 1111 1111 1111 exp 12/29'));
+      expect(card.single.kind, IdKind.card, reason: 'the expiry date is left alone');
+    });
+
+    test("a passport's machine-readable lines are hidden whole", () {
+      final hit = finder.findInLine(_line('P<INDKUMAR<<ANIL<<<<<<<<<<<<<<<<<<<<<<<<<<<<')).single;
+      expect(hit.kind, IdKind.passportMrz);
+      expect(hit.pieces.single.chars, hit.text.length);
+      expect(finder.findInLine(_line('Z9876543<1IND9001015M3001017<<<<<<<<<<<<<<04')).single.kind, IdKind.passportMrz);
+    });
+
     test('every line of every block is read', () {
       final hits = finder.find(
         _layout([_line('Name A Kumar', top: 0.2), _line('2345 6789 0120', top: 0.5), _line('ABCDE1234F', top: 0.7)]),
@@ -189,16 +301,28 @@ void main() {
 
   group('mask marks', () {
     test('a mask survives a JSON round trip, and other marks still load', () {
-      const mask = MaskAnnotation(id: 'm1', left: 0.1, top: 0.2, right: 0.5, bottom: 0.3, label: 'Aadhaar number');
+      const mask = MaskAnnotation(
+        id: 'm1',
+        left: 0.1,
+        top: 0.2,
+        right: 0.5,
+        bottom: 0.3,
+        label: 'Aadhaar number',
+        crosses: 8,
+      );
       final back = Annotation.listFromJson(jsonDecode(jsonEncode([mask.toJson()])));
       final read = back.single as MaskAnnotation;
-      expect((read.id, read.left, read.right, read.label, read.color), (
-        'm1',
-        0.1,
-        0.5,
-        'Aadhaar number',
-        MaskAnnotation.black,
-      ));
+      expect((read.crosses, read.crossesOut), (8, true));
+      expect(
+        const MaskAnnotation(id: 'b', left: 0, top: 0, right: 1, bottom: 1).toJson().containsKey('crosses'),
+        isFalse,
+      );
+      expect(read.movedBy(0.1, 0).crosses, 8);
+      expect(read.scaledBy(1.2).crosses, 8);
+      expect(
+        (read.id, read.left, read.right, read.label, read.color),
+        ('m1', 0.1, 0.5, 'Aadhaar number', MaskAnnotation.black),
+      );
     });
 
     test('a mask is built from two corners in any order and stays on the page', () {
@@ -243,6 +367,52 @@ void main() {
       expect(at(5, 8), 255);
     });
 
+    test('a crossed-out mask is the paper colour with one X per hidden character', () {
+      // Light grey paper with a black "number" in the middle.
+      final image = RgbImage(80, 20)..data.fillRange(0, 80 * 20 * 3, 230);
+      for (var y = 6; y < 14; y++) {
+        for (var x = 10; x < 70; x++) {
+          final i = (y * 80 + x) * 3;
+          image.data[i] = image.data[i + 1] = image.data[i + 2] = 0;
+        }
+      }
+      burnMasks(image, const [MaskAnnotation(id: 'm', left: 0.1, top: 0.25, right: 0.875, bottom: 0.75, crosses: 4)]);
+      int at(int x, int y) => image.data[(y * 80 + x) * 3];
+      // The box edge, between Xs, is paper again: the number is gone.
+      expect(at(11, 6), 230);
+      expect(at(10 + 15, 7), 230, reason: 'the gap between two Xs');
+      // The centre of each X is ink.
+      final cells = crossCells(8, 5, 70, 15, 4);
+      for (final (i, c) in cells.indexed) {
+        final cx = ((c.left + c.right) / 2).floor(), cy = ((c.top + c.bottom) / 2).floor();
+        final near = [
+          for (var dy = -1; dy <= 1; dy++)
+            for (var dx = -1; dx <= 1; dx++) at(cx + dx, cy + dy),
+        ];
+        expect(near.any((v) => v < 60), isTrue, reason: 'X $i has ink at its centre');
+      }
+      expect(at(2, 2), 230, reason: 'outside is untouched');
+    });
+
+    test('on dark paper the Xs are light', () {
+      final image = RgbImage(40, 20)..data.fillRange(0, 40 * 20 * 3, 20);
+      burnMasks(image, const [MaskAnnotation(id: 'm', left: 0.2, top: 0.2, right: 0.8, bottom: 0.8, crosses: 1)]);
+      expect(image.data[(10 * 40 + 20) * 3], greaterThan(200));
+    });
+
+    test('X cells are spread evenly and stay inside the box', () {
+      final cells = crossCells(0, 0, 100, 20, 5);
+      expect(cells, hasLength(5));
+      for (final c in cells) {
+        expect(c.left, greaterThanOrEqualTo(0));
+        expect(c.right, lessThanOrEqualTo(100));
+        expect(c.top, greaterThan(0));
+        expect(c.bottom, lessThan(20));
+      }
+      expect(cells[1].left - cells[0].left, closeTo(20, 1e-9));
+      expect(crossCells(0, 0, 10, 10, 0), isEmpty);
+    });
+
     test('a mask edge is rounded outwards so no sliver of the number shows', () {
       final image = RgbImage(10, 10)..data.fillRange(0, 300, 255);
       // 0.41 to 0.49 of 10 pixels is less than one whole pixel.
@@ -253,9 +423,7 @@ void main() {
     test('a JPEG keeps its size and loses what the mask covered', () {
       final white = RgbImage(40, 20)..data.fillRange(0, 2400, 255);
       final jpeg = white.encodeJpg();
-      final masked = burnMasksIntoJpeg(jpeg, const [
-        MaskAnnotation(id: 'm', left: 0, top: 0, right: 0.5, bottom: 1),
-      ]);
+      final masked = burnMasksIntoJpeg(jpeg, const [MaskAnnotation(id: 'm', left: 0, top: 0, right: 0.5, bottom: 1)]);
       final back = img.decodeJpg(masked)!;
       expect((back.width, back.height), (40, 20));
       expect(back.getPixel(2, 10).r, lessThan(40));
@@ -296,9 +464,9 @@ void main() {
 
     Future<void> setUpContainer({AppPlan plan = AppPlan.pro, OcrLayout? layout}) async {
       tmp = Directory.systemTemp.createTempSync('lumascan_mask');
-      final path = (File('${tmp.path}/scan.jpg')
-            ..writeAsBytesSync(img.encodeJpg(img.Image(width: 300, height: 400))))
-          .path;
+      final path = (File(
+        '${tmp.path}/scan.jpg',
+      )..writeAsBytesSync(img.encodeJpg(img.Image(width: 300, height: 400)))).path;
       final store = PageStore(rootDir: () async => tmp);
       ocr = _FakeLayoutOcr(layout ?? _layout([_line('2345 6789 0120')]));
       container = ProviderContainer(
@@ -387,9 +555,10 @@ void main() {
 
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
-      final mask = pages().single.annotations.single as MaskAnnotation;
-      expect(mask.label, 'Aadhaar number');
-      expect(mask.top, lessThan(0.5));
+      final masks = pages().single.annotations.cast<MaskAnnotation>();
+      expect(masks.map((m) => m.crosses), [4, 4], reason: 'two groups crossed out, the last one left');
+      expect(masks.first.label, 'Aadhaar number');
+      expect(masks.first.top, lessThan(0.5));
     });
 
     testWidgets('Auto mask on Basic opens the upgrade pop-up and changes nothing', (tester) async {
@@ -432,7 +601,7 @@ void main() {
       await tester.tap(find.text('Auto mask ID numbers'));
       await tester.pumpAndSettle();
       expect(ocr.readPages, hasLength(2));
-      expect(ocr.readPages.last.annotations.whereType<MaskAnnotation>(), hasLength(1));
+      expect(ocr.readPages.last.annotations.whereType<MaskAnnotation>(), hasLength(2));
     });
 
     test('adding a mask forgets text read earlier, in case it holds the number', () async {
@@ -449,6 +618,79 @@ void main() {
       controller.setPageText(id, 'read again');
       controller.setAnnotations(id, const []);
       expect(pages().single.text, 'read again');
+    });
+  });
+
+  group('Mask IDs in Batch Review', () {
+    final harness = ScreenHarness();
+    tearDown(harness.dispose);
+
+    Future<_FakeLayoutOcr> open(WidgetTester tester, {AppPlan plan = AppPlan.pro, OcrLayout? layout}) async {
+      final ocr = _FakeLayoutOcr(
+        layout ?? _layout([_line('2345 6789 0120', top: 0.3), _line('DOB: 01/01/1990', top: 0.6)]),
+      );
+      await tester.runAsync(
+        () => harness.setUp(
+          pageCount: 3,
+          overrides: [planProvider.overrideWithValue(plan), ocrEngineProvider.overrideWithValue(ocr)],
+        ),
+      );
+      await harness.pumpRoute(tester, (_) => const BatchReviewScreen());
+      return ocr;
+    }
+
+    Future<void> tapMaskIds(WidgetTester tester) async {
+      await tester.tap(find.text('More'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Mask IDs'));
+      await tester.pumpAndSettle();
+    }
+
+    int maskedPages() => harness.pages.where((p) => p.annotations.whereType<MaskAnnotation>().isNotEmpty).length;
+
+    testWidgets('masks the numbers on every selected page as one undo step', (tester) async {
+      final ocr = await open(tester);
+      await tapMaskIds(tester);
+      final read = ocr.readPages.length;
+      expect(read, greaterThan(0));
+      expect(maskedPages(), read);
+      final first = harness.pages.firstWhere((p) => p.annotations.isNotEmpty);
+      final masks = first.annotations.cast<MaskAnnotation>();
+      expect(masks.map((m) => m.label).toSet(), {'Aadhaar number', 'Date of birth'});
+      expect(masks.every((m) => m.crossesOut), isTrue);
+      expect(find.textContaining('Masked'), findsOneWidget);
+
+      await tester.tap(find.text('Undo'));
+      await tester.pump();
+      expect(maskedPages(), 0);
+    });
+
+    testWidgets('on Basic it opens the upgrade pop-up and reads nothing', (tester) async {
+      final ocr = await open(tester, plan: AppPlan.basic);
+      await tapMaskIds(tester);
+      expect(find.text('Upgrade to Pro'), findsWidgets);
+      expect(ocr.readPages, isEmpty);
+      expect(maskedPages(), 0);
+    });
+
+    testWidgets('says so when there is nothing to mask', (tester) async {
+      await open(tester, layout: _layout([_line('Invoice total 1800')]));
+      await tapMaskIds(tester);
+      expect(find.text('No ID numbers found.'), findsOneWidget);
+      expect(maskedPages(), 0);
+    });
+  });
+
+  group('auto mask summary', () {
+    test('counts the numbers and says which ones got a black box', () {
+      final found = const IdNumberFinder().find(
+        _layout([_line('2345 6789 0120', top: 0.2), _line('DOB: 0l/?1/l9B0', top: 0.5)]),
+      );
+      final text = autoMaskSummary(found);
+      expect(text, contains('Masked 2 numbers'));
+      expect(text, contains('One could not be read, so it is covered with a black box.'));
+      final masks = masksFor(found, () => 'id');
+      expect(masks.map((m) => m.crosses), [4, 4, 0]);
     });
   });
 }

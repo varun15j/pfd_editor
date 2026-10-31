@@ -5,9 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/preferences.dart';
 import '../../app/providers.dart';
-import '../../domain/id_masking.dart';
 import '../../domain/models.dart';
-import '../../domain/ocr.dart';
 import '../../domain/plan.dart';
 import '../../imaging/page_renderer.dart';
 import '../../imaging/render_service.dart';
@@ -16,6 +14,7 @@ import '../../ui/upgrade_dialog.dart';
 import '../pages/scan_controller.dart';
 import '../pdf_editor/annotation_layer.dart';
 import '../signatures/sign_sheet.dart';
+import 'auto_mask.dart';
 import 'markup_actions.dart';
 import 'markup_canvas.dart';
 import 'markup_style.dart';
@@ -133,9 +132,11 @@ class _MarkupScreenState extends ConsumerState<MarkupScreen> {
       ..showSnackBar(const SnackBar(content: Text('Drag it into place. Tap it to resize or delete.')));
   }
 
-  /// Reads the page on the device and masks every ID number found, leaving
-  /// the last four characters. The masks are ordinary marks: they can be
-  /// moved, resized or removed, and Undo takes them all back at once.
+  /// Reads the page on the device and masks every private number found:
+  /// the characters OCR read are crossed out with Xs, leaving the last four,
+  /// and a number it could not read is covered with a black box. The masks
+  /// are ordinary marks: they can be moved, resized or removed, and Undo
+  /// takes them all back at once.
   Future<void> _autoMask(ScanPage page) async {
     if (!await ensurePlan(context, ref, PlanFeature.autoMask, what: 'Auto mask')) return;
     if (!mounted) return;
@@ -143,33 +144,21 @@ class _MarkupScreenState extends ConsumerState<MarkupScreen> {
     void say(String text) => messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(text)));
-    final engine = ref.read(ocrEngineProvider);
-    final capability = await engine.capability('en');
-    if (engine is! OcrLayoutEngine || capability.readiness == OcrReadiness.unavailable) {
-      say(capability.reason ?? 'ID numbers cannot be found on this device. Drag over a number to mask it.');
+    final (engine, reason) = await autoMaskEngine(ref.read(ocrEngineProvider));
+    if (engine == null) {
+      say(reason!);
       return;
     }
     setState(() => _autoMasking = true);
     try {
-      // Read the page with the masks already placed, so they are not found
-      // again.
-      final layout = await (engine as OcrLayoutEngine).recognizeLayout(
-        page.copyWith(annotations: _marks),
-        languageCode: 'en',
-      );
+      final found = await findIdsOnPage(engine, page.copyWith(annotations: _marks));
       if (!mounted) return;
-      final found = const IdNumberFinder().find(layout);
       if (found.isEmpty) {
         say('No ID numbers found. Drag over a number to mask it by hand.');
         return;
       }
-      _change([
-        ..._marks!,
-        for (final m in found)
-          MaskAnnotation(id: _newId(), left: m.left, top: m.top, right: m.right, bottom: m.bottom, label: m.kind.label),
-      ]);
-      final kinds = {for (final m in found) m.kind.label}.join(', ');
-      say('Masked ${found.length} ${found.length == 1 ? 'number' : 'numbers'} ($kinds). Check the page before sharing.');
+      _change([..._marks!, ...masksFor(found, _newId)]);
+      say(autoMaskSummary(found));
     } catch (_) {
       if (mounted) say('Could not read the page. Drag over a number to mask it by hand.');
     } finally {
