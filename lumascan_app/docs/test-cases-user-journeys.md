@@ -80,4 +80,4 @@ readable; the Basic plan shows the upgrade pop-up instead.
 | Device | J1 | J2 + J3 | Notes |
 |---|---|---|---|
 | OnePlus CPH2661, Android 16, display size large (320 dp wide) | Pass | Pass | Whole run 1 min 21 s. J2 needs PR #88: without it the ID review's Edit sheet overflows on this screen |
-| Emulator sdk_gphone16k_x86_64, 1 CPU core, 2 GB | Every step passed across runs, but not in one run | Pass (2 runs) | With one core Android's own watchdog restarts the system during long runs; give the AVD 4 cores |
+| Emulator sdk_gphone16k_x86_64, 4 cores, 4 GB | Pass (about 4 min) | Pass | With 1 core and 2 GB, Android's watchdog restarted the system during long runs; give the AVD at least 4 cores |
