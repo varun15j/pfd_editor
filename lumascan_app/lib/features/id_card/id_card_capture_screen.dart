@@ -18,6 +18,7 @@ import '../pages/page_image.dart';
 import '../pages/scan_controller.dart';
 import 'id_card_review_screen.dart';
 import 'id_card_session.dart';
+import '../../ui/luma_icons.dart';
 
 /// The ID card camera (ID-05): a full-screen preview with a 3 × 3 grid, a
 /// card-shaped guide marked by four green corners, the side being taken
@@ -483,7 +484,7 @@ class _Controls extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: Space.lg),
       child: Row(
         children: [
-          side(Icons.close, 'Close', onClose),
+          side(LumaIcons.close, 'Close', onClose),
           Semantics(
             button: true,
             enabled: canShoot,
@@ -512,7 +513,7 @@ class _Controls extends StatelessWidget {
               ),
             ),
           ),
-          side(Icons.photo_library_outlined, 'Import', onImport),
+          side(LumaIcons.gallery, 'Import', onImport),
         ],
       ),
     );
@@ -541,7 +542,7 @@ class _Message extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.no_photography_outlined, color: Colors.white, size: 48),
+          const Icon(LumaIcons.noCamera, color: Colors.white, size: 48),
           const SizedBox(height: Space.md),
           Text(
             title,

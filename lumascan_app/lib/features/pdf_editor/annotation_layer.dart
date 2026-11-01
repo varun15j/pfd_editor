@@ -7,15 +7,16 @@ import 'package:flutter/material.dart';
 import '../../domain/models.dart';
 import '../../pdf_edit/annotations.dart';
 import '../markup/markup_style.dart';
+import '../../ui/luma_icons.dart';
 
 enum EditorTool {
-  view(Icons.pan_tool_outlined, 'View'),
-  select(Icons.open_with, 'Move'),
-  pen(Icons.edit_outlined, 'Pen'),
-  highlighter(Icons.border_color_outlined, 'Highlight'),
-  text(Icons.text_fields, 'Text'),
-  mask(Icons.visibility_off_outlined, 'Mask'),
-  eraser(Icons.auto_fix_normal_outlined, 'Erase');
+  view(LumaIcons.hand, 'View'),
+  select(LumaIcons.move, 'Move'),
+  pen(LumaIcons.pen, 'Pen'),
+  highlighter(LumaIcons.highlight, 'Highlight'),
+  text(LumaIcons.textTool, 'Text'),
+  mask(LumaIcons.hide, 'Mask'),
+  eraser(LumaIcons.erase, 'Erase');
 
   const EditorTool(this.icon, this.label);
   final IconData icon;

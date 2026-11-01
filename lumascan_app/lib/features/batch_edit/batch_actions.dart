@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 
 import 'batch_selection.dart';
+import '../../ui/luma_icons.dart';
 
 /// Actions in Batch Review (BE-03). The first group sits in the action bar;
 /// the rest are under More.
 enum BatchAction {
-  enhance('Enhance', Icons.auto_fix_high_outlined, 'enhance'),
-  rotate('Rotate', Icons.rotate_right, 'rotate'),
-  crop('Crop', Icons.crop, 'crop'),
-  ocr('OCR', Icons.text_snippet_outlined, 'read text from'),
-  delete('Delete', Icons.delete_outline, 'delete'),
-  retake('Retake', Icons.camera_alt_outlined, 'retake', singlePage: true),
-  markup('Markup', Icons.draw_outlined, 'mark up', singlePage: true),
-  duplicate('Duplicate', Icons.copy_outlined, 'duplicate', singlePage: true),
-  reorder('Reorder', Icons.swap_vert, 'reorder', needsSelection: false);
+  enhance('Enhance', LumaIcons.enhance, 'enhance'),
+  rotate('Rotate', LumaIcons.rotateRight, 'rotate'),
+  crop('Crop', LumaIcons.crop, 'crop'),
+  ocr('OCR', LumaIcons.textResult, 'read text from'),
+  delete('Delete', LumaIcons.delete, 'delete'),
+  retake('Retake', LumaIcons.retake, 'retake', singlePage: true),
+  markup('Markup', LumaIcons.sign, 'mark up', singlePage: true),
+  duplicate('Duplicate', LumaIcons.duplicate, 'duplicate', singlePage: true),
+  reorder('Reorder', LumaIcons.reorder, 'reorder', needsSelection: false);
 
   const BatchAction(this.label, this.icon, this.verb, {this.singlePage = false, this.needsSelection = true});
 

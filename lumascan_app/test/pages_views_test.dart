@@ -15,6 +15,7 @@ import 'package:lumascan/features/pages/pages_screen.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 import 'package:lumascan/imaging/page_renderer.dart';
 import 'package:lumascan/imaging/render_service.dart';
+import 'package:lumascan/ui/luma_icons.dart';
 
 class _FakeScanner implements ScannerService {
   _FakeScanner(this.paths);
@@ -149,7 +150,7 @@ void main() {
     for (final n in ['1', '2', '3']) {
       expect(find.text(n), findsOneWidget, reason: 'strip badge $n');
     }
-    final prev = find.widgetWithIcon(IconButton, Icons.chevron_left);
+    final prev = find.widgetWithIcon(IconButton, LumaIcons.previous);
     expect(tester.widget<IconButton>(prev).onPressed, isNull);
 
     await tester.tap(find.byTooltip('Next page'));
@@ -163,7 +164,7 @@ void main() {
     await tester.tap(find.byTooltip('Next page'));
     await tester.pumpAndSettle();
     expect(find.text('New page'), findsOneWidget);
-    expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.chevron_right)).onPressed, isNull);
+    expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, LumaIcons.next)).onPressed, isNull);
     await tester.tap(find.text('3'));
     await tester.pumpAndSettle();
 
@@ -251,8 +252,8 @@ void main() {
 
   testWidgets('undo and redo buttons walk the edit history', (tester) async {
     await pumpPages(tester);
-    final undo = find.widgetWithIcon(IconButton, Icons.undo);
-    final redo = find.widgetWithIcon(IconButton, Icons.redo);
+    final undo = find.widgetWithIcon(IconButton, LumaIcons.undo);
+    final redo = find.widgetWithIcon(IconButton, LumaIcons.redo);
     expect(tester.widget<IconButton>(undo).onPressed, isNotNull);
     expect(tester.widget<IconButton>(redo).onPressed, isNull);
 

@@ -7,6 +7,7 @@ import '../../ui/file_size.dart';
 import '../library/document_tile.dart' show formatModified;
 import 'cloud_accounts.dart';
 import 'cloud_import_flow.dart';
+import '../../ui/luma_icons.dart';
 
 /// Folders and files in a connected cloud account. Tapping a folder opens
 /// it; tapping a PDF or Word file imports it into a chosen Library folder.
@@ -143,18 +144,18 @@ class _EntryTile extends StatelessWidget {
     return ListTile(
       enabled: enabled,
       leading: Icon(switch (entry.kind) {
-        CloudEntryKind.folder => Icons.folder_outlined,
-        CloudEntryKind.pdf => Icons.picture_as_pdf_outlined,
-        CloudEntryKind.word => Icons.description_outlined,
-        CloudEntryKind.googleDoc => Icons.article_outlined,
-        CloudEntryKind.other => Icons.insert_drive_file_outlined,
+        CloudEntryKind.folder => LumaIcons.folder,
+        CloudEntryKind.pdf => LumaIcons.pdf,
+        CloudEntryKind.word => LumaIcons.document,
+        CloudEntryKind.googleDoc => LumaIcons.article,
+        CloudEntryKind.other => LumaIcons.file,
       }),
       title: Text(entry.name, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: details.isEmpty ? null : Text(details.join(' · ')),
       trailing: entry.isFolder
-          ? const Icon(Icons.chevron_right)
+          ? const Icon(LumaIcons.next)
           : enabled
-          ? const Icon(Icons.download_outlined, semanticLabel: 'Import')
+          ? const Icon(LumaIcons.download, semanticLabel: 'Import')
           : null,
       onTap: enabled ? onTap : null,
     );

@@ -9,6 +9,7 @@ import '../../app/theme.dart';
 import '../../domain/plan.dart';
 import '../../domain/purchases.dart';
 import '../../ui/state_views.dart';
+import '../../ui/luma_icons.dart';
 
 /// Opens the plans screen, with [highlight] marked as the plan that unlocks
 /// what the user tried to use.
@@ -49,19 +50,19 @@ class PaywallScreen extends ConsumerWidget {
           const SizedBox(height: Space.md),
           if (state.pending) ...[
             _Note(
-              icon: Icons.hourglass_top_outlined,
+              icon: LumaIcons.hourglass,
               text: 'A payment is pending. Your plan unlocks as soon as $store confirms it.',
             ),
             const SizedBox(height: Space.md),
           ],
           if (!state.available)
             _Note(
-              icon: Icons.storefront_outlined,
+              icon: LumaIcons.storefront,
               text: 'Plans cannot be bought on this device. Install $appName from Google Play or the App Store to buy Pro or Gold.',
             )
           else if (state.offers.isEmpty && state.offersFailed)
             _Note(
-              icon: Icons.cloud_off_outlined,
+              icon: LumaIcons.offline,
               text: 'Could not load the plans from $store.',
               action: TextButton(onPressed: controller.loadOffers, child: const Text('Try again')),
             )
@@ -96,7 +97,7 @@ class PaywallScreen extends ConsumerWidget {
                 onPressed: state.available && !state.restoring ? controller.restore : null,
                 icon: state.restoring
                     ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.restore),
+                    : const Icon(LumaIcons.reset),
                 label: const Text('Restore purchases'),
               ),
               if (state.available && state.plan != AppPlan.basic)
@@ -168,7 +169,7 @@ class _PlanCard extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: Space.xs),
                 child: Row(
                   children: [
-                    Icon(Icons.check, size: 18, color: c.success),
+                    Icon(LumaIcons.check, size: 18, color: c.success),
                     const SizedBox(width: Space.sm),
                     Expanded(child: Text(f)),
                   ],

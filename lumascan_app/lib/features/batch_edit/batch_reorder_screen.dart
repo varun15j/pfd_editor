@@ -6,6 +6,7 @@ import '../../domain/models.dart';
 import '../../ui/undo_toast.dart';
 import '../pages/page_image.dart';
 import '../pages/scan_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// Reorder (BE-06): the document's pages in order, with a drag handle and
 /// Move up / Move down buttons on each, so the order can be changed without
@@ -140,21 +141,21 @@ class _ReorderTile extends StatelessWidget {
                     ),
                     if (selected) ...[
                       const SizedBox(width: 6),
-                      Icon(Icons.check_circle, size: 18, color: colors.accent),
+                      Icon(LumaIcons.selected, size: 18, color: colors.accent),
                     ],
                   ],
                 ),
               ),
             ),
-            IconButton(tooltip: 'Move page ${index + 1} up', icon: const Icon(Icons.arrow_upward), onPressed: onMoveUp),
+            IconButton(tooltip: 'Move page ${index + 1} up', icon: const Icon(LumaIcons.moveUp), onPressed: onMoveUp),
             IconButton(
               tooltip: 'Move page ${index + 1} down',
-              icon: const Icon(Icons.arrow_downward),
+              icon: const Icon(LumaIcons.moveDown),
               onPressed: onMoveDown,
             ),
             ReorderableDragStartListener(
               index: index,
-              child: const Padding(padding: EdgeInsets.all(12), child: Icon(Icons.drag_handle)),
+              child: const Padding(padding: EdgeInsets.all(12), child: Icon(LumaIcons.dragHandle)),
             ),
           ],
         ),

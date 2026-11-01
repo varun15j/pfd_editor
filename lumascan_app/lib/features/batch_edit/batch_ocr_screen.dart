@@ -12,6 +12,7 @@ import '../share/text_pdf_next_sheet.dart';
 import '../pages/scan_controller.dart';
 import 'batch_ocr_job.dart';
 import '../../app/preferences.dart';
+import '../../ui/luma_icons.dart';
 
 /// Batch OCR (BE-07): checks that text recognition can run, then reads the
 /// selected pages one by one with progress and Cancel, and ends with which
@@ -181,7 +182,7 @@ class _Intro extends StatelessWidget {
           OcrReadiness.ready => FilledButton.icon(
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
             onPressed: onStart,
-            icon: const Icon(Icons.text_snippet_outlined),
+            icon: const Icon(LumaIcons.textResult),
             label: Text('Recognize text on $count page${count == 1 ? '' : 's'}'),
           ),
           OcrReadiness.needsDownload => Column(
@@ -194,7 +195,7 @@ class _Intro extends StatelessWidget {
                 onPressed: preparing ? null : onDownload,
                 icon: preparing
                     ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.download_outlined),
+                    : const Icon(LumaIcons.download),
                 label: Text('Download ${capability.language} OCR'),
               ),
             ],
@@ -205,7 +206,7 @@ class _Intro extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.info_outline),
+                  const Icon(LumaIcons.info),
                   const SizedBox(width: 12),
                   Expanded(child: Text(capability.reason ?? 'Text recognition is not available.')),
                 ],
@@ -261,7 +262,7 @@ class _JobView extends StatelessWidget {
               onPressed: building ? null : onCreatePdf,
               icon: building
                   ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.picture_as_pdf_outlined),
+                  : const Icon(LumaIcons.pdf),
               label: const Text('Create text PDF'),
             ),
             const SizedBox(height: 8),
@@ -270,7 +271,7 @@ class _JobView extends StatelessWidget {
             FilledButton.icon(
               style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
               onPressed: job.retry,
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(LumaIcons.retry),
               label: Text('Retry $failed page${failed == 1 ? '' : 's'}'),
             ),
           const SizedBox(height: 8),
@@ -297,12 +298,12 @@ class _ResultTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = LumaColors.of(context);
     final (icon, color, label) = switch (result.status) {
-      OcrPageStatus.waiting => (Icons.schedule, colors.muted, 'Waiting'),
-      OcrPageStatus.running => (Icons.hourglass_top, colors.accent, 'Reading'),
-      OcrPageStatus.done => (Icons.check_circle_outline, colors.success, 'Text found'),
-      OcrPageStatus.empty => (Icons.remove_circle_outline, colors.muted, 'No text found'),
-      OcrPageStatus.failed => (Icons.error_outline, colors.danger, 'Failed'),
-      OcrPageStatus.cancelled => (Icons.block, colors.muted, 'Cancelled'),
+      OcrPageStatus.waiting => (LumaIcons.schedule, colors.muted, 'Waiting'),
+      OcrPageStatus.running => (LumaIcons.hourglass, colors.accent, 'Reading'),
+      OcrPageStatus.done => (LumaIcons.checkCircle, colors.success, 'Text found'),
+      OcrPageStatus.empty => (LumaIcons.noText, colors.muted, 'No text found'),
+      OcrPageStatus.failed => (LumaIcons.error, colors.danger, 'Failed'),
+      OcrPageStatus.cancelled => (LumaIcons.cancelled, colors.muted, 'Cancelled'),
     };
     final preview = result.text?.trim().split('\n').first;
     return ListTile(

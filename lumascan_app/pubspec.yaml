@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.27.0+47
+version: 1.28.0+48
 
 environment:
   sdk: ^3.13.1
@@ -101,6 +101,19 @@ flutter:
     - sample_photos/colour_book/
     - sample_scan_img/odds_book/
     - assets/models/lcnet100_h_e_bifpn_256_fp32.onnx
+
+  # Phosphor icons (MIT, assets/fonts/phosphor/LICENSE), used through
+  # lib/ui/luma_icons.dart.
+  fonts:
+    - family: Phosphor
+      fonts:
+        - asset: assets/fonts/phosphor/Phosphor.ttf
+    - family: PhosphorFill
+      fonts:
+        - asset: assets/fonts/phosphor/Phosphor-Fill.ttf
+    - family: PhosphorDuotone
+      fonts:
+        - asset: assets/fonts/phosphor/Phosphor-Duotone.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

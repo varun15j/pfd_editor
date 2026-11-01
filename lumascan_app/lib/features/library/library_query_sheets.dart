@@ -6,6 +6,7 @@ import '../../domain/library.dart';
 import '../../domain/library_query.dart';
 import 'library_controller.dart';
 import 'library_query_controller.dart';
+import '../../ui/luma_icons.dart';
 
 Future<void> showSortSheet(BuildContext context) =>
     showModalBottomSheet<void>(context: context, showDragHandle: true, builder: (_) => const SortSheet());
@@ -46,7 +47,7 @@ class SortSheet extends ConsumerWidget {
                 RadioListTile<LibrarySort>(
                   value: s,
                   title: Text(s.label),
-                  secondary: s == current ? Icon(Icons.check, color: c.accent) : null,
+                  secondary: s == current ? Icon(LumaIcons.check, color: c.accent) : null,
                 ),
               const SizedBox(height: Space.sm),
             ],

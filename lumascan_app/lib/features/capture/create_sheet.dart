@@ -7,6 +7,7 @@ import '../../domain/scanner_service.dart';
 import '../id_card/id_card_type_screen.dart';
 import '../pdf_editor/open_pdf.dart';
 import '../word/word_actions.dart';
+import '../../ui/luma_icons.dart';
 
 /// The centre Create button's sheet: every way to start a document in one
 /// place (US-03.1). Each option closes the sheet before it starts.
@@ -31,26 +32,26 @@ class CreateSheet extends StatelessWidget {
 
   static final options = <(IconData, String, String, CreateAction)>[
     (
-      Icons.document_scanner_outlined,
+      LumaIcons.scan,
       'Scan document',
       'Take page after page; edges are found for you',
       (context, ref) => scanThenReview(context, ref, ScanSource.camera),
     ),
     (
-      Icons.photo_library_outlined,
+      LumaIcons.gallery,
       'Import photos',
       'Turn photos of pages into a PDF',
       (context, ref) => scanThenReview(context, ref, ScanSource.gallery),
     ),
     (
-      Icons.badge_outlined,
+      LumaIcons.idCard,
       'ID copy',
       'Both sides of an ID card on one A4 page',
       (context, ref) => openIdCardStudio(context),
     ),
-    (Icons.edit_document, 'Edit a PDF', 'Add text, drawings or a signature', pickAndEditPdf),
+    (LumaIcons.editPdf, 'Edit a PDF', 'Add text, drawings or a signature', pickAndEditPdf),
     (
-      Icons.description_outlined,
+      LumaIcons.document,
       'Open a Word file',
       'Turn a .docx from your files into a PDF in your Library',
       importWordFile,

@@ -9,16 +9,17 @@ import '../filters/filter_screen.dart';
 import '../markup/markup_screen.dart';
 import 'marks_notice.dart';
 import 'scan_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// Per-page actions shared by the list, gallery and single-page views.
 enum PageAction {
-  retake('Retake', Icons.camera_alt_outlined),
-  crop('Crop', Icons.crop),
-  rotate('Rotate', Icons.rotate_right),
-  filters('Filters', Icons.tune),
-  markup('Markup', Icons.draw_outlined),
-  duplicate('Duplicate', Icons.copy_outlined),
-  delete('Delete page', Icons.delete_outline);
+  retake('Retake', LumaIcons.retake),
+  crop('Crop', LumaIcons.crop),
+  rotate('Rotate', LumaIcons.rotateRight),
+  filters('Filters', LumaIcons.enhance),
+  markup('Markup', LumaIcons.sign),
+  duplicate('Duplicate', LumaIcons.duplicate),
+  delete('Delete page', LumaIcons.delete);
 
   const PageAction(this.label, this.icon);
 

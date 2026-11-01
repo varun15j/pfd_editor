@@ -31,6 +31,7 @@ import 'camera_frame.dart';
 import 'camera_mode.dart';
 import 'capture_settings_screen.dart';
 import 'page_identity.dart';
+import '../../ui/luma_icons.dart';
 
 /// Opens the camera. Pages join the current draft as they are taken. When
 /// the camera closes with pages taken, the draft opens; [openDraftAfter] is
@@ -726,7 +727,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
             for (final f in DocumentFilter.values)
               ListTile(
                 title: Text(f.label),
-                trailing: f == _filter ? const Icon(Icons.check) : null,
+                trailing: f == _filter ? const Icon(LumaIcons.check) : null,
                 onTap: () => Navigator.pop(context, f),
               ),
           ],
@@ -921,7 +922,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
                               children: [
                                 _RoundButton(
                                   tooltip: 'Filter: ${_filter.label}',
-                                  icon: Icons.filter_b_and_w_outlined,
+                                  icon: LumaIcons.blackAndWhite,
                                   onPressed: _chooseFilter,
                                 ),
                                 Expanded(
@@ -931,7 +932,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
                                 ),
                                 _RoundButton(
                                   tooltip: 'Camera settings',
-                                  icon: Icons.more_horiz,
+                                  icon: LumaIcons.more,
                                   onPressed: _openSettings,
                                 ),
                               ],
@@ -941,7 +942,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
                               children: [
                                 Expanded(
                                   child: _QuickToggle(
-                                    icon: Icons.burst_mode_outlined,
+                                    icon: LumaIcons.batch,
                                     title: 'Batch',
                                     on: _batch,
                                     onChanged: (on) => _setOption(_Option.batch, on),
@@ -950,7 +951,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: _QuickToggle(
-                                    icon: _torch ? Icons.flash_on : Icons.flash_off,
+                                    icon: _torch ? LumaIcons.flash : LumaIcons.flashOff,
                                     title: 'Flash',
                                     on: _torch,
                                     onChanged: ready && _camera.hasTorch ? (on) => _setOption(_Option.flash, on) : null,
@@ -959,7 +960,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: _QuickToggle(
-                                    icon: Icons.motion_photos_auto_outlined,
+                                    icon: LumaIcons.autoCapture,
                                     title: 'Auto',
                                     on: _autoCapture,
                                     onChanged: (on) => _setOption(_Option.auto, on),
@@ -970,7 +971,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
                             if (_retakeId != null) ...[
                               const SizedBox(height: 10),
                               _Banner(
-                                icon: Icons.replay,
+                                icon: LumaIcons.replay,
                                 text: 'Retaking page $retakeNumber. Take the new photo.',
                                 action: 'Cancel',
                                 onAction: _cancelRetake,
@@ -1044,7 +1045,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
               ),
             ),
     _CameraStatus.blocked => _CameraMessage(
-      icon: Icons.no_photography_outlined,
+      icon: LumaIcons.noCamera,
       title: 'Camera access needed',
       body: _blockedPermanently
           ? 'Camera access is turned off. Turn it on in Settings to scan pages. Pages stay on this device.'
@@ -1055,7 +1056,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
       onSecondary: () => Navigator.of(context).pop(_importPhotosInstead),
     ),
     _CameraStatus.failed => _CameraMessage(
-      icon: Icons.error_outline,
+      icon: LumaIcons.error,
       title: 'The camera could not start',
       body: _failure ?? 'Try again.',
       action: 'Try again',
@@ -1259,14 +1260,14 @@ class _Thumbnail extends StatelessWidget {
               ),
               clipBehavior: Clip.antiAlias,
               child: page == null
-                  ? Icon(Icons.description_outlined, color: colors.muted)
+                  ? Icon(LumaIcons.document, color: colors.muted)
                   : Image.file(
                       File(page!.originalPath),
                       key: ValueKey(page!.id),
                       fit: BoxFit.cover,
                       cacheWidth: (52 * dpr).round(),
                       gaplessPlayback: true,
-                      errorBuilder: (_, _, _) => Icon(Icons.description_outlined, color: colors.muted),
+                      errorBuilder: (_, _, _) => Icon(LumaIcons.document, color: colors.muted),
                     ),
             ),
           ),
@@ -1358,7 +1359,7 @@ class _Toast extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.check_circle, size: 18, color: LumaColors.dark.success),
+            Icon(LumaIcons.selected, size: 18, color: LumaColors.dark.success),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
@@ -1596,7 +1597,7 @@ class _ControlPanel extends StatelessWidget {
                             side: const BorderSide(color: Colors.white24),
                             fixedSize: const Size(minTapTarget, minTapTarget),
                           ),
-                          icon: const Icon(Icons.close, size: 20),
+                          icon: const Icon(LumaIcons.close, size: 20),
                         ),
                       ),
                     ),
@@ -1628,13 +1629,13 @@ class _ImportButtons extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         _ImportButton(
-          icon: Icons.photo_library_outlined,
+          icon: LumaIcons.gallery,
           label: 'Gallery',
           semantics: 'Import from gallery',
           onTap: onGallery,
         ),
         const SizedBox(width: 6),
-        _ImportButton(icon: Icons.folder_open_outlined, label: 'Files', semantics: 'Import from file', onTap: onFiles),
+        _ImportButton(icon: LumaIcons.folderOpen, label: 'Files', semantics: 'Import from file', onTap: onFiles),
       ],
     ),
   );
@@ -2074,26 +2075,26 @@ class _SettingsSheet extends StatelessWidget {
                       ],
                     ),
                   ),
-                  IconButton(tooltip: 'Close', onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                  IconButton(tooltip: 'Close', onPressed: () => Navigator.pop(context), icon: const Icon(LumaIcons.close)),
                 ],
               ),
             ),
-            row(_Option.batch, Icons.burst_mode_outlined, 'Batch mode', 'Keep capturing without review'),
+            row(_Option.batch, LumaIcons.batch, 'Batch mode', 'Keep capturing without review'),
             row(
               _Option.flash,
-              Icons.flash_on,
+              LumaIcons.flash,
               'Flashlight',
               flashAvailable ? 'Continuous light while scanning' : 'Not available on this camera',
               enabled: flashAvailable,
             ),
-            row(_Option.auto, Icons.motion_photos_auto_outlined, 'Auto capture', 'Capture when edges are stable'),
-            row(_Option.crop, Icons.crop_free, 'Auto crop', 'Find the page edges in each photo'),
-            row(_Option.grid, Icons.grid_3x3, 'Alignment grid', 'Show a 3 × 3 guide'),
+            row(_Option.auto, LumaIcons.autoCapture, 'Auto capture', 'Capture when edges are stable'),
+            row(_Option.crop, LumaIcons.fullPage, 'Auto crop', 'Find the page edges in each photo'),
+            row(_Option.grid, LumaIcons.grid, 'Alignment grid', 'Show a 3 × 3 guide'),
             ListTile(
-              leading: icon(Icons.tune),
+              leading: icon(LumaIcons.adjust),
               title: const Text('More capture settings', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: const Text('Resolution, shutter sound, save original'),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: const Icon(LumaIcons.next),
               onTap: () => Navigator.pop(context, true),
             ),
             const SizedBox(height: 8),
@@ -2148,7 +2149,7 @@ class _CapturedPhotosSheet extends ConsumerWidget {
                   IconButton(
                     tooltip: 'Close captured photos',
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(LumaIcons.close),
                   ),
                 ],
               ),
@@ -2186,14 +2187,14 @@ class _CapturedPhotosSheet extends ConsumerWidget {
                                   File(page.originalPath),
                                   fit: BoxFit.contain,
                                   cacheWidth: (110 * dpr).round(),
-                                  errorBuilder: (_, _, _) => Icon(Icons.description_outlined, color: colors.muted),
+                                  errorBuilder: (_, _, _) => Icon(LumaIcons.document, color: colors.muted),
                                 ),
                               ),
                               if (page.text != null && page.text!.trim().isNotEmpty)
                                 Positioned(
                                   left: 8,
                                   bottom: 8,
-                                  child: Icon(Icons.text_snippet_outlined, size: 18, color: colors.accent),
+                                  child: Icon(LumaIcons.textResult, size: 18, color: colors.accent),
                                 ),
                               Positioned(
                                 right: 8,
@@ -2219,7 +2220,7 @@ class _CapturedPhotosSheet extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: TextButton.icon(
-                  icon: const Icon(Icons.copy),
+                  icon: const Icon(LumaIcons.copy),
                   label: Text('Copy text of ${text.length} page${text.length == 1 ? '' : 's'}'),
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: text.join('\n\n')));
@@ -2290,7 +2291,7 @@ class _TextResultSheet extends StatelessWidget {
                       ],
                     ),
                   ),
-                  IconButton(tooltip: 'Close', onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                  IconButton(tooltip: 'Close', onPressed: () => Navigator.pop(context), icon: const Icon(LumaIcons.close)),
                 ],
               ),
             ),
@@ -2319,7 +2320,7 @@ class _TextResultSheet extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: FilledButton.icon(
-                icon: const Icon(Icons.copy),
+                icon: const Icon(LumaIcons.copy),
                 label: const Text('Copy all text'),
                 onPressed: () => copy(lines.join('\n'), 'Text'),
               ),
@@ -2356,13 +2357,13 @@ class _LineAction {
     final url = _url.firstMatch(line)?.group(0);
     if (url != null) {
       final uri = Uri.tryParse(url);
-      if (uri != null && uri.host.isNotEmpty) return _LineAction(uri, 'Open link', Icons.open_in_new);
+      if (uri != null && uri.host.isNotEmpty) return _LineAction(uri, 'Open link', LumaIcons.openExternal);
     }
     final email = _email.firstMatch(line)?.group(0);
-    if (email != null) return _LineAction(Uri(scheme: 'mailto', path: email), 'Write email', Icons.mail_outline);
+    if (email != null) return _LineAction(Uri(scheme: 'mailto', path: email), 'Write email', LumaIcons.mail);
     final phone = _phone.firstMatch(line)?.group(0);
     if (phone != null) {
-      return _LineAction(Uri(scheme: 'tel', path: phone.replaceAll(RegExp(r'[^\d+]'), '')), 'Call', Icons.call);
+      return _LineAction(Uri(scheme: 'tel', path: phone.replaceAll(RegExp(r'[^\d+]'), '')), 'Call', LumaIcons.phone);
     }
     return null;
   }
@@ -2405,14 +2406,14 @@ class _QrResultSheet extends StatelessWidget {
     final colors = LumaColors.of(context);
     final link = code.webLink;
     final (kind, icon) = switch (code.kind) {
-      QrKind.link => ('Web link', Icons.link),
-      QrKind.wifi => ('Wi-Fi network', Icons.wifi),
-      QrKind.email => ('Email address', Icons.mail_outline),
-      QrKind.phone => ('Phone number', Icons.call),
-      QrKind.contact => ('Contact', Icons.person_outline),
-      QrKind.text => ('Text', Icons.notes),
+      QrKind.link => ('Web link', LumaIcons.link),
+      QrKind.wifi => ('Wi-Fi network', LumaIcons.wifi),
+      QrKind.email => ('Email address', LumaIcons.mail),
+      QrKind.phone => ('Phone number', LumaIcons.phone),
+      QrKind.contact => ('Contact', LumaIcons.contact),
+      QrKind.text => ('Text', LumaIcons.text),
     };
-    final action = link != null ? _LineAction(link, 'Open link', Icons.open_in_new) : _LineAction.of(code.raw);
+    final action = link != null ? _LineAction(link, 'Open link', LumaIcons.openExternal) : _LineAction.of(code.raw);
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -2450,7 +2451,7 @@ class _QrResultSheet extends StatelessWidget {
               const SizedBox(height: 8),
             ],
             OutlinedButton.icon(
-              icon: const Icon(Icons.copy),
+              icon: const Icon(LumaIcons.copy),
               label: const Text('Copy'),
               onPressed: () async {
                 await Clipboard.setData(ClipboardData(text: code.raw));
@@ -2476,7 +2477,7 @@ class _DiscardDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = LumaColors.of(context);
     return AlertDialog(
-      icon: Icon(Icons.close, color: colors.danger),
+      icon: Icon(LumaIcons.close, color: colors.danger),
       title: const Text('Discard the photos?'),
       content: Text(
         'All $count photo${count == 1 ? '' : 's'} captured now and their changes will be removed '

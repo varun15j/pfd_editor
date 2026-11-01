@@ -20,6 +20,7 @@ import 'package:lumascan/pdf_edit/pdf_edit_controller.dart';
 import 'package:lumascan/pdf_edit/pdf_saver.dart';
 
 import 'support/memory_stores.dart';
+import 'package:lumascan/ui/luma_icons.dart';
 
 /// Reports a page count (or a problem) for each path, and counts the checks.
 class _FakeInspector implements PdfInspector {
@@ -432,7 +433,7 @@ void main() {
       await tester.runAsync(setUp);
       await pumpScreen(tester);
       await addFromDevice(tester);
-      final gesture = await tester.startGesture(tester.getCenter(find.byIcon(Icons.drag_handle).first));
+      final gesture = await tester.startGesture(tester.getCenter(find.byIcon(LumaIcons.dragHandle).first));
       await tester.pump(const Duration(milliseconds: 100));
       for (var i = 0; i < 10; i++) {
         await gesture.moveBy(const Offset(0, 16));

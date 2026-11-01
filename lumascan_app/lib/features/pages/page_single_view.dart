@@ -12,6 +12,7 @@ import 'adding_progress.dart';
 import 'page_actions.dart';
 import 'page_image.dart';
 import 'scan_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// Single-page layout for the Pages screen: one large page you can swipe
 /// through, previous/next buttons around a "Page X of N" label, a strip of
@@ -125,7 +126,7 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
             children: [
               IconButton.filledTonal(
                 tooltip: 'Previous page',
-                icon: const Icon(Icons.chevron_left),
+                icon: const Icon(LumaIcons.previous),
                 onPressed: onAddPage
                     ? () => _goTo(pages.length - 1)
                     : index > 0
@@ -148,7 +149,7 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
               ),
               IconButton.filledTonal(
                 tooltip: 'Next page',
-                icon: const Icon(Icons.chevron_right),
+                icon: const Icon(LumaIcons.next),
                 onPressed: !onAddPage && (index < pages.length - 1 || addPage) ? () => _goTo(index + 1) : null,
               ),
             ],

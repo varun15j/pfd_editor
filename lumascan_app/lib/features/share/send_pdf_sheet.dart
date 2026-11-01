@@ -13,6 +13,7 @@ import '../../ui/state_views.dart';
 import '../../ui/upgrade_dialog.dart';
 import 'lock_pdf_sheet.dart';
 import 'pdf_sharer.dart';
+import '../../ui/luma_icons.dart';
 
 /// Offers to send a saved PDF as it is, as a smaller copy, or (Pro) as a copy
 /// that fits under a size limit for upload forms. The saved file is never
@@ -251,7 +252,7 @@ class _SendPdfSheetState extends ConsumerState<SendPdfSheet> {
                 builder: (tileContext) => ListTile(
                   contentPadding: EdgeInsets.zero,
                   enabled: !_making,
-                  leading: const Icon(Icons.picture_as_pdf_outlined),
+                  leading: const Icon(LumaIcons.pdf),
                   title: const Text('Send PDF'),
                   subtitle: Text('$_fileName · ${original == null ? 'size unknown' : formatFileSize(original)}'),
                   onTap: () => _sendOriginal(tileContext),
@@ -261,7 +262,7 @@ class _SendPdfSheetState extends ConsumerState<SendPdfSheet> {
                 builder: (tileContext) => ListTile(
                   contentPadding: EdgeInsets.zero,
                   enabled: !_making,
-                  leading: const Icon(Icons.compress),
+                  leading: const Icon(LumaIcons.compress),
                   title: const Text('Send smaller copy'),
                   subtitle: Text(copySubtitle),
                   onTap: () => _sendSmaller(tileContext),
@@ -270,7 +271,7 @@ class _SendPdfSheetState extends ConsumerState<SendPdfSheet> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 enabled: !_making,
-                leading: const Icon(Icons.upload_file_outlined),
+                leading: const Icon(LumaIcons.fitSize),
                 title: Row(
                   children: [
                     const Flexible(child: Text('Fit under a size')),
@@ -306,7 +307,7 @@ class _SendPdfSheetState extends ConsumerState<SendPdfSheet> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 enabled: !_making,
-                leading: const Icon(Icons.lock_outline),
+                leading: const Icon(LumaIcons.password),
                 title: const Text('Send with password'),
                 subtitle: Text(PdfLocker.lockedName(widget.name)),
                 // Shown to everyone; on Basic it opens the upgrade pop-up.

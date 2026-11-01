@@ -7,6 +7,7 @@ import '../../domain/cloud_storage.dart';
 import 'cloud_accounts.dart';
 import 'cloud_browse_screen.dart';
 import 'cloud_import_flow.dart';
+import '../../ui/luma_icons.dart';
 
 /// Settings > Accounts: cloud storage accounts to import documents from.
 /// Connecting is optional and read-only; nothing is uploaded or synced.
@@ -47,9 +48,9 @@ class AccountsScreen extends ConsumerWidget {
 }
 
 IconData cloudProviderIcon(CloudProviderId id) => switch (id) {
-  CloudProviderId.googleDrive => Icons.add_to_drive,
-  CloudProviderId.oneDrive => Icons.cloud_outlined,
-  CloudProviderId.iCloudDrive => Icons.cloud_queue,
+  CloudProviderId.googleDrive => LumaIcons.googleDrive,
+  CloudProviderId.oneDrive => LumaIcons.cloud,
+  CloudProviderId.iCloudDrive => LumaIcons.cloud,
 };
 
 class _ProviderCard extends ConsumerStatefulWidget {

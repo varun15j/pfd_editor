@@ -7,6 +7,7 @@ import '../../imaging/render_service.dart';
 import '../../ui/undo_toast.dart';
 import '../pages/page_image.dart';
 import '../pages/scan_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// Enhance Selected Pages (BE-04): one look (filter, brightness, contrast)
 /// for every selected page. The preview shows one selected page at a time.
@@ -92,7 +93,7 @@ class _BatchEnhanceScreenState extends ConsumerState<BatchEnhanceScreen> {
                     children: [
                       IconButton(
                         tooltip: 'Previous selected page',
-                        icon: const Icon(Icons.chevron_left),
+                        icon: const Icon(LumaIcons.previous),
                         onPressed: _active > 0 ? () => setState(() => _active--) : null,
                       ),
                       Expanded(
@@ -104,7 +105,7 @@ class _BatchEnhanceScreenState extends ConsumerState<BatchEnhanceScreen> {
                       ),
                       IconButton(
                         tooltip: 'Next selected page',
-                        icon: const Icon(Icons.chevron_right),
+                        icon: const Icon(LumaIcons.next),
                         onPressed: _active < count - 1 ? () => setState(() => _active++) : null,
                       ),
                     ],
