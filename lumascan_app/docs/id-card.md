@@ -45,6 +45,13 @@ A side replaced in place stays that side wherever it is retaken (the ID screens,
 camera), and an undo of the retake follows back (`IdCopyDraft.followPages`). When a side of a finished copy
 changes in any way (retaken, cropped, filtered, masked, rotated, swapped), the copy page is made again from
 the sides as they are now, in its place. That follows from the change, so it is not an undo step of its own.
+Once the last remake is done, the PDF saved in the Library is saved again, so Documents and Share show the
+new copy page, not the old one.
+
+Retake from any page options (saved grid, page preview, Batch Review) on a side opens the ID card camera for
+that side (`retakeIdCopyPage`); on the copy page it first asks which side. The review page also has a small
+Retake button on each side. Retake on any other page opens the app camera for one photo
+(`retakeWithCamera`), which replaces the page and closes straight back to the screen it came from.
 
 ## Layout
 

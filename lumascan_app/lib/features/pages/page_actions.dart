@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:permission_handler/permission_handler.dart';
 
-import '../../app/app_info.dart';
 import '../../domain/models.dart';
+import '../batch_capture/batch_capture_screen.dart';
 import '../crop/crop_screen.dart';
 import '../filters/filter_screen.dart';
+import '../id_card/id_card_retake.dart';
 import '../markup/markup_screen.dart';
 import 'marks_notice.dart';
 import 'scan_controller.dart';
@@ -36,29 +36,21 @@ Future<void> runPageAction(BuildContext context, WidgetRef ref, PageAction actio
   final messenger = ScaffoldMessenger.of(context);
   switch (action) {
     case PageAction.retake:
-      final outcome = await controller.retake(page.id);
-      switch (outcome) {
-        case ScanAdded():
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text('Page ${index + 1} retaken'),
-              // An action would otherwise keep it up until dismissed.
-              persist: false,
-              action: SnackBarAction(label: 'Undo', onPressed: controller.undo),
-            ),
-          );
-        case ScanCancelled():
-          break;
-        case ScanFailed(:final message):
-          messenger.showSnackBar(SnackBar(content: Text('Retake failed: $message')));
-        case ScanPermissionBlocked():
-          messenger.showSnackBar(
-            SnackBar(
-              content: const Text('Camera access is off for $appName.'),
-              action: SnackBarAction(label: 'Open Settings', onPressed: openAppSettings),
-            ),
-          );
-      }
+      // A side of an ID copy, or the copy itself, is taken again with the ID
+      // card camera, so it keeps its card crop and the copy is made again.
+      if (await retakeIdCopyPage(context, ref, page)) return;
+      if (!context.mounted) return;
+      // Any other page: the app's camera takes one photo in its place, then
+      // closes, back here.
+      if (!await retakeWithCamera(context, page.id)) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Page ${index + 1} retaken'),
+          // An action would otherwise keep it up until dismissed.
+          persist: false,
+          action: SnackBarAction(label: 'Undo', onPressed: controller.undo),
+        ),
+      );
     case PageAction.filters:
       await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => FilterScreen(pageId: page.id)));
     case PageAction.markup:

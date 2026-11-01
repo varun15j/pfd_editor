@@ -60,7 +60,8 @@ class _IdCardSavedScreenState extends ConsumerState<IdCardSavedScreen> {
     }
     // The copy opens its review, where a change makes it again.
     if (page.id == ref.read(idCopyDraftProvider)?.compositeId) {
-      await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const IdCardReviewScreen(fromSaved: true)));
+      await Navigator.of(context)
+          .push(MaterialPageRoute<void>(builder: (_) => const IdCardReviewScreen(fromSaved: true)));
       return;
     }
     await showPageActions(context, ref, page, index);
@@ -131,7 +132,12 @@ class _IdCardSavedScreenState extends ConsumerState<IdCardSavedScreen> {
   Future<void> _editPdf() async {
     final file = await _savePdf();
     if (file == null || !mounted) return;
-    await openPdfInEditor(context, ref, path: file.path, name: ref.read(scanControllerProvider).info?.name ?? 'ID card');
+    await openPdfInEditor(
+      context,
+      ref,
+      path: file.path,
+      name: ref.read(scanControllerProvider).info?.name ?? 'ID card',
+    );
   }
 
   Future<void> _more() async {
@@ -156,7 +162,10 @@ class _IdCardSavedScreenState extends ConsumerState<IdCardSavedScreen> {
         openDraft(context);
       case _More.rename:
         final name = ref.read(scanControllerProvider).info?.name ?? '';
-        final next = await showDialog<String>(context: context, builder: (_) => _RenameDialog(initial: name));
+        final next = await showDialog<String>(
+          context: context,
+          builder: (_) => _RenameDialog(initial: name),
+        );
         if (next != null) ref.read(scanControllerProvider.notifier).rename(next);
       case _More.home:
         await saveAndGoHome(context, ref);
@@ -252,7 +261,10 @@ class _IdCardSavedScreenState extends ConsumerState<IdCardSavedScreen> {
             ),
             if (_working)
               const Positioned.fill(
-                child: ColoredBox(color: Color(0x33000000), child: Center(child: CircularProgressIndicator())),
+                child: ColoredBox(
+                  color: Color(0x33000000),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
               ),
           ],
         ),
@@ -337,7 +349,10 @@ class _PageTile extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Padding(padding: const EdgeInsets.all(4), child: PageImage(page: page)),
+                    Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: PageImage(page: page),
+                    ),
                     if (picking)
                       Positioned(
                         top: 6,
@@ -386,7 +401,11 @@ class _AddTile extends StatelessWidget {
               children: [
                 Icon(LumaIcons.add, size: 36, color: c.muted),
                 const SizedBox(height: Space.xs),
-                Text('Tap to add new pages', textAlign: TextAlign.center, style: TextStyle(color: c.muted)),
+                Text(
+                  'Tap to add new pages',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: c.muted),
+                ),
               ],
             ),
           ),
