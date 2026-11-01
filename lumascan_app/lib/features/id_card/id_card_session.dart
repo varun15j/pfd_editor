@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
@@ -18,26 +18,83 @@ import '../../pdf_edit/pdf_saver.dart';
 import '../library/library_controller.dart';
 import '../pages/scan_controller.dart';
 
-/// The ID copy being made in ID card mode, or null outside it. Kept in
-/// memory only: the pages themselves are in the scan draft, which is saved
-/// as it changes, so nothing taken is lost if the app closes.
+/// The ID copy on screen: the scan document's ID copy setup, or null when
+/// the document is not one. It is kept with the document itself (see
+/// [ScanDocInfo.idCopy]), so it is there again after the app restarts or the
+/// document is opened from Home, and a side retaken anywhere stays that side.
 final idCopyDraftProvider = NotifierProvider<IdCopyDraftNotifier, IdCopyDraft?>(IdCopyDraftNotifier.new);
 
 class IdCopyDraftNotifier extends Notifier<IdCopyDraft?> {
-  @override
-  IdCopyDraft? build() => null;
+  /// Copy pages made again after a side changed, one at a time.
+  Future<void> _remaking = Future.value();
 
-  void start(IdCopyType type) => state = IdCopyDraft(type: type);
+  /// The sides the copy page was last made from, so a change that leaves
+  /// them as they were does not make it again.
+  List<ScanPage?>? _madeFrom;
+
+  @override
+  IdCopyDraft? build() {
+    ref.listen(scanControllerProvider, _sidesMayHaveChanged);
+    return ref.watch(scanControllerProvider.select((s) => s.info?.idCopy));
+  }
+
+  ScanController get _scan => ref.read(scanControllerProvider.notifier);
+
+  void start(IdCopyType type) {
+    _madeFrom = null;
+    _set(IdCopyDraft(type: type));
+  }
 
   void update(IdCopyDraft Function(IdCopyDraft draft) change) {
     final draft = state;
-    if (draft != null) state = change(draft);
+    if (draft != null) _set(change(draft));
   }
+
+  void _set(IdCopyDraft draft) {
+    _scan.setIdCopy(draft);
+    state = draft;
+  }
+
+  /// When a side of a finished copy changes (retaken, cropped, filtered,
+  /// masked), anywhere in the app, the copy page is made again from the
+  /// sides as they are now, so it never shows an old picture.
+  void _sidesMayHaveChanged(ScanState? before, ScanState after) {
+    final draft = after.info?.idCopy;
+    // Only changes within one document: opening another one is not an edit.
+    if (before == null || draft == null || draft.compositeId == null) return;
+    if (before.info?.createdAt != after.info?.createdAt || before.info?.idCopy == null) return;
+    final was = sidePages(before.info!.idCopy!, before);
+    final now = sidePages(draft, after);
+    if (listEquals(was, now) || now.any((s) => s == null)) return;
+    _remaking = _remaking.then((_) => _remakeCopy()).catchError((Object e) => debugPrint('ID copy remake failed: $e'));
+  }
+
+  Future<void> _remakeCopy() async {
+    final draft = ref.read(scanControllerProvider).info?.idCopy;
+    final scan = ref.read(scanControllerProvider);
+    final copyId = draft?.compositeId;
+    if (draft == null || copyId == null || scan.pageById(copyId) == null) return;
+    final sides = sidePages(draft, scan);
+    if (sides.any((s) => s == null) || listEquals(sides, _madeFrom)) return;
+    final jpeg = await _compose(
+      paper: draft.paper,
+      slots: idCopySlots(draft.type, paper: draft.paper, scale: draft.scale),
+      pages: [for (final s in sides) s!],
+      watermark: draft.watermark,
+    );
+    if (!ref.mounted) return;
+    final page = await _scan.replaceMadePage(copyId, await _tempFile(jpeg));
+    if (page != null) _madeFrom = sides;
+  }
+
+  /// Completes once every copy page being made again is in the draft.
+  Future<void> get remade => _remaking;
 
   /// Makes the ID copy page from the sides and puts it first in the draft, in
   /// place of an earlier copy if there is one. The sides stay in the draft
   /// after it, as they are (US-ID-01.8: export never removes the sides).
   Future<ScanPage> makeCopyPage() async {
+    await _remaking;
     final draft = state;
     if (draft == null) throw StateError('No ID copy is being made');
     final sides = sidePages(draft, ref.read(scanControllerProvider));
@@ -48,10 +105,9 @@ class IdCopyDraftNotifier extends Notifier<IdCopyDraft?> {
       pages: [for (final s in sides) s!],
       watermark: draft.watermark,
     );
-    final page = await ref
-        .read(scanControllerProvider.notifier)
-        .addMadePage(await _tempFile(jpeg), at: 0, replacing: draft.compositeId);
+    final page = await _scan.addMadePage(await _tempFile(jpeg), at: 0, replacing: draft.compositeId);
     update((d) => d.withComposite(page.id));
+    _madeFrom = sides;
     return page;
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -11,11 +13,13 @@ import 'package:lumascan/domain/id_copy.dart';
 import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/photo_import.dart';
+import 'package:lumascan/domain/scan_document.dart';
 import 'package:lumascan/export/pdf_exporter.dart';
 import 'package:lumascan/features/id_card/id_card_capture_screen.dart';
 import 'package:lumascan/features/id_card/id_card_session.dart';
 import 'package:lumascan/features/id_card/id_card_type_screen.dart';
 import 'package:lumascan/features/library/library_controller.dart';
+import 'package:lumascan/features/pages/scan_controller.dart';
 import 'package:lumascan/imaging/id_copy_composer.dart';
 import 'package:lumascan/imaging/page_renderer.dart';
 import 'package:lumascan/imaging/render_service.dart';
@@ -45,7 +49,11 @@ class _FakeExporter implements PdfExporter {
   final calls = <(List<ScanPage>, ExportOptions)>[];
 
   @override
-  Future<File> export(List<ScanPage> pages, ExportOptions options, {void Function(int done, int total)? onProgress}) async {
+  Future<File> export(
+    List<ScanPage> pages,
+    ExportOptions options, {
+    void Function(int done, int total)? onProgress,
+  }) async {
     calls.add((pages, options));
     return File('${dir.path}/${options.fileName}')..writeAsBytesSync([37, 80, 68, 70]);
   }
@@ -138,6 +146,35 @@ void main() {
       expect(d.sideIds, ['front2', 'back']);
       expect(d.complete, isTrue);
       expect(d.swapped().sideIds, ['back', 'front2']);
+    });
+
+    test('a side retaken in place, or the retake undone, stays that side; a removed side stays missing', () {
+      const copy = IdCopyDraft(type: IdCopyType.idCard, sideIds: ['front', 'back'], compositeId: 'copy');
+      final retaken = copy.followPages(['copy', 'front', 'back'], ['copy', 'front2', 'back']);
+      expect(retaken.sideIds, ['front2', 'back']);
+      expect(retaken.compositeId, 'copy');
+      expect(retaken.followPages(['copy', 'front2', 'back'], ['copy', 'front', 'back']), copy, reason: 'undo');
+      expect(copy.followPages(['copy', 'front', 'back'], ['back', 'copy', 'front']), same(copy), reason: 'moved');
+      expect(copy.followPages(['copy', 'front', 'back'], ['copy', 'back']).sideIds, ['front', 'back']);
+    });
+
+    test('the copy is kept with the document, so it is there after a restart', () {
+      final info = ScanDocInfo(
+        name: 'Aadhaar',
+        createdAt: DateTime.utc(2026, 10, 31, 9),
+        idCopy: const IdCopyDraft(
+          type: IdCopyType.idCard,
+          sideIds: ['front', 'back'],
+          watermark: 'For bank KYC only',
+          paper: PdfPageSize.letter,
+          scale: IdCopyScale.large,
+          compositeId: 'copy',
+        ),
+      );
+      final back = ScanDocInfo.fromJson(jsonDecode(jsonEncode(info.toJson())) as Map<String, Object?>)!;
+      expect(back.idCopy, info.idCopy);
+      expect(back.copyWith(name: 'PAN').idCopy, info.idCopy, reason: 'renaming keeps it');
+      expect(ScanDocInfo.fromJson({'name': 'Old scan'})!.idCopy, isNull);
     });
 
     test('a watermark must say something and fit across a card', () {
@@ -266,6 +303,24 @@ void main() {
       }
     }
 
+    /// Waits for [future], which runs in the test's clock, while the file
+    /// work behind it runs for real.
+    Future<T> finish<T>(WidgetTester tester, Future<T> future) async {
+      late T value;
+      var done = false;
+      unawaited(
+        future.then((v) {
+          value = v;
+          done = true;
+        }),
+      );
+      for (var i = 0; i < 10 && !done; i++) {
+        await harness.settle(tester);
+      }
+      expect(done, isTrue);
+      return value;
+    }
+
     testWidgets('picking a type moves the selection and keeps every control in place', (tester) async {
       await open(tester);
       expect(find.text('A4 paper example'), findsOneWidget);
@@ -296,7 +351,9 @@ void main() {
       await tap(tester, find.bySemanticsLabel('Take back page'));
       expect(harness.pages, hasLength(2));
       expect(find.text('Tap the title above to rename; tap the picture to crop or rotate'), findsOneWidget);
-      final x = [for (final l in ['Add Watermark', 'Edit', 'Filter']) tester.getCenter(find.text(l)).dx];
+      final x = [
+        for (final l in ['Add Watermark', 'Edit', 'Filter']) tester.getCenter(find.text(l)).dx,
+      ];
       expect(x, orderedEquals([...x]..sort()));
       expect(tester.getCenter(find.bySemanticsLabel('Save the copy')).dx, greaterThan(x.last));
 
@@ -325,6 +382,49 @@ void main() {
       expect(exporter.calls.single.$2.fitImageDpi, composeDpi);
       final docs = harness.container.read(libraryProvider).value!.documents;
       expect(docs.single.type, ScanType.idCard);
+    });
+
+    testWidgets('a side retaken after saving goes on the copy page, and undo puts the old one back', (tester) async {
+      await open(tester);
+      await tap(tester, find.text('Make it now'));
+      await tap(tester, find.bySemanticsLabel('Take front page'));
+      await tap(tester, find.bySemanticsLabel('Take back page'));
+      await tap(tester, find.bySemanticsLabel('Save the copy'));
+      await until(tester, find.text('Collage'));
+      final controller = harness.container.read(scanControllerProvider.notifier);
+      final session = harness.container.read(idCopyDraftProvider.notifier);
+      final [copy, front, back] = harness.pages;
+      final undoSteps = harness.container.read(scanControllerProvider).undoStack.length;
+
+      // Opened again from Home, the front is retaken from the pages, not from
+      // the ID card screens.
+      final photo = File('${shots.path}/front2.jpg')..writeAsBytesSync(_jpeg(80, 50, img.ColorRgb8(200, 30, 30)));
+      final newFront = (await finish(tester, controller.addCapture(photo.path, replacing: front.id)))!;
+      await finish(tester, session.remade);
+
+      var draft = harness.container.read(idCopyDraftProvider)!;
+      expect(draft.sideIds, [newFront.id, back.id], reason: 'the retaken page is still the front');
+      expect(composed, hasLength(2), reason: 'the copy page was made again');
+      expect(composed.last.imagePaths, [newFront.originalPath, back.originalPath]);
+      expect(composed.last.watermark, composed.first.watermark);
+      final pages = harness.pages;
+      expect(pages, hasLength(3));
+      expect(pages[0].id, isNot(copy.id), reason: 'a new copy page, first as before');
+      expect(pages[0].id, draft.compositeId);
+      expect([pages[1].id, pages[2].id], [newFront.id, back.id]);
+      expect(
+        harness.container.read(scanControllerProvider).undoStack.length,
+        undoSteps + 1,
+        reason: 'the retake is one undo step; making the copy again is part of it',
+      );
+
+      controller.undo();
+      await finish(tester, session.remade);
+      draft = harness.container.read(idCopyDraftProvider)!;
+      expect(draft.sideIds, [front.id, back.id]);
+      expect(composed, hasLength(3));
+      expect(composed.last.imagePaths, [front.originalPath, back.originalPath]);
+      expect(harness.pages.first.id, draft.compositeId);
     });
 
     testWidgets('a collage of two picked pages is added at the end', (tester) async {
