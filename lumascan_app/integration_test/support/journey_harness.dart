@@ -11,6 +11,7 @@ import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/domain/app_settings.dart';
+import 'package:lumascan/domain/eula.dart';
 import 'package:lumascan/domain/launch_action.dart';
 import 'package:lumascan/domain/photo_import.dart';
 import 'package:lumascan/domain/plan.dart';
@@ -199,7 +200,7 @@ class Journey {
           libraryStoreProvider.overrideWithValue(library),
           draftStoreProvider.overrideWithValue(MemoryDraftStore()),
           uiPrefsStoreProvider.overrideWithValue(MemoryUiPrefsStore(const UiPrefs(dismissedCards: {scanTipsId}))),
-          appSettingsStoreProvider.overrideWithValue(MemoryAppSettingsStore(const AppSettings(onboardingSeen: true))),
+          appSettingsStoreProvider.overrideWithValue(MemoryAppSettingsStore(const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true))),
           documentTextStoreProvider.overrideWithValue(MemoryDocumentTextStore()),
           launchActionSourceProvider.overrideWithValue(const NoLaunchActions()),
           planProvider.overrideWithValue(AppPlan.gold),
