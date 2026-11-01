@@ -6,6 +6,7 @@ import 'package:lumascan/data/plan_cache_store.dart';
 import 'package:lumascan/data/signature_library_store.dart';
 import 'package:lumascan/data/ui_prefs_store.dart';
 import 'package:lumascan/domain/app_settings.dart';
+import 'package:lumascan/domain/eula.dart';
 import 'package:lumascan/domain/document_text.dart';
 import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/domain/models.dart';
@@ -97,11 +98,13 @@ class MemoryUiPrefsStore extends UiPrefsStore {
 
 /// Settings where new pages start with no filter, for tests about edits
 /// where the untouched page is the baseline. Scans are enhanced by default.
-MemoryAppSettingsStore plainPagesSettings() =>
-    MemoryAppSettingsStore(const AppSettings(onboardingSeen: true, defaultFilter: DocumentFilter.original));
+MemoryAppSettingsStore plainPagesSettings() => MemoryAppSettingsStore(
+  const AppSettings(onboardingSeen: true, eulaAcceptedVersion: eulaVersion, defaultFilter: DocumentFilter.original),
+);
 
 class MemoryAppSettingsStore extends AppSettingsStore {
-  MemoryAppSettingsStore([this.settings = const AppSettings(onboardingSeen: true)]) : super(PageStore());
+  MemoryAppSettingsStore([this.settings = const AppSettings(onboardingSeen: true, eulaAcceptedVersion: eulaVersion)])
+    : super(PageStore());
 
   AppSettings settings;
 

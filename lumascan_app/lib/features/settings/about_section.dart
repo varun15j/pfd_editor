@@ -4,6 +4,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../app/app_info.dart';
 import '../../app/theme.dart';
+import '../../domain/eula.dart';
+import '../onboarding/eula_screen.dart';
 import 'help_screen.dart';
 import '../../ui/luma_icons.dart';
 
@@ -40,6 +42,14 @@ class AboutSection extends ConsumerWidget {
           subtitle: const Text('What stays on your device'),
           trailing: const Icon(LumaIcons.next),
           onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PrivacyScreen())),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(LumaIcons.article),
+          title: const Text('Terms of use'),
+          subtitle: const Text('End User Licence Agreement, version $eulaVersion'),
+          trailing: const Icon(LumaIcons.next),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const EulaScreen())),
         ),
         ListTile(
           contentPadding: EdgeInsets.zero,

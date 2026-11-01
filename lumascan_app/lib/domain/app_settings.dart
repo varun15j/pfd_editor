@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 
+import 'eula.dart';
 import 'models.dart';
 import 'ocr_languages.dart';
 import 'plan.dart';
@@ -88,6 +89,7 @@ class AppSettings {
     this.ocrLanguage = 'en',
     this.appLock = false,
     this.appLockDelay = AppLockDelay.oneMinute,
+    this.eulaAcceptedVersion = 0,
   });
 
   /// Looks only. Does not touch any file.
@@ -150,6 +152,12 @@ class AppSettings {
 
   /// How long the app may be in the background before the lock asks again.
   final AppLockDelay appLockDelay;
+  /// Version of the End User Licence Agreement the user last accepted; 0 when
+  /// they never have. Below [eulaVersion], the agreement is shown at start.
+  final int eulaAcceptedVersion;
+
+  /// Whether the current agreement has been accepted.
+  bool get eulaAccepted => eulaAcceptedVersion >= eulaVersion;
 
   AppSettings copyWith({
     ThemeMode? themeMode,
@@ -167,6 +175,7 @@ class AppSettings {
     String? ocrLanguage,
     bool? appLock,
     AppLockDelay? appLockDelay,
+    int? eulaAcceptedVersion,
   }) => AppSettings(
     themeMode: themeMode ?? this.themeMode,
     defaultFilter: defaultFilter ?? this.defaultFilter,
@@ -183,6 +192,7 @@ class AppSettings {
     ocrLanguage: ocrLanguage ?? this.ocrLanguage,
     appLock: appLock ?? this.appLock,
     appLockDelay: appLockDelay ?? this.appLockDelay,
+    eulaAcceptedVersion: eulaAcceptedVersion ?? this.eulaAcceptedVersion,
   );
 
   static const Object _keep = Object();
@@ -209,6 +219,7 @@ class AppSettings {
     'ocrLanguage': ocrLanguage,
     'appLock': appLock,
     'appLockDelay': appLockDelay.name,
+    'eulaAcceptedVersion': eulaAcceptedVersion,
   };
 
   /// Unknown or missing values fall back to the defaults, so a settings file
@@ -230,6 +241,7 @@ class AppSettings {
     ocrLanguage: OcrLanguage.byCode(json['ocrLanguage'] as String? ?? '')?.code ?? 'en',
     appLock: json['appLock'] as bool? ?? false,
     appLockDelay: AppLockDelay.values.asNameMap()[json['appLockDelay']] ?? AppLockDelay.oneMinute,
+    eulaAcceptedVersion: (json['eulaAcceptedVersion'] as num?)?.toInt() ?? 0,
   );
 
   /// Files before 3 always held Date and time, the default then, chosen or
@@ -269,7 +281,8 @@ class AppSettings {
       other.debugPlan == debugPlan &&
       other.ocrLanguage == ocrLanguage &&
       other.appLock == appLock &&
-      other.appLockDelay == appLockDelay;
+      other.appLockDelay == appLockDelay &&
+      other.eulaAcceptedVersion == eulaAcceptedVersion;
 
   @override
   int get hashCode => Object.hash(
@@ -288,5 +301,6 @@ class AppSettings {
     ocrLanguage,
     appLock,
     appLockDelay,
+    eulaAcceptedVersion,
   );
 }

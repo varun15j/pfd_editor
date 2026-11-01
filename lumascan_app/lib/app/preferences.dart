@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/app_settings_store.dart';
 import '../data/ui_prefs_store.dart';
 import '../domain/app_settings.dart';
+import '../domain/eula.dart';
 import '../domain/models.dart';
 import '../domain/ocr_languages.dart';
 import '../domain/plan.dart';
@@ -56,6 +57,10 @@ class AppSettingsController extends Notifier<AppSettings> {
   /// question when one was given.
   void completeOnboarding({bool? analytics}) =>
       _set(state.copyWith(onboardingSeen: true, analytics: analytics ?? state.analytics));
+
+  /// Remembers that the current End User Licence Agreement was accepted, so
+  /// it is not shown again until its version changes.
+  void acceptEula() => _set(state.copyWith(eulaAcceptedVersion: eulaVersion));
 
   void setAnalytics(bool value) => _set(state.copyWith(analytics: value));
 
