@@ -96,6 +96,8 @@ void _paintMarks(PdfGraphics canvas, PdfPoint size, List<Annotation> annotations
           bw * SignatureAnnotation.strokeFraction,
           (p) => PdfPoint(left + p.x * bw, size.y - (top + p.y * bh)),
         );
+      case MaskAnnotation(crossesOut: true):
+        break; // Burned into the picture with the paper's own colour.
       case MaskAnnotation():
         // Already burned into the picture; the vector box keeps its edges
         // sharp at any zoom.

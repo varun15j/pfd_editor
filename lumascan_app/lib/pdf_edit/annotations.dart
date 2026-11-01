@@ -269,6 +269,7 @@ class MaskAnnotation extends Annotation {
     required this.bottom,
     this.color = black,
     this.label,
+    this.crosses = 0,
   }) : super(id);
 
   static const black = 0xFF000000;
@@ -285,6 +286,14 @@ class MaskAnnotation extends Annotation {
   /// What was hidden when Auto mask found it, such as "Aadhaar number".
   /// Null for a box drawn by hand.
   final String? label;
+
+  /// How many characters the mask hides, when Auto mask could read them.
+  /// Each is drawn over with an X on a box the colour of the paper, so the
+  /// page still reads as a number with its digits crossed out. 0 is a solid
+  /// box in [color]: a box drawn by hand, or a number OCR could not read.
+  final int crosses;
+
+  bool get crossesOut => crosses > 0;
 
   double get width => right - left;
   double get height => bottom - top;
@@ -309,7 +318,16 @@ class MaskAnnotation extends Annotation {
   /// Moved by [dx], [dy] and kept on the page.
   MaskAnnotation movedBy(double dx, double dy) {
     final x = (left + dx).clamp(0.0, 1.0 - width), y = (top + dy).clamp(0.0, 1.0 - height);
-    return MaskAnnotation(id: id, left: x, top: y, right: x + width, bottom: y + height, color: color, label: label);
+    return MaskAnnotation(
+      id: id,
+      left: x,
+      top: y,
+      right: x + width,
+      bottom: y + height,
+      color: color,
+      label: label,
+      crosses: crosses,
+    );
   }
 
   /// Grown or shrunk by [factor] around its centre, kept on the page.
@@ -324,6 +342,7 @@ class MaskAnnotation extends Annotation {
       bottom: (cy + hh).clamp(0.0, 1.0),
       color: color,
       label: label,
+      crosses: crosses,
     );
   }
 
@@ -337,6 +356,7 @@ class MaskAnnotation extends Annotation {
     'bottom': bottom,
     'color': color,
     if (label != null) 'label': label,
+    if (crosses > 0) 'crosses': crosses,
   };
 
   static MaskAnnotation fromJson(Map<String, Object?> json) => MaskAnnotation(
@@ -347,6 +367,7 @@ class MaskAnnotation extends Annotation {
     bottom: (json['bottom']! as num).toDouble(),
     color: (json['color'] as num?)?.toInt() ?? black,
     label: json['label'] as String?,
+    crosses: (json['crosses'] as num?)?.toInt() ?? 0,
   );
 }
 

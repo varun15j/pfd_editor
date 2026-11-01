@@ -1,11 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/preferences.dart';
 import '../../app/providers.dart';
+import '../../domain/id_masking.dart';
 import '../../domain/models.dart';
 import '../../domain/plan.dart';
+import '../../pdf_edit/annotations.dart';
 import '../../ui/undo_toast.dart';
+import '../../ui/upgrade_dialog.dart';
+import '../markup/auto_mask.dart';
 import '../pages/page_actions.dart';
 import '../pages/scan_controller.dart';
 import 'batch_actions.dart';
@@ -102,6 +108,8 @@ Future<void> runBatchAction(BuildContext context, WidgetRef ref, BatchAction act
       if (ok != true) return;
       controller.removePages(selection.ids);
       showUndoToast(messenger, message: 'Deleted $count $noun', onUndo: controller.undo);
+    case BatchAction.maskIds:
+      await _maskIds(context, ref, selected);
     case BatchAction.reorder:
       await Navigator.of(context)
           .push(MaterialPageRoute<void>(builder: (_) => BatchReorderScreen(selectedIds: selection.ids)));
@@ -111,6 +119,81 @@ Future<void> runBatchAction(BuildContext context, WidgetRef ref, BatchAction act
       final page = selected.single;
       await runPageAction(context, ref, _pageActions[action]!, page, pages.indexOf(page));
   }
+}
+
+/// Auto mask on every selected page (Pro and Gold), one undo step for all.
+Future<void> _maskIds(BuildContext context, WidgetRef ref, List<ScanPage> pages) async {
+  if (!await ensurePlan(context, ref, PlanFeature.autoMask, what: 'Auto mask')) return;
+  if (!context.mounted) return;
+  final messenger = ScaffoldMessenger.of(context);
+  void say(String text) => messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(text)));
+  final (engine, reason) = await autoMaskEngine(ref.read(ocrEngineProvider));
+  if (engine == null) {
+    say(reason!);
+    return;
+  }
+  if (!context.mounted) return;
+  final done = ValueNotifier(0);
+  final navigator = Navigator.of(context);
+  unawaited(
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          title: const Text('Looking for ID numbers'),
+          content: ValueListenableBuilder<int>(
+            valueListenable: done,
+            builder: (_, n, _) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LinearProgressIndicator(value: pages.isEmpty ? null : n / pages.length),
+                const SizedBox(height: 12),
+                Text('Page ${n < pages.length ? n + 1 : n} of ${pages.length}, read on this phone'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  final store = ref.read(pageStoreProvider);
+  final added = <String, List<Annotation>>{};
+  final found = <IdMatch>[];
+  var failed = 0;
+  try {
+    for (final page in pages) {
+      try {
+        final hits = await findIdsOnPage(engine, page);
+        found.addAll(hits);
+        added[page.id] = masksFor(hits, store.newId);
+      } catch (_) {
+        failed++;
+      }
+      done.value++;
+    }
+  } finally {
+    navigator.pop();
+    done.dispose();
+  }
+  final marked = added.values.where((m) => m.isNotEmpty).length;
+  if (found.isEmpty) {
+    say(failed > 0 ? 'Could not read $failed of the pages. Mask them by hand in Markup.' : 'No ID numbers found.');
+    return;
+  }
+  final controller = ref.read(scanControllerProvider.notifier);
+  controller.addAnnotations(added);
+  showUndoToast(
+    messenger,
+    message: [
+      autoMaskSummary(found, pages: marked),
+      if (failed > 0) 'Could not read $failed ${failed == 1 ? 'page' : 'pages'}.',
+    ].join(' '),
+    onUndo: controller.undo,
+  );
 }
 
 const _pageActions = {

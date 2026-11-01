@@ -29,9 +29,11 @@ class HelpScreen extends StatelessWidget {
     ),
     (
       'Hiding an Aadhaar or ID number',
-      'In Markup, choose Mask and drag over the part to hide. On Pro, Auto mask ID numbers finds Aadhaar, VID, PAN and other '
-          'ID numbers for you and hides all but the last four characters. A mask is burned into the saved PDF or JPG, so what '
-          'it covers cannot be read from the file.',
+      'In Markup, choose Mask and drag over the part to hide. On Pro and Gold, Auto mask ID numbers finds Aadhaar, PAN, '
+          'passport, Social Security, credit and debit card and other ID numbers, and dates of birth, and crosses out all but '
+          'the last four characters with an X each. A number it cannot read is covered with a black box. For many pages, use '
+          'Mask IDs under More in Batch Review. A mask is burned into the saved PDF or JPG, so what it covers cannot be read '
+          'from the file.',
     ),
     (
       'Copying an ID card',
