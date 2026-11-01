@@ -506,6 +506,10 @@ void main() {
 
       expect(importer.calls.single, (name: 'Notes.docx', kind: CloudEntryKind.word, folderId: null));
       expect(find.text('Saved Notes.pdf to your Library'), findsOneWidget);
+      // The Send button must not keep it up for ever, over the next screen.
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pumpAndSettle();
+      expect(find.text('Saved Notes.pdf to your Library'), findsNothing);
     });
 
     testWidgets('files that are not PDF or Word cannot be imported', (tester) async {

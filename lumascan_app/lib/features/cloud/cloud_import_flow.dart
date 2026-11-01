@@ -115,6 +115,9 @@ Future<bool> runCloudImport(
       ..showSnackBar(
         SnackBar(
           content: Text('Saved ${saved.name}.pdf to ${folder ?? 'your Library'}'),
+          // With an action it would stay up until dismissed, over the
+          // next screen too.
+          persist: false,
           action: context.mounted
               ? SnackBarAction(
                   label: 'Send',

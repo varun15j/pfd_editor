@@ -238,6 +238,9 @@ Future<void> importWordFile(BuildContext context, WidgetRef ref) async {
       ..showSnackBar(
         SnackBar(
           content: Text('Saved ${saved.name}.pdf'),
+          // With an action it would stay up until dismissed, over the
+          // next screen too.
+          persist: false,
           action: context.mounted
               ? SnackBarAction(
                   label: 'Send',
