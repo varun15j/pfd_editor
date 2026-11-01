@@ -20,6 +20,7 @@ import '../../export/xlsx_writer.dart';
 import '../../ui/upgrade_dialog.dart';
 import '../pages/scan_actions.dart';
 import '../share/pdf_sharer.dart';
+import '../../ui/luma_icons.dart';
 
 /// Tools > Table to Excel: one photo of a table, read on the device, checked
 /// on screen and saved as an Excel (.xlsx) file. Gold only. Nothing leaves
@@ -138,12 +139,12 @@ Future<ScanSource?> _askSource(BuildContext context) => showModalBottomSheet<Sca
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.photo_camera_outlined),
+            leading: const Icon(LumaIcons.camera),
             title: const Text('Take a photo'),
             onTap: () => Navigator.pop(sheetContext, ScanSource.camera),
           ),
           ListTile(
-            leading: const Icon(Icons.photo_library_outlined),
+            leading: const Icon(LumaIcons.gallery),
             title: const Text('Choose a photo'),
             onTap: () => Navigator.pop(sheetContext, ScanSource.gallery),
           ),
@@ -230,7 +231,7 @@ class _TablePreviewScreenState extends ConsumerState<TablePreviewScreen> {
         title: const Text('Check the table'),
         actions: [
           if (widget.photoPath != null)
-            IconButton(tooltip: 'Show the photo', icon: const Icon(Icons.image_outlined), onPressed: _showPhoto),
+            IconButton(tooltip: 'Show the photo', icon: const Icon(LumaIcons.image), onPressed: _showPhoto),
         ],
       ),
       body: Column(
@@ -290,7 +291,7 @@ class _TablePreviewScreenState extends ConsumerState<TablePreviewScreen> {
               padding: const EdgeInsets.fromLTRB(Space.page, Space.md, Space.page, Space.md),
               child: FilledButton.icon(
                 onPressed: _saving ? null : _save,
-                icon: const Icon(Icons.table_chart_outlined),
+                icon: const Icon(LumaIcons.table),
                 label: Text(_saving ? 'Saving' : 'Save as Excel'),
               ),
             ),
@@ -396,21 +397,21 @@ class ExcelSavedSheet extends ConsumerWidget {
             const SizedBox(height: 8),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.open_in_new),
+              leading: const Icon(LumaIcons.openExternal),
               title: const Text('Open in Excel'),
               onTap: () => _open(context),
             ),
             Builder(
               builder: (tileContext) => ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.ios_share),
+                leading: const Icon(LumaIcons.share),
                 title: const Text('Share'),
                 onTap: () => _share(context, ref, tileContext),
               ),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.folder_outlined),
+              leading: const Icon(LumaIcons.folder),
               title: const Text('Save to Documents folder'),
               subtitle: const Text('Choose Documents in the save dialog'),
               onTap: () => _saveToDocuments(context),

@@ -20,6 +20,7 @@ import 'page_image.dart';
 import 'page_single_view.dart';
 import 'scan_actions.dart';
 import 'scan_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// Draft review screen (S08 Pages): every captured page, in order, with
 /// crop, rotate, filter and delete actions, plus add-more and export.
@@ -90,7 +91,7 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
           if (pages.isNotEmpty) ...[
             IconButton(
               tooltip: 'Batch edit',
-              icon: const Icon(Icons.library_add_check_outlined),
+              icon: const Icon(LumaIcons.batchEdit),
               onPressed: state.busy
                   ? null
                   : () =>
@@ -98,19 +99,19 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
             ),
             IconButton(
               tooltip: 'Undo',
-              icon: const Icon(Icons.undo),
+              icon: const Icon(LumaIcons.undo),
               onPressed: state.canUndo ? controller.undo : null,
             ),
             IconButton(
               tooltip: 'Redo',
-              icon: const Icon(Icons.redo),
+              icon: const Icon(LumaIcons.redo),
               onPressed: state.canRedo ? controller.redo : null,
             ),
           ],
           if (pages.isNotEmpty)
             IconButton(
               tooltip: 'Delete scan',
-              icon: const Icon(Icons.delete_outline),
+              icon: const Icon(LumaIcons.delete),
               onPressed: () => _confirmDelete(context, ref, name ?? 'this scan'),
             ),
         ],
@@ -164,7 +165,7 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
                       child: OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
                         onPressed: state.busy ? null : () => showAddPagesSheet(context, ref),
-                        icon: const Icon(Icons.add_a_photo_outlined),
+                        icon: const Icon(LumaIcons.addPhoto),
                         label: const Text('Add pages'),
                       ),
                     ),
@@ -172,7 +173,7 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
                     Expanded(
                       child: FilledButton.icon(
                         onPressed: state.busy ? null : () => showExportChoice(context, ref),
-                        icon: const Icon(Icons.ios_share),
+                        icon: const Icon(LumaIcons.share),
                         label: const Text('Export'),
                       ),
                     ),
@@ -203,9 +204,9 @@ class _PagesScreenState extends ConsumerState<PagesScreen> {
 
 /// How the Pages screen lays out the draft's pages.
 enum PagesLayout {
-  list('List view', Icons.view_list_outlined),
-  gallery('Gallery view', Icons.grid_view_outlined),
-  page('Page view', Icons.crop_portrait_outlined);
+  list('List view', LumaIcons.listView),
+  gallery('Gallery view', LumaIcons.gridView),
+  page('Page view', LumaIcons.pageView);
 
   const PagesLayout(this.label, this.icon);
 
@@ -263,7 +264,7 @@ class _EmptyState extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(Icons.document_scanner_outlined, color: LumaColors.of(context).onAccent, size: 40),
+                  Icon(LumaIcons.scan, color: LumaColors.of(context).onAccent, size: 40),
                 ],
               ),
             ),
@@ -273,7 +274,7 @@ class _EmptyState extends StatelessWidget {
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
           onPressed: busy ? null : () => onScan(ScanSource.gallery),
-          icon: const Icon(Icons.photo_library_outlined),
+          icon: const Icon(LumaIcons.gallery),
           label: const Text('Import from photos'),
         ),
         const SizedBox(height: 12),
@@ -281,7 +282,7 @@ class _EmptyState extends StatelessWidget {
           builder: (context, ref, _) => OutlinedButton.icon(
             style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(52)),
             onPressed: busy ? null : () => pickAndEditPdf(context, ref),
-            icon: const Icon(Icons.edit_document),
+            icon: const Icon(LumaIcons.editPdf),
             label: const Text('Edit a PDF'),
           ),
         ),
@@ -354,19 +355,19 @@ class _PageCard extends ConsumerWidget {
                       children: [
                         IconButton(
                           tooltip: 'Crop',
-                          icon: const Icon(Icons.crop),
+                          icon: const Icon(LumaIcons.crop),
                           onPressed: () =>
                               Navigator.of(context)
                                   .push(MaterialPageRoute<void>(builder: (_) => CropScreen(pageId: page.id))),
                         ),
                         IconButton(
                           tooltip: 'Rotate',
-                          icon: const Icon(Icons.rotate_right),
+                          icon: const Icon(LumaIcons.rotateRight),
                           onPressed: () => rotatePage(context, ref, page),
                         ),
                         IconButton(
                           tooltip: 'Delete page',
-                          icon: const Icon(Icons.delete_outline),
+                          icon: const Icon(LumaIcons.delete),
                           onPressed: () => runPageAction(context, ref, PageAction.delete, page, index),
                         ),
                       ],
@@ -376,7 +377,7 @@ class _PageCard extends ConsumerWidget {
               ),
               ReorderableDragStartListener(
                 index: index,
-                child: const Padding(padding: EdgeInsets.all(8), child: Icon(Icons.drag_handle)),
+                child: const Padding(padding: EdgeInsets.all(8), child: Icon(LumaIcons.dragHandle)),
               ),
             ],
           ),

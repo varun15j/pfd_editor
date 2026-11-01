@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen widget: the green Scan button, as the camera button in the app. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#FF34C759"/>
+    <corners android:radius="18dp"/>
+</shape>

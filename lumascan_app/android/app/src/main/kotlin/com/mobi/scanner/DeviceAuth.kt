@@ -69,9 +69,10 @@ class DeviceAuth(private val activity: Activity) {
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) = finish(
                     when (errorCode) {
+                        // No negative button is set: the device credential
+                        // option takes its place.
                         BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED,
-                        BiometricPrompt.BIOMETRIC_ERROR_CANCELED,
-                        BiometricPrompt.BIOMETRIC_ERROR_NEGATIVE_BUTTON -> "cancelled"
+                        BiometricPrompt.BIOMETRIC_ERROR_CANCELED -> "cancelled"
                         BiometricPrompt.BIOMETRIC_ERROR_NO_DEVICE_CREDENTIAL -> "unavailable"
                         else -> "failed"
                     },

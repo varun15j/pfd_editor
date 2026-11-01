@@ -8,6 +8,7 @@ import '../../app/app_info.dart';
 import '../../export/pdf_lock/pdf_locker.dart';
 import '../../ui/file_size.dart';
 import 'pdf_sharer.dart';
+import '../../ui/luma_icons.dart';
 
 /// Asks for a password and makes a locked copy of a saved PDF, then offers
 /// to send it (Pro and Gold). The saved PDF is never changed.
@@ -145,7 +146,7 @@ class _LockPdfSheetState extends ConsumerState<LockPdfSheet> {
                 Builder(
                   builder: (buttonContext) => FilledButton.icon(
                     onPressed: () => _send(buttonContext),
-                    icon: const Icon(Icons.ios_share),
+                    icon: const Icon(LumaIcons.share),
                     label: const Text('Send'),
                   ),
                 ),
@@ -174,7 +175,7 @@ class _LockPdfSheetState extends ConsumerState<LockPdfSheet> {
                     errorText: _tried ? _passwordError : null,
                     suffixIcon: IconButton(
                       tooltip: _show ? 'Hide password' : 'Show password',
-                      icon: Icon(_show ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                      icon: Icon(_show ? LumaIcons.hide : LumaIcons.show),
                       onPressed: () => setState(() => _show = !_show),
                     ),
                   ),
@@ -199,7 +200,7 @@ class _LockPdfSheetState extends ConsumerState<LockPdfSheet> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.info_outline, size: 18, color: scheme.onSurfaceVariant),
+                    Icon(LumaIcons.info, size: 18, color: scheme.onSurfaceVariant),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -218,7 +219,7 @@ class _LockPdfSheetState extends ConsumerState<LockPdfSheet> {
                 ],
                 FilledButton.icon(
                   onPressed: _locking ? null : _lock,
-                  icon: const Icon(Icons.lock_outline),
+                  icon: const Icon(LumaIcons.password),
                   label: Text(_locking ? 'Locking…' : 'Lock PDF'),
                 ),
               ],

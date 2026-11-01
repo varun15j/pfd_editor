@@ -4,12 +4,16 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../domain/models.dart';
+import '../../domain/plan.dart';
 import '../../imaging/page_renderer.dart';
+import '../../ui/upgrade_dialog.dart';
 import '../pages/marks_notice.dart';
 import '../pages/scan_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// Where a page sits in a guided crop queue: [index] counts from 0.
 @immutable
@@ -64,6 +68,9 @@ class _CropScreenState extends ConsumerState<CropScreen> {
   final _viewerKey = GlobalKey();
   late CropQuad _quad;
   late final CropQuad _initialQuad;
+
+  /// Book page fix: flatten the curve and remove fingers (Pro).
+  late bool _bookFix;
   late final Future<RenderedImage> _source;
   late final Future<CropQuad?> _detected;
   late final String _originalPath;
@@ -78,6 +85,7 @@ class _CropScreenState extends ConsumerState<CropScreen> {
     final page = ref.read(scanControllerProvider).pageById(widget.pageId)!;
     _quad = page.recipe.crop;
     _initialQuad = _quad;
+    _bookFix = page.recipe.bookFix;
     _originalPath = page.originalPath;
     _source = ref.read(renderServiceProvider).source(page);
     // Looked up once, so Reset can answer straight away.
@@ -118,13 +126,18 @@ class _CropScreenState extends ConsumerState<CropScreen> {
     }
     final controller = ref.read(scanControllerProvider.notifier);
     final page = ref.read(scanControllerProvider).pageById(widget.pageId);
-    if (page != null && page.recipe.crop != _quad) {
-      final next = page.recipe.copyWith(crop: _quad);
+    if (page != null && (page.recipe.crop != _quad || page.recipe.bookFix != _bookFix)) {
+      final next = page.recipe.copyWith(crop: _quad, bookFix: _bookFix);
       final dropsMarks = controller.dropsMarks(page.id, next);
       controller.updateRecipe(page.id, next);
       if (dropsMarks) showMarksRemovedNotice(context, controller);
     }
     Navigator.of(context).pop(widget.step == null ? null : CropStepResult.applied);
+  }
+
+  Future<void> _toggleBookFix() async {
+    if (!_bookFix && !await ensurePlan(context, ref, PlanFeature.bookFix, what: 'Flatten book page')) return;
+    if (mounted) setState(() => _bookFix = !_bookFix);
   }
 
   void _moveCorner(int i, Offset delta, Size size) {
@@ -253,20 +266,38 @@ class _CropScreenState extends ConsumerState<CropScreen> {
                     TextButton.icon(
                       style: TextButton.styleFrom(foregroundColor: Colors.white, minimumSize: const Size(48, 48)),
                       onPressed: _resetToDetected,
-                      icon: const Icon(Icons.auto_fix_high),
+                      icon: const Icon(LumaIcons.enhance),
                       label: const Text('Reset to detected'),
                     ),
                     TextButton.icon(
                       style: TextButton.styleFrom(foregroundColor: Colors.white, minimumSize: const Size(48, 48)),
                       onPressed: () => setState(() => _quad = CropQuad.full),
-                      icon: const Icon(Icons.crop_free),
+                      icon: const Icon(LumaIcons.fullPage),
                       label: const Text('Full page'),
+                    ),
+                    Semantics(
+                      toggled: _bookFix,
+                      child: TextButton.icon(
+                        style: TextButton.styleFrom(
+                          foregroundColor: _bookFix ? Theme.of(context).colorScheme.primary : Colors.white,
+                          minimumSize: const Size(48, 48),
+                        ),
+                        onPressed: _toggleBookFix,
+                        icon: Icon(
+                          _bookFix
+                              ? LumaIcons.selected
+                              : ref.watch(planIncludesProvider(PlanFeature.bookFix))
+                              ? LumaIcons.book
+                              : LumaIcons.proBadge,
+                        ),
+                        label: const Text('Flatten book page'),
+                      ),
                     ),
                     if (step != null)
                       TextButton.icon(
                         style: TextButton.styleFrom(foregroundColor: Colors.white, minimumSize: const Size(48, 48)),
                         onPressed: () => setState(() => _quad = _initialQuad),
-                        icon: const Icon(Icons.restore),
+                        icon: const Icon(LumaIcons.reset),
                         label: const Text('Reset'),
                       ),
                   ],

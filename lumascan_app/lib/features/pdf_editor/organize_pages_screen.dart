@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../pdf_edit/annotations.dart';
 import '../../pdf_edit/pdf_edit_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// Reorder and delete pages. Drag the handle to reorder; Move up and Move
 /// down give the same result without dragging (PDF-02 accessibility).
@@ -22,7 +23,7 @@ class OrganizePagesScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text('${pages.length} page${pages.length == 1 ? '' : 's'}'),
         actions: [
-          if (state.canUndo) IconButton(tooltip: 'Undo', icon: const Icon(Icons.undo), onPressed: controller.undo),
+          if (state.canUndo) IconButton(tooltip: 'Undo', icon: const Icon(LumaIcons.undo), onPressed: controller.undo),
         ],
       ),
       body: ReorderableListView.builder(
@@ -85,7 +86,7 @@ class OrganizePagesScreen extends ConsumerWidget {
                       index: i,
                       child: const Padding(
                         padding: EdgeInsets.all(8),
-                        child: Icon(Icons.drag_handle, semanticLabel: 'Drag to reorder'),
+                        child: Icon(LumaIcons.dragHandle, semanticLabel: 'Drag to reorder'),
                       ),
                     ),
                   ],

@@ -8,6 +8,7 @@ import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../domain/photo_import.dart';
 import '../pages/scan_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// Picks photos, lets the user set their order, and adds them to the end of
 /// the draft. Returns true when pages were added.
@@ -200,7 +201,7 @@ class _PhotoTile extends StatelessWidget {
                   cacheWidth: 320,
                   errorBuilder: (_, _, _) => ColoredBox(
                     color: c.surfaceRaised,
-                    child: Icon(Icons.broken_image_outlined, color: c.muted),
+                    child: Icon(LumaIcons.brokenImage, color: c.muted),
                   ),
                 ),
               ),

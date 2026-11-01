@@ -30,7 +30,7 @@ The five that matter most in India, where LumaScan can be better than every lega
 | 6 | Signature library (built 2026-10-27) | Signatures and initials saved once and reused, instead of drawing each time. Also a date and name stamp. Built as a Sign sheet in the PDF editor and Markup; drawing a one-off signature stays free. | M | Pro |
 | 7 | Auto file naming (built 2026-10-27) | A name suggested from the text on the page (invoice number, date, title), instead of "Scan 2026-10-26". Genius Scan calls it smart rename. Built as a suggestion in the Save sheet, see [plans.md](plans.md). | M | Pro |
 | 8 | Searchable library (built 2026-10-27) | Search inside the text of saved documents, not only their names, folders and tags. Needs OCR text kept in the index. | M | Pro |
-| 9 | Book mode, finished | Curve flattening and finger removal for photographed books. The two-page split exists; pages photographed from a thick book still curve. | L | Pro |
+| 9 | Book mode, finished (built 2026-10-27) | Curve flattening and finger removal for photographed books. The two-page split exists; pages photographed from a thick book still curve. | L | Pro |
 | 10 | Table and form extraction | A table on a page becomes a real table, exported to Excel or CSV. Adobe and CamScanner both sell this. | L | Gold |
 | 11 | Receipt mode | Receipts read into a list with date, merchant and amount, exported as a spreadsheet for expenses. | L | Gold |
 | 12 | Cloud backup and sync | Documents backed up and the library shared across devices, with share links. Needs the P1 backend; today cloud accounts are import and export only. | XL | Gold |
@@ -42,7 +42,7 @@ The five that matter most in India, where LumaScan can be better than every lega
 | # | Feature | What it is | Effort | Plan |
 | --- | --- | --- | --- | --- |
 | 15 | Redact text, not just cover it | Masking (built 2026-10-26) covers a region; redaction would also delete the text behind it in a PDF that has real text. | M | Pro |
-| 16 | Widget and quick actions | A home-screen widget and a long-press shortcut that open the camera straight away. | S | Basic (free) |
+| 16 | Widget and quick actions (built 2026-10-27, see [widget-and-shortcuts.md](widget-and-shortcuts.md)) | A home-screen widget and a long-press shortcut that open the camera straight away. | S | Basic (free) |
 | 17 | Share a scan as a link | A link instead of a file, so WhatsApp does not re-compress it. Needs the backend. | XL | Gold |
 | 18 | Print | Print straight from the app through the system print service. | S | Basic (free) |
 | 19 | Sort and bulk actions in the library | Multi-select for move, tag, delete and share; sort by size and by page count. | S | Basic (free) |

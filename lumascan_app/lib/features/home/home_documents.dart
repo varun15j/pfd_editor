@@ -12,6 +12,7 @@ import '../library/document_tile.dart';
 import '../library/library_actions.dart';
 import '../pages/page_image.dart';
 import '../pages/scan_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// One document on Home: a scan kept as page images (the one on screen or an
 /// earlier one), or a saved PDF.
@@ -266,7 +267,7 @@ class _HomeDocRow extends StatelessWidget {
                       const SizedBox(height: Space.xs),
                       Row(
                         children: [
-                          Icon(Icons.file_copy_outlined, size: 16, color: c.muted),
+                          Icon(LumaIcons.extract, size: 16, color: c.muted),
                           const SizedBox(width: Space.xs),
                           Text('${d.pageCount}', style: text.bodyMedium?.copyWith(color: c.muted)),
                         ],
@@ -309,11 +310,11 @@ class _ScanMenu extends ConsumerWidget {
       itemBuilder: (_) => const [
         PopupMenuItem(
           value: _ScanAction.rename,
-          child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Rename')),
+          child: ListTile(leading: Icon(LumaIcons.rename), title: Text('Rename')),
         ),
         PopupMenuItem(
           value: _ScanAction.delete,
-          child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Delete')),
+          child: ListTile(leading: Icon(LumaIcons.delete), title: Text('Delete')),
         ),
       ],
     );

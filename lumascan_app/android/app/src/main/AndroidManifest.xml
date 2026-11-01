@@ -52,6 +52,18 @@
                 <data android:mimeType="image/*"/>
             </intent-filter>
         </activity>
+        <!-- Home-screen widget: Scan and Import in one tap (improvement.md #16). -->
+        <receiver
+            android:name=".ScanWidget"
+            android:exported="false"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/scan_widget_info"/>
+        </receiver>
         <!-- Cold-restarts the app when its window never gets a frame (UX-10).
              Runs in its own process so it can kill the stuck one. -->
         <activity

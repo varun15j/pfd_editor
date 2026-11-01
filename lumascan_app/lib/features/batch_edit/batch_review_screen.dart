@@ -13,6 +13,7 @@ import 'batch_action_bar.dart';
 import 'batch_action_runner.dart';
 import 'batch_completion.dart';
 import 'batch_selection.dart';
+import '../../ui/luma_icons.dart';
 
 /// Batch Review (BE-02, US-03.5): every page of the draft in a two-column
 /// grid. Tap pages to pick which ones the batch actions apply to. All pages
@@ -152,7 +153,7 @@ class _SelectionRow extends StatelessWidget {
           ),
           IconButton(
             tooltip: 'Add pages',
-            icon: const Icon(Icons.add_a_photo_outlined),
+            icon: const Icon(LumaIcons.addPhoto),
             onPressed: busy ? null : onAddPages,
           ),
         ],
@@ -222,7 +223,7 @@ class BatchPageTile extends StatelessWidget {
                       ),
                       padding: const EdgeInsets.all(2),
                       child: Icon(
-                        selected ? Icons.check : Icons.circle_outlined,
+                        selected ? LumaIcons.check : LumaIcons.unselected,
                         size: 18,
                         color: selected ? colors.onAccent : Colors.transparent,
                       ),

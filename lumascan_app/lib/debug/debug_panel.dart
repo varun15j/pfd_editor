@@ -8,6 +8,7 @@ import 'profile_sample.dart';
 import 'profiling_report_screen.dart';
 import 'sample_pages.dart';
 import 'sample_pages_tile.dart';
+import '../ui/luma_icons.dart';
 
 /// The app's navigator, so the debug panel (which sits above every route) can
 /// open the profiling report.
@@ -123,7 +124,7 @@ class DebugPanel extends StatelessWidget {
                 ListTile(
                   title: Text('Debug', style: Theme.of(context).textTheme.titleLarge),
                   subtitle: const Text('Debug builds only'),
-                  trailing: IconButton(icon: const Icon(Icons.close), tooltip: 'Close', onPressed: onClose),
+                  trailing: IconButton(icon: const Icon(LumaIcons.close), tooltip: 'Close', onPressed: onClose),
                 ),
                 const Divider(),
                 const PlanSwitcherTile(),
@@ -173,7 +174,7 @@ class DebugPanel extends StatelessWidget {
                 const Divider(),
                 if (profiler.location != null)
                   ListTile(
-                    leading: Icon(profiler.keptAfterUninstall ? Icons.folder_shared_outlined : Icons.folder_outlined),
+                    leading: Icon(profiler.keptAfterUninstall ? LumaIcons.sharedFolder : LumaIcons.folder),
                     title: Text(
                       profiler.keptAfterUninstall ? 'Data is kept after uninstall' : 'Keep data after uninstall',
                     ),
@@ -195,7 +196,7 @@ class DebugPanel extends StatelessWidget {
                           },
                   ),
                 ListTile(
-                  leading: const Icon(Icons.analytics_outlined),
+                  leading: const Icon(LumaIcons.analytics),
                   title: const Text('Open profiling report'),
                   onTap: () {
                     onClose();
@@ -205,7 +206,7 @@ class DebugPanel extends StatelessWidget {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.delete_outline),
+                  leading: const Icon(LumaIcons.delete),
                   title: const Text('Clear profiling data'),
                   onTap: profiler.clear,
                 ),

@@ -9,6 +9,7 @@ import '../../pdf_edit/pdf_edit_controller.dart';
 import '../../pdf_edit/pdf_saver.dart';
 import '../library/library_controller.dart';
 import '../share/send_pdf_sheet.dart';
+import '../../ui/luma_icons.dart';
 
 Future<void> showSavePdfSheet(BuildContext context) => showModalBottomSheet<void>(
   context: context,
@@ -116,7 +117,7 @@ class _SavePdfSheetState extends ConsumerState<SavePdfSheet> {
                 Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
               ],
               const SizedBox(height: 16),
-              FilledButton.icon(onPressed: _send, icon: const Icon(Icons.ios_share), label: const Text('Send')),
+              FilledButton.icon(onPressed: _send, icon: const Icon(LumaIcons.share), label: const Text('Send')),
               const SizedBox(height: 8),
               TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
             ] else ...[
@@ -149,7 +150,7 @@ class _SavePdfSheetState extends ConsumerState<SavePdfSheet> {
                 const SizedBox(height: 8),
                 Text('Saving pages…', style: textTheme.bodySmall, textAlign: TextAlign.center),
               ] else
-                FilledButton.icon(onPressed: _save, icon: const Icon(Icons.save_alt), label: const Text('Save PDF')),
+                FilledButton.icon(onPressed: _save, icon: const Icon(LumaIcons.save), label: const Text('Save PDF')),
               if (_error != null) ...[
                 const SizedBox(height: 12),
                 Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),

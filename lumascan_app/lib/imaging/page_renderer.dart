@@ -7,6 +7,7 @@ import 'package:image/image.dart' as img;
 
 import '../domain/models.dart';
 import '../pdf_edit/annotations.dart';
+import 'book_fix.dart';
 import 'filters.dart';
 import 'geometry.dart';
 import 'masking.dart';
@@ -14,7 +15,7 @@ import 'rgb_image.dart';
 import 'stage_times.dart';
 
 /// Render pipeline from LLD section 7:
-/// decode → orientation → perspective warp → quarter turns → filter →
+/// decode → orientation → perspective warp → book page fix → quarter turns → filter →
 /// brightness and contrast → masks → encode.
 ///
 /// [masks] are burned into the pixels last (see [burnMasks]). Exports, OCR
@@ -31,7 +32,9 @@ RgbImage renderRecipe(
 }) {
   final t = times ?? StageTimes();
   var image = RgbImage.decode(original, maxDimension: maxDimension, times: t);
-  image = t.time('crop', () => rotateQuarterTurns(warpPerspective(image, recipe.crop), recipe.quarterTurns));
+  image = t.time('crop', () => warpPerspective(image, recipe.crop));
+  if (recipe.bookFix) image = t.time('book', () => fixBookPage(image));
+  image = t.time('crop', () => rotateQuarterTurns(image, recipe.quarterTurns));
   image = t.time('filter', () => applyFilter(image, recipe.filter));
   image = t.time(
     'adjust',

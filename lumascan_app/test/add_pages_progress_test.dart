@@ -18,6 +18,7 @@ import 'support/fake_batch_camera.dart';
 import 'support/fake_photos.dart';
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
+import 'package:lumascan/ui/luma_icons.dart';
 
 /// Analyses a photo only when the test lets it, so the state in the middle of
 /// an import can be looked at. A name listed in [unreadable] fails.
@@ -202,7 +203,7 @@ void main() {
             .value,
         0.5,
       );
-      expect(find.byIcon(Icons.check_circle), findsNWidgets(2));
+      expect(find.byIcon(LumaIcons.selected), findsNWidgets(2));
       expect(find.byType(CircularProgressIndicator), findsOneWidget, reason: 'the page being worked on');
 
       await step(tester);

@@ -11,10 +11,11 @@ import '../features/pages/scan_actions.dart';
 import '../features/pages/scan_controller.dart';
 import '../features/tools/tools_screen.dart';
 import 'theme.dart';
+import '../ui/luma_icons.dart';
 
 enum AppTab {
-  docs('Docs', Icons.description_outlined, Icons.description),
-  tools('Tools', Icons.widgets_outlined, Icons.widgets);
+  docs('Docs', LumaIcons.docsTab, LumaIcons.documentSelected),
+  tools('Tools', LumaIcons.tools, LumaIcons.toolsSelected);
 
   const AppTab(this.label, this.icon, this.selectedIcon);
 
@@ -53,7 +54,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           backgroundColor: LumaColors.scan,
           foregroundColor: LumaColors.onScan,
           onPressed: busy ? null : () => scanThenReview(context, ref, ScanSource.camera),
-          child: const Icon(Icons.photo_camera, size: 30),
+          child: const Icon(LumaIcons.cameraFilled, size: 30),
         ),
       ),
       bottomNavigationBar: _BottomBar(selected: _tab, onSelect: _select),

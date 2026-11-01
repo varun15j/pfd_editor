@@ -12,6 +12,7 @@ import '../../pdf_edit/pdf_edit_controller.dart';
 import '../../ui/file_size.dart';
 import '../library/library_controller.dart';
 import '../share/send_pdf_sheet.dart';
+import '../../ui/luma_icons.dart';
 
 final pdfSplitterProvider = Provider<PdfSplitter>(
   (ref) => PdfSplitter(ref.watch(pageStoreProvider), ref.watch(pdfRasterizerProvider)),
@@ -167,13 +168,13 @@ class _SplitScreenState extends ConsumerState<SplitScreen> {
                   ButtonSegment(
                     value: SplitMode.split,
                     label: const Text('Split'),
-                    icon: const Icon(Icons.call_split),
+                    icon: const Icon(LumaIcons.split),
                     enabled: _pageCount > 1,
                   ),
                   const ButtonSegment(
                     value: SplitMode.extract,
                     label: Text('Extract'),
-                    icon: Icon(Icons.file_copy_outlined),
+                    icon: Icon(LumaIcons.extract),
                   ),
                 ],
                 selected: {_mode},
@@ -236,7 +237,7 @@ class _SplitScreenState extends ConsumerState<SplitScreen> {
                   IconButton.outlined(
                     tooltip: 'Fewer pages per file',
                     onPressed: _busy || _every <= 1 ? null : () => setState(() => _every--),
-                    icon: const Icon(Icons.remove),
+                    icon: const Icon(LumaIcons.remove),
                   ),
                   Expanded(
                     child: Text(
@@ -248,7 +249,7 @@ class _SplitScreenState extends ConsumerState<SplitScreen> {
                   IconButton.outlined(
                     tooltip: 'More pages per file',
                     onPressed: _busy || _every >= _pageCount - 1 ? null : () => setState(() => _every++),
-                    icon: const Icon(Icons.add),
+                    icon: const Icon(LumaIcons.add),
                   ),
                 ],
               ),
@@ -282,7 +283,7 @@ class _SplitScreenState extends ConsumerState<SplitScreen> {
           ListTile(
             dense: true,
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.picture_as_pdf_outlined),
+            leading: const Icon(LumaIcons.pdf),
             title: Text('${part.name}.pdf', maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: Text(
               'Page${part.pages.length == 1 ? '' : 's'} ${describePages(part.pages)}',
@@ -355,7 +356,7 @@ class _SplitScreenState extends ConsumerState<SplitScreen> {
           for (final (file, pages) in saved)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.picture_as_pdf_outlined),
+              leading: const Icon(LumaIcons.pdf),
               title: Text(p.basename(file.path), maxLines: 2, overflow: TextOverflow.ellipsis),
               subtitle: Text(
                 '$pages page${pages == 1 ? '' : 's'}'
@@ -363,7 +364,7 @@ class _SplitScreenState extends ConsumerState<SplitScreen> {
               ),
               trailing: IconButton(
                 tooltip: 'Send ${p.basename(file.path)}',
-                icon: const Icon(Icons.ios_share),
+                icon: const Icon(LumaIcons.share),
                 onPressed: () =>
                     showSendPdfSheet(context, pdfPath: file.path, name: p.basename(file.path), pageCount: pages),
               ),
@@ -405,7 +406,7 @@ class SplitLibraryPickScreen extends ConsumerWidget {
               children: [
                 for (final doc in docs)
                   ListTile(
-                    leading: const Icon(Icons.picture_as_pdf_outlined),
+                    leading: const Icon(LumaIcons.pdf),
                     title: Text(doc.name, maxLines: 2, overflow: TextOverflow.ellipsis),
                     subtitle: Text('${doc.pageCount} page${doc.pageCount == 1 ? '' : 's'}'),
                     onTap: () => Navigator.of(context).pop(doc),

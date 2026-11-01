@@ -8,6 +8,7 @@ import '../../domain/models.dart';
 import '../pages/scan_controller.dart';
 import 'id_card_capture_screen.dart';
 import 'id_card_session.dart';
+import '../../ui/luma_icons.dart';
 
 /// Opens ID card mode at the type picker (ID-01: the Tools and Create
 /// shortcut goes here, never to the plain document camera).
@@ -133,9 +134,9 @@ class _TypeChoice extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = LumaColors.of(context);
     final icon = switch (type) {
-      IdCopyType.singleSide => Icons.credit_card,
-      IdCopyType.idCard => Icons.badge_outlined,
-      IdCopyType.passport => Icons.menu_book_outlined,
+      IdCopyType.singleSide => LumaIcons.creditCard,
+      IdCopyType.idCard => LumaIcons.idCard,
+      IdCopyType.passport => LumaIcons.book,
     };
     return Semantics(
       button: true,
@@ -236,7 +237,7 @@ class _SampleDocument extends StatelessWidget {
       aspectRatio: 0.8,
       child: Container(
         color: const Color(0xFFDCE3EA),
-        child: const FittedBox(child: Icon(Icons.person, color: ink)),
+        child: const FittedBox(child: Icon(LumaIcons.profile, color: ink)),
       ),
     );
     return Container(

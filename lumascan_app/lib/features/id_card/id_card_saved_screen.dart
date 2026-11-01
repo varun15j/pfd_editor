@@ -17,6 +17,7 @@ import '../pdf_editor/open_pdf.dart';
 import '../share/send_pdf_sheet.dart';
 import 'id_card_review_screen.dart';
 import 'id_card_session.dart';
+import '../../ui/luma_icons.dart';
 
 /// The saved copy (ID-08): every page of the document two to a row, the ID
 /// copy first as 01, then each side, then the dashed "Tap to add new pages"
@@ -99,13 +100,13 @@ class _IdCardSavedScreenState extends ConsumerState<IdCardSavedScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.badge_outlined),
+                leading: const Icon(LumaIcons.idCard),
                 title: const Text('ID copy page'),
                 subtitle: const Text('One page, ready to print'),
                 onTap: () => Navigator.pop(sheet, true),
               ),
               ListTile(
-                leading: const Icon(Icons.picture_as_pdf_outlined),
+                leading: const Icon(LumaIcons.pdf),
                 title: Text('All ${scan.pages.length} pages'),
                 subtitle: const Text('The copy and each side'),
                 onTap: () => Navigator.pop(sheet, false),
@@ -262,11 +263,11 @@ class _IdCardSavedScreenState extends ConsumerState<IdCardSavedScreen> {
             child: Row(
               children: [
                 for (final (icon, label, run) in <(IconData, String, VoidCallback)>[
-                  (Icons.add_photo_alternate_outlined, 'Add', () => showAddPagesSheet(context, ref)),
-                  (Icons.dashboard_outlined, 'Collage', () => setState(() => _collage = [])),
-                  (Icons.ios_share, 'Share', _share),
-                  (Icons.edit_document, 'Edit PDF', _editPdf),
-                  (Icons.more_horiz, 'More', _more),
+                  (LumaIcons.addImage, 'Add', () => showAddPagesSheet(context, ref)),
+                  (LumaIcons.collage, 'Collage', () => setState(() => _collage = [])),
+                  (LumaIcons.share, 'Share', _share),
+                  (LumaIcons.editPdf, 'Edit PDF', _editPdf),
+                  (LumaIcons.more, 'More', _more),
                 ])
                   Expanded(
                     child: CompactActionButton(
@@ -286,10 +287,10 @@ class _IdCardSavedScreenState extends ConsumerState<IdCardSavedScreen> {
 }
 
 enum _More {
-  export(Icons.download_outlined, 'Save as PDF, Word or JPG'),
-  pages(Icons.view_agenda_outlined, 'Open all pages'),
-  rename(Icons.drive_file_rename_outline, 'Rename'),
-  home(Icons.home_outlined, 'Done');
+  export(LumaIcons.download, 'Save as PDF, Word or JPG'),
+  pages(LumaIcons.organizePages, 'Open all pages'),
+  rename(LumaIcons.rename, 'Rename'),
+  home(LumaIcons.home, 'Done');
 
   const _More(this.icon, this.label);
 
@@ -346,7 +347,7 @@ class _PageTile extends StatelessWidget {
                           backgroundColor: picked ? LumaColors.scan : Colors.white,
                           child: picked
                               ? Text('$pickNumber', style: const TextStyle(color: Colors.white, fontSize: 13))
-                              : const Icon(Icons.circle_outlined, size: 22, color: Colors.black45),
+                              : const Icon(LumaIcons.unselected, size: 22, color: Colors.black45),
                         ),
                       ),
                   ],
@@ -383,7 +384,7 @@ class _AddTile extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.add, size: 36, color: c.muted),
+                Icon(LumaIcons.add, size: 36, color: c.muted),
                 const SizedBox(height: Space.xs),
                 Text('Tap to add new pages', textAlign: TextAlign.center, style: TextStyle(color: c.muted)),
               ],

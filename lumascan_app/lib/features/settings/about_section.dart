@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../app/app_info.dart';
 import '../../app/theme.dart';
 import 'help_screen.dart';
+import '../../ui/luma_icons.dart';
 
 /// Version of the installed app. Overridden in tests.
 final packageInfoProvider = FutureProvider<PackageInfo>((ref) => PackageInfo.fromPlatform());
@@ -26,30 +27,30 @@ class AboutSection extends ConsumerWidget {
         const SizedBox(height: Space.sm),
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.help_outline),
+          leading: const Icon(LumaIcons.help),
           title: const Text('Help'),
           subtitle: const Text('Tips for scanning, editing and sharing'),
-          trailing: const Icon(Icons.chevron_right),
+          trailing: const Icon(LumaIcons.next),
           onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const HelpScreen())),
         ),
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.shield_outlined),
+          leading: const Icon(LumaIcons.shield),
           title: const Text('Privacy'),
           subtitle: const Text('What stays on your device'),
-          trailing: const Icon(Icons.chevron_right),
+          trailing: const Icon(LumaIcons.next),
           onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PrivacyScreen())),
         ),
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.description_outlined),
+          leading: const Icon(LumaIcons.document),
           title: const Text('Open-source licences'),
-          trailing: const Icon(Icons.chevron_right),
+          trailing: const Icon(LumaIcons.next),
           onTap: () => showLicensePage(context: context, applicationName: appName, applicationVersion: version),
         ),
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.info_outline),
+          leading: const Icon(LumaIcons.info),
           title: const Text('About $appName'),
           subtitle: Text(
             version == null ? 'Version unavailable' : 'Version $version',

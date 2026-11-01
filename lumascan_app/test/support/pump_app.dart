@@ -8,6 +8,7 @@ import 'package:lumascan/data/app_settings_store.dart';
 import 'package:lumascan/data/document_text_store.dart';
 import 'package:lumascan/data/library_store.dart';
 import 'package:lumascan/data/ui_prefs_store.dart';
+import 'package:lumascan/domain/launch_action.dart';
 
 import 'memory_stores.dart';
 
@@ -21,6 +22,7 @@ Future<void> pumpApp(
   UiPrefsStore? prefs,
   AppSettingsStore? settings,
   DocumentTextStore? textStore,
+  LaunchActionSource launchActions = const NoLaunchActions(),
 }) async {
   tester.view.physicalSize = const Size(1080, 2340);
   tester.view.devicePixelRatio = 2.6;
@@ -35,6 +37,7 @@ Future<void> pumpApp(
         uiPrefsStoreProvider.overrideWithValue(prefs ?? MemoryUiPrefsStore()),
         appSettingsStoreProvider.overrideWithValue(settings ?? MemoryAppSettingsStore()),
         documentTextStoreProvider.overrideWithValue(textStore ?? MemoryDocumentTextStore()),
+        launchActionSourceProvider.overrideWithValue(launchActions),
         ...overrides,
       ],
       child: const LumaScanApp(),

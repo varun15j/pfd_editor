@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import 'scan_controller.dart';
+import '../../ui/luma_icons.dart';
 
 /// "Adding 7 of 20 pages" with a progress bar, shown at the top of the Pages
 /// screen while a scan or import is being saved.
@@ -71,13 +72,13 @@ class PagePlaceholder extends StatelessWidget {
         ),
         child: Center(
           child: switch (state) {
-            PlaceholderState.ready => Icon(Icons.check_circle, color: c.success),
+            PlaceholderState.ready => Icon(LumaIcons.selected, color: c.success),
             PlaceholderState.working => const SizedBox(
               width: 22,
               height: 22,
               child: CircularProgressIndicator(strokeWidth: 2.5),
             ),
-            PlaceholderState.waiting => Icon(Icons.description_outlined, color: c.muted),
+            PlaceholderState.waiting => Icon(LumaIcons.document, color: c.muted),
           },
         ),
       ),
