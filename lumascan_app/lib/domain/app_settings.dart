@@ -56,6 +56,18 @@ enum AutoCaptureSteadiness {
   final int frames;
 }
 
+/// How long the app may be away from the screen before the app lock asks
+/// again. Every cold start asks.
+enum AppLockDelay {
+  immediately('Immediately', Duration.zero),
+  oneMinute('After 1 minute', Duration(minutes: 1)),
+  fiveMinutes('After 5 minutes', Duration(minutes: 5));
+
+  const AppLockDelay(this.label, this.duration);
+  final String label;
+  final Duration duration;
+}
+
 /// Choices the user makes in Settings, kept on the device. Each field says in
 /// its comment whether changing it touches files that already exist.
 @immutable
@@ -74,6 +86,8 @@ class AppSettings {
     this.autoCaptureSteadiness = AutoCaptureSteadiness.normal,
     this.debugPlan,
     this.ocrLanguage = 'en',
+    this.appLock = false,
+    this.appLockDelay = AppLockDelay.oneMinute,
   });
 
   /// Looks only. Does not touch any file.
@@ -129,6 +143,14 @@ class AppSettings {
   /// Applies to the next read; text already recognised is kept.
   final String ocrLanguage;
 
+  /// Ask for fingerprint, face or the phone's PIN before the app shows
+  /// anything. Does not touch any file; saved PDFs open as before in other
+  /// apps.
+  final bool appLock;
+
+  /// How long the app may be in the background before the lock asks again.
+  final AppLockDelay appLockDelay;
+
   AppSettings copyWith({
     ThemeMode? themeMode,
     DocumentFilter? defaultFilter,
@@ -143,6 +165,8 @@ class AppSettings {
     AutoCaptureSteadiness? autoCaptureSteadiness,
     Object? debugPlan = _keep,
     String? ocrLanguage,
+    bool? appLock,
+    AppLockDelay? appLockDelay,
   }) => AppSettings(
     themeMode: themeMode ?? this.themeMode,
     defaultFilter: defaultFilter ?? this.defaultFilter,
@@ -157,6 +181,8 @@ class AppSettings {
     autoCaptureSteadiness: autoCaptureSteadiness ?? this.autoCaptureSteadiness,
     debugPlan: identical(debugPlan, _keep) ? this.debugPlan : debugPlan as AppPlan?,
     ocrLanguage: ocrLanguage ?? this.ocrLanguage,
+    appLock: appLock ?? this.appLock,
+    appLockDelay: appLockDelay ?? this.appLockDelay,
   );
 
   static const Object _keep = Object();
@@ -181,6 +207,8 @@ class AppSettings {
     'autoCaptureSteadiness': autoCaptureSteadiness.name,
     if (debugPlan != null) 'debugPlan': debugPlan!.name,
     'ocrLanguage': ocrLanguage,
+    'appLock': appLock,
+    'appLockDelay': appLockDelay.name,
   };
 
   /// Unknown or missing values fall back to the defaults, so a settings file
@@ -200,6 +228,8 @@ class AppSettings {
         AutoCaptureSteadiness.values.asNameMap()[json['autoCaptureSteadiness']] ?? AutoCaptureSteadiness.normal,
     debugPlan: AppPlan.values.asNameMap()[json['debugPlan']],
     ocrLanguage: OcrLanguage.byCode(json['ocrLanguage'] as String? ?? '')?.code ?? 'en',
+    appLock: json['appLock'] as bool? ?? false,
+    appLockDelay: AppLockDelay.values.asNameMap()[json['appLockDelay']] ?? AppLockDelay.oneMinute,
   );
 
   /// Files before 3 always held Date and time, the default then, chosen or
@@ -237,7 +267,9 @@ class AppSettings {
       other.captureHaptics == captureHaptics &&
       other.autoCaptureSteadiness == autoCaptureSteadiness &&
       other.debugPlan == debugPlan &&
-      other.ocrLanguage == ocrLanguage;
+      other.ocrLanguage == ocrLanguage &&
+      other.appLock == appLock &&
+      other.appLockDelay == appLockDelay;
 
   @override
   int get hashCode => Object.hash(
@@ -254,5 +286,7 @@ class AppSettings {
     autoCaptureSteadiness,
     debugPlan,
     ocrLanguage,
+    appLock,
+    appLockDelay,
   );
 }

@@ -66,6 +66,12 @@ enum PlanFeature {
   /// Send sheet.
   password(AppPlan.pro),
 
+  /// App lock: fingerprint or face, with the phone's PIN as the fallback,
+  /// before the app shows anything. Turning it on needs Pro; once on it
+  /// stays on until turned off, so documents are not left open if the plan
+  /// ends.
+  appLock(AppPlan.pro),
+
   /// Split a PDF into several by page ranges, or extract chosen pages into
   /// a new PDF. Offered in Tools and the Library menu; merging stays on
   /// every plan.
