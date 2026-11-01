@@ -8,6 +8,7 @@ import 'package:lumascan/app/app_info.dart';
 import 'package:lumascan/app/app_lock.dart';
 import 'package:lumascan/app/device_auth.dart';
 import 'package:lumascan/domain/app_settings.dart';
+import 'package:lumascan/domain/eula.dart';
 import 'package:lumascan/domain/plan.dart';
 import 'package:lumascan/features/cloud/accounts_screen.dart';
 
@@ -72,7 +73,7 @@ void main() {
   });
 
   testWidgets('without the lock the app opens straight away and never asks', (tester) async {
-    await pump(tester, const AppSettings(onboardingSeen: true));
+    await pump(tester, const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true));
     expect(find.byType(LockScreen), findsNothing);
     await leaveFor(tester, const Duration(hours: 1));
     expect(find.byType(LockScreen), findsNothing);
@@ -81,7 +82,7 @@ void main() {
 
   testWidgets('a locked app asks on opening and shows the app once it is the owner', (tester) async {
     auth.answers.add(DeviceAuthResult.cancelled);
-    await pump(tester, const AppSettings(onboardingSeen: true, appLock: true));
+    await pump(tester, const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, appLock: true));
     expect(find.text('$appName is locked'), findsOneWidget);
     expect(auth.reasons, hasLength(1), reason: 'the prompt opens by itself');
 
@@ -93,13 +94,13 @@ void main() {
 
   testWidgets('a failed check says so and stays locked', (tester) async {
     auth.answers.add(DeviceAuthResult.failed);
-    await pump(tester, const AppSettings(onboardingSeen: true, appLock: true));
+    await pump(tester, const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, appLock: true));
     expect(find.textContaining("Couldn't check it's you"), findsOneWidget);
     expect(find.byType(LockScreen), findsOneWidget);
   });
 
   testWidgets('locks again only after the chosen time in the background', (tester) async {
-    await pump(tester, const AppSettings(onboardingSeen: true, appLock: true));
+    await pump(tester, const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, appLock: true));
     expect(find.byType(LockScreen), findsNothing, reason: 'unlocked on opening');
 
     await leaveFor(tester, const Duration(seconds: 30));
@@ -111,14 +112,14 @@ void main() {
   });
 
   testWidgets('Immediately locks after any time away', (tester) async {
-    await pump(tester, const AppSettings(onboardingSeen: true, appLock: true, appLockDelay: AppLockDelay.immediately));
+    await pump(tester, const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, appLock: true, appLockDelay: AppLockDelay.immediately));
     auth.answers.add(DeviceAuthResult.cancelled);
     await leaveFor(tester, Duration.zero);
     expect(find.byType(LockScreen), findsOneWidget);
   });
 
   testWidgets('the back button does not close pages behind the lock screen', (tester) async {
-    await pump(tester, const AppSettings(onboardingSeen: true, appLock: true));
+    await pump(tester, const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, appLock: true));
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Accounts'));
@@ -139,7 +140,7 @@ void main() {
 
   testWidgets('a phone with no screen lock left turns the app lock off', (tester) async {
     auth.answers.add(DeviceAuthResult.unavailable);
-    final store = await pump(tester, const AppSettings(onboardingSeen: true, appLock: true));
+    final store = await pump(tester, const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, appLock: true));
     expect(find.byType(LockScreen), findsNothing);
     expect(store.settings.appLock, isFalse);
   });
@@ -155,7 +156,7 @@ void main() {
     }
 
     testWidgets('on Basic it offers the upgrade instead of turning on', (tester) async {
-      final store = await openSettings(tester, const AppSettings(onboardingSeen: true, debugPlan: AppPlan.basic));
+      final store = await openSettings(tester, const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, debugPlan: AppPlan.basic));
       await tester.tap(find.text('Lock with fingerprint or face'));
       await tester.pumpAndSettle();
       expect(find.text('Upgrade to Pro'), findsWidgets);
@@ -164,7 +165,7 @@ void main() {
     });
 
     testWidgets('on Pro it asks first, then turns on and offers the delay', (tester) async {
-      final store = await openSettings(tester, const AppSettings(onboardingSeen: true, debugPlan: AppPlan.pro));
+      final store = await openSettings(tester, const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, debugPlan: AppPlan.pro));
       await tester.tap(find.text('Lock with fingerprint or face'));
       await tester.pumpAndSettle();
       expect(auth.reasons, ['Confirm to turn on the app lock']);
@@ -181,7 +182,7 @@ void main() {
 
     testWidgets('a phone with no screen lock is told to set one', (tester) async {
       auth.available = false;
-      final store = await openSettings(tester, const AppSettings(onboardingSeen: true, debugPlan: AppPlan.pro));
+      final store = await openSettings(tester, const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, debugPlan: AppPlan.pro));
       await tester.tap(find.text('Lock with fingerprint or face'));
       await tester.pumpAndSettle();
       expect(find.textContaining('Set a screen lock'), findsOneWidget);
@@ -189,7 +190,7 @@ void main() {
     });
 
     testWidgets('turning off asks first, and stays on when cancelled', (tester) async {
-      final store = await openSettings(tester, const AppSettings(onboardingSeen: true, appLock: true));
+      final store = await openSettings(tester, const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true, appLock: true));
       auth.answers.add(DeviceAuthResult.cancelled);
       await tester.tap(find.text('Lock with fingerprint or face'));
       await tester.pumpAndSettle();
