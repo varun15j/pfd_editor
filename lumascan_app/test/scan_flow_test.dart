@@ -11,6 +11,7 @@ import 'package:lumascan/domain/scanner_service.dart';
 import 'package:lumascan/export/pdf_exporter.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 import 'package:path/path.dart' as path;
+import 'support/temp_dir.dart';
 
 class FakeScanner implements ScannerService {
   FakeScanner(this.next);
@@ -51,7 +52,7 @@ void main() {
 
   tearDown(() {
     container.dispose();
-    tmp.deleteSync(recursive: true);
+    deleteTemp(tmp);
   });
 
   ScanController controller() => container.read(scanControllerProvider.notifier);

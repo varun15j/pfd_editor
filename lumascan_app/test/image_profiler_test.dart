@@ -19,9 +19,11 @@ import 'package:lumascan/imaging/page_renderer.dart';
 import 'package:lumascan/imaging/render_queue.dart';
 import 'package:lumascan/imaging/render_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:path/path.dart' as p;
 
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
+import 'support/temp_dir.dart';
 
 ProfileSample _sample(
   ProfileKind kind,
@@ -103,7 +105,7 @@ void main() {
     late Directory tmp;
 
     setUp(() => tmp = Directory.systemTemp.createTempSync('profile_location'));
-    tearDown(() => tmp.deleteSync(recursive: true));
+    tearDown(() => deleteTemp(tmp));
 
     ProfileLocation location(String privateDir, {bool allow = true, bool android = true}) => ProfileLocation(
       sharedDir: allow ? '${tmp.path}/Documents/LumaScan/debug' : '${tmp.path}/blocked/LumaScan/debug',
@@ -115,16 +117,18 @@ void main() {
     test('without access the database stays inside the app', () async {
       File('${tmp.path}/blocked').writeAsStringSync('a file, so no folder can be made under it');
       final where = location('${tmp.path}/app1', allow: false);
-      expect(await where.resolve(), '${tmp.path}/app1/image_profile.db');
+      expect(await where.resolve(), p.join('${tmp.path}/app1', 'image_profile.db'));
       expect(await where.requestShared(), isFalse);
     });
 
     test('iOS keeps it inside the app', () async {
       final where = location('${tmp.path}/app1', android: false);
-      expect(await where.resolve(), '${tmp.path}/app1/image_profile.db');
+      expect(await where.resolve(), p.join('${tmp.path}/app1', 'image_profile.db'));
     });
 
-    test('moving to shared storage keeps what was recorded, and a reinstall finds it', () async {
+    test('moving to shared storage keeps what was recorded, and a reinstall finds it', skip: Platform.isWindows
+        ? 'Windows cannot move a database file that is still open; the phones this runs on can'
+        : false, () async {
       Directory('${tmp.path}/app1').createSync();
       // Recorded before access was given, inside the app.
       final blocked = location('${tmp.path}/app1', allow: false);
@@ -185,7 +189,7 @@ void main() {
 
   test('the render service reports each step of making a picture', () async {
     final tmp = Directory.systemTemp.createTempSync('profiled_render');
-    addTearDown(() => tmp.deleteSync(recursive: true));
+    addTearDown(() => deleteTemp(tmp));
     final store = PageStore(rootDir: () async => tmp);
     final source = File('${tmp.path}/photo.jpg')..writeAsBytesSync(img.encodeJpg(img.Image(width: 2000, height: 1500)));
     final page = ScanPage(

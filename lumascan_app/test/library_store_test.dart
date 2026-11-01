@@ -16,6 +16,7 @@ import 'package:lumascan/features/library/document_tile.dart';
 import 'package:lumascan/features/library/library_controller.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 import 'package:path/path.dart' as path;
+import 'support/temp_dir.dart';
 
 class FakeScanner implements ScannerService {
   FakeScanner(this.paths);
@@ -65,7 +66,7 @@ void main() {
     // Working copies made in the background after a scan may still be landing.
     for (var attempt = 0; ; attempt++) {
       try {
-        tmp.deleteSync(recursive: true);
+        deleteTemp(tmp);
         return;
       } on FileSystemException {
         if (attempt == 20) rethrow;
@@ -165,7 +166,7 @@ void main() {
       final controller = first.read(scanControllerProvider.notifier);
       await controller.scan(ScanSource.camera);
       await controller.draftSaved;
-      File(first.read(scanControllerProvider).pages[1].originalPath).deleteSync();
+      await deleteWhenFree(File(first.read(scanControllerProvider).pages[1].originalPath));
 
       final second = launch();
       await second.read(scanControllerProvider.notifier).draftSaved;

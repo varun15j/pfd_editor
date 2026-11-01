@@ -14,6 +14,7 @@ import 'package:lumascan/features/pages/scan_controller.dart';
 import 'support/fake_batch_camera.dart';
 import 'support/memory_stores.dart';
 import 'support/screen_harness.dart';
+import 'support/temp_dir.dart';
 
 /// A draft store whose saves wait for the test, and can fail.
 class _GatedDraftStore extends MemoryDraftStore {
@@ -73,7 +74,7 @@ void main() {
     late Directory shots;
     tearDown(() {
       harness.dispose();
-      shots.deleteSync(recursive: true);
+      deleteTemp(shots);
     });
 
     Future<void> openDone(WidgetTester tester) async {

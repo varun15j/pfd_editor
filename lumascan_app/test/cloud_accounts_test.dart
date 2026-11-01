@@ -22,6 +22,7 @@ import 'package:path/path.dart' as p;
 
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
+import 'support/temp_dir.dart';
 
 /// A cloud account held in memory: a folder tree of entries by parent id.
 class FakeCloudProvider extends CloudStorageProvider {
@@ -178,7 +179,7 @@ void main() {
 
     test('exports a Google Doc as PDF and downloads other files as they are', () async {
       final tmp = Directory.systemTemp.createTempSync('lumascan_drive');
-      addTearDown(() => tmp.deleteSync(recursive: true));
+      addTearDown(() => deleteTemp(tmp));
       final urls = <Uri>[];
       final client = MockClient((request) async {
         urls.add(request.url);
@@ -306,7 +307,7 @@ void main() {
         ),
       );
     });
-    tearDown(() => tmp.deleteSync(recursive: true));
+    tearDown(() => deleteTemp(tmp));
 
     ProviderContainer container({PdfInfo info = const PdfInfo.ok(4), WordService? word}) {
       final c = ProviderContainer(

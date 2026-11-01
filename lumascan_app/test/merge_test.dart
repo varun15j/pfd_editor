@@ -21,6 +21,7 @@ import 'package:lumascan/pdf_edit/pdf_saver.dart';
 
 import 'support/memory_stores.dart';
 import 'package:lumascan/ui/luma_icons.dart';
+import 'support/temp_dir.dart';
 
 /// Reports a page count (or a problem) for each path, and counts the checks.
 class _FakeInspector implements PdfInspector {
@@ -111,7 +112,7 @@ void main() {
   tearDown(() {
     if (!ready) return;
     ready = false;
-    tmp.deleteSync(recursive: true);
+    deleteTemp(tmp);
   });
 
   File source(String name, [int bytes = 100]) => File('${tmp.path}/$name')..writeAsBytesSync(List.filled(bytes, 9));

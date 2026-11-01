@@ -6,6 +6,7 @@ import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/export/jpg_exporter.dart';
 import 'package:path/path.dart' as p;
+import 'support/temp_dir.dart';
 
 void main() {
   late Directory tmp;
@@ -29,7 +30,7 @@ void main() {
     ];
   });
 
-  tearDown(() => tmp.deleteSync(recursive: true));
+  tearDown(() => deleteTemp(tmp));
 
   test('one JPG per page, in order, with the page edits, in a folder named after the scan', () async {
     final progress = <int>[];

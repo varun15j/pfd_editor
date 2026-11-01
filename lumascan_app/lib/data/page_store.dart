@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -125,10 +126,16 @@ class PageStore {
   static String _beside(String originalPath, String kind) =>
       p.join(p.dirname(originalPath), '${p.basenameWithoutExtension(originalPath)}.$kind.jpg');
 
-  /// Deletes an original and the working copies made from it.
+  /// Deletes an original and the working copies made from it. A file that
+  /// cannot be deleted (one still open, on Windows) is left behind rather
+  /// than stopping the rest from being deleted.
   Future<void> deleteOriginal(String path) async {
     for (final f in [File(path), File(workingPreviewPath(path)), File(workingSmallPath(path))]) {
-      if (f.existsSync()) await f.delete();
+      try {
+        if (f.existsSync()) await f.delete();
+      } on FileSystemException catch (e) {
+        debugPrint('Could not delete ${f.path}: ${e.osError?.message ?? e.message}');
+      }
     }
   }
 

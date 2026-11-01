@@ -18,6 +18,7 @@ import 'package:lumascan/domain/plan.dart';
 import 'package:lumascan/features/settings/ocr_language_screen.dart';
 
 import 'support/memory_stores.dart';
+import 'support/temp_dir.dart';
 
 class _Engine implements OcrEngine, OcrLayoutEngine {
   _Engine(this.name);
@@ -108,7 +109,7 @@ void main() {
   group('Tesseract models', () {
     late Directory dir;
     setUp(() => dir = Directory.systemTemp.createTempSync('tess'));
-    tearDown(() => dir.deleteSync(recursive: true));
+    tearDown(() => deleteTemp(dir));
 
     test('are downloaded once with English, and a failed download leaves nothing behind', () async {
       final fetched = <String>[];

@@ -19,6 +19,7 @@ import 'support/fake_photos.dart';
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
 import 'package:lumascan/ui/luma_icons.dart';
+import 'support/temp_dir.dart';
 
 /// Analyses a photo only when the test lets it, so the state in the middle of
 /// an import can be looked at. A name listed in [unreadable] fails.
@@ -300,7 +301,7 @@ void main() {
 
     testWidgets('importing from the blocked camera screen opens the draft at once too', (tester) async {
       final shots = Directory.systemTemp.createTempSync('lumascan_shots');
-      addTearDown(() => shots.deleteSync(recursive: true));
+      addTearDown(() => deleteTemp(shots));
       analyzer = _GatedAnalyzer();
       await pumpApp(
         tester,

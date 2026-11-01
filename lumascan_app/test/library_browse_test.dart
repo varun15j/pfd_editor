@@ -16,6 +16,7 @@ import 'package:path/path.dart' as path;
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
 import 'package:lumascan/ui/luma_icons.dart';
+import 'support/temp_dir.dart';
 
 SavedDocument doc(String id, String name, {int day = 7}) => SavedDocument(
   id: id,
@@ -239,7 +240,7 @@ void main() {
   group('stored UI choices', () {
     late Directory tmp;
     setUp(() => tmp = Directory.systemTemp.createTempSync('lumascan_prefs'));
-    tearDown(() => tmp.deleteSync(recursive: true));
+    tearDown(() => deleteTemp(tmp));
 
     test('choices survive a restart and a damaged file falls back to defaults', () async {
       ProviderContainer launch() =>

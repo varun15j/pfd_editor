@@ -27,6 +27,7 @@ import 'package:path/path.dart' as p;
 import 'package:pdfrx/pdfrx.dart';
 
 import 'support/memory_stores.dart';
+import 'support/temp_dir.dart';
 
 Uint8List _jpeg(int width, int height) =>
     img.encodeJpg(img.Image(width: width, height: height)..clear(img.ColorRgb8(200, 200, 200)));
@@ -201,7 +202,7 @@ void main() {
       File(pdfPath).writeAsBytesSync([0x25, 0x50, 0x44, 0x46]);
     });
 
-    tearDown(() => tmp.deleteSync(recursive: true));
+    tearDown(() => deleteTemp(tmp));
 
     test('a page with text becomes text, a picture page stays a picture, in page order', () async {
       final rasterizer = _RecordingRasterizer();

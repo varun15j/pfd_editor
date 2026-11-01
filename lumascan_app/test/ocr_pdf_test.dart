@@ -9,6 +9,7 @@ import 'package:lumascan/domain/ocr.dart';
 import 'package:lumascan/export/ocr_pdf_builder.dart';
 import 'package:lumascan/imaging/ocr_figures.dart';
 import 'package:lumascan/imaging/rgb_image.dart';
+import 'support/temp_dir.dart';
 
 /// White page 200 x 400 with a dark square picture between y 150 and 250.
 RgbImage _page({bool picture = true}) {
@@ -39,7 +40,7 @@ void main() {
 
   test('the text PDF holds the text and the picture of each read page', () async {
     final tmp = Directory.systemTemp.createTempSync('lumascan_ocrpdf');
-    addTearDown(() => tmp.deleteSync(recursive: true));
+    addTearDown(() => deleteTemp(tmp));
     final file = File('${tmp.path}/p.jpg')..writeAsBytesSync(_page().encodeJpg());
     final page = ScanPage(id: 'p', originalPath: file.path);
     final layout = OcrLayout(const [

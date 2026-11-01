@@ -9,6 +9,7 @@ import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/imaging/page_renderer.dart';
 import 'package:lumascan/imaging/render_queue.dart';
 import 'package:lumascan/imaging/render_service.dart';
+import 'support/temp_dir.dart';
 
 void main() {
   group('RenderQueue', () {
@@ -90,7 +91,7 @@ void main() {
       store = PageStore(rootDir: () async => tmp);
     });
 
-    tearDown(() => tmp.deleteSync(recursive: true));
+    tearDown(() => deleteTemp(tmp));
 
     /// A landscape "camera photo" larger than the working preview.
     Future<ScanPage> addPage(String id, {int width = 2400, int height = 1800}) async {

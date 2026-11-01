@@ -15,6 +15,7 @@ import 'package:lumascan/features/pages/scan_controller.dart';
 import 'support/fake_photos.dart';
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
+import 'support/temp_dir.dart';
 
 /// The draft screen keeps animating while page images load, so wait a fixed
 /// time instead of for it to settle.
@@ -50,7 +51,7 @@ void main() {
 
     tearDown(() {
       container.dispose();
-      tmp.deleteSync(recursive: true);
+      deleteTemp(tmp);
     });
 
     ScanController controller() => container.read(scanControllerProvider.notifier);

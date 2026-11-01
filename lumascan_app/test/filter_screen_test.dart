@@ -17,6 +17,7 @@ import 'package:lumascan/imaging/render_service.dart';
 
 import 'support/memory_stores.dart';
 import 'package:lumascan/ui/luma_icons.dart';
+import 'support/temp_dir.dart';
 
 class _FakeScanner implements ScannerService {
   _FakeScanner(this.paths);
@@ -67,7 +68,7 @@ void main() {
     if (!ready) return;
     ready = false;
     container.dispose();
-    tmp.deleteSync(recursive: true);
+    deleteTemp(tmp);
   });
 
   List<ScanPage> pages() => container.read(scanControllerProvider).pages;

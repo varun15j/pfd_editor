@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/debug/sample_pages.dart';
 import 'package:lumascan/imaging/page_detector.dart';
 import 'package:lumascan/imaging/rgb_image.dart';
+import 'support/temp_dir.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +33,7 @@ void main() {
       const MethodChannel('plugins.flutter.io/path_provider'),
       (call) async => temp.path,
     );
-    addTearDown(() => temp.deleteSync(recursive: true));
+    addTearDown(() => deleteTemp(temp));
 
     final photos = await loadSamplePages();
     expect(photos.map((p) => p.name), [for (final a in samplePageAssets) a.split('/').last]);
@@ -54,7 +55,7 @@ void main() {
       const MethodChannel('plugins.flutter.io/path_provider'),
       (call) async => temp.path,
     );
-    addTearDown(() => temp.deleteSync(recursive: true));
+    addTearDown(() => deleteTemp(temp));
     final photos = await loadSamplePages(set: bookSamples);
     expect(photos.map((p) => p.name), [for (final a in bookSamples.assets) a.split('/').last]);
   });

@@ -26,6 +26,7 @@ import 'package:path/path.dart' as p;
 import 'support/fake_photos.dart';
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
+import 'support/temp_dir.dart';
 
 class _FakeScanner implements ScannerService {
   _FakeScanner(this.paths);
@@ -64,7 +65,7 @@ void main() {
   tearDown(() {
     if (!ready) return;
     ready = false;
-    tmp.deleteSync(recursive: true);
+    deleteTemp(tmp);
   });
 
   File write(String relative, int bytes) {
