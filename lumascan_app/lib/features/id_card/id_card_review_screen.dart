@@ -73,23 +73,28 @@ class _IdCardReviewScreenState extends ConsumerState<IdCardReviewScreen> {
     final action = await showModalBottomSheet<_EditAction>(
       context: context,
       showDragHandle: true,
+      // Five options with hints do not fit in the default height on a
+      // narrow phone or with large text; the sheet grows and scrolls.
+      isScrollControlled: true,
       builder: (sheet) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(Space.xl, 0, Space.xl, Space.sm),
-              child: Text(draft.type.sideName(_selected), style: Theme.of(sheet).textTheme.titleLarge),
-            ),
-            for (final a in _EditAction.values)
-              if (a != _EditAction.swap || draft.type.sides > 1)
-                ListTile(
-                  leading: Icon(a.icon),
-                  title: Text(a.label),
-                  subtitle: a.hint == null ? null : Text(a.hint!),
-                  onTap: () => Navigator.pop(sheet, a),
-                ),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Space.xl, 0, Space.xl, Space.sm),
+                child: Text(draft.type.sideName(_selected), style: Theme.of(sheet).textTheme.titleLarge),
+              ),
+              for (final a in _EditAction.values)
+                if (a != _EditAction.swap || draft.type.sides > 1)
+                  ListTile(
+                    leading: Icon(a.icon),
+                    title: Text(a.label),
+                    subtitle: a.hint == null ? null : Text(a.hint!),
+                    onTap: () => Navigator.pop(sheet, a),
+                  ),
+            ],
+          ),
         ),
       ),
     );

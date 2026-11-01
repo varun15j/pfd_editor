@@ -472,6 +472,22 @@ void main() {
       expect(harness.container.read(idCopyDraftProvider)!.compositeId, harness.pages.first.id);
     });
 
+    testWidgets('the Edit sheet fits a narrow phone with large display size (OnePlus, 320 dp wide)', (tester) async {
+      await open(tester);
+      await tap(tester, find.text('Make it now'));
+      await tap(tester, find.bySemanticsLabel('Take front page'));
+      await tap(tester, find.bySemanticsLabel('Take back page'));
+      // 1080 x 2414 px at 3.375: the OnePlus CPH2661 with display size set large.
+      tester.view.physicalSize = const Size(1080, 2414);
+      tester.view.devicePixelRatio = 3.375;
+      await tester.pump();
+      await tap(tester, find.bySemanticsLabel('Front page. Edit'));
+      expect(tester.takeException(), isNull, reason: 'no overflow');
+      await tester.ensureVisible(find.text('Swap front and back'));
+      await tap(tester, find.text('Swap front and back'));
+      expect(find.text('Swap front and back'), findsNothing, reason: 'the last option can be reached and used');
+    });
+
     testWidgets('with the camera off, it says so and offers Import and settings', (tester) async {
       await open(tester, deny: true);
       await tap(tester, find.text('Make it now'));
