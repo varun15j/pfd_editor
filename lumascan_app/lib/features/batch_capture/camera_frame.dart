@@ -1,19 +1,18 @@
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/preferences.dart';
+import '../../app/providers.dart';
+import '../../data/corner_worker.dart';
 import '../../domain/models.dart';
 import '../../domain/plan.dart';
 import '../../imaging/book_split.dart';
 import '../../imaging/corner_model.dart';
-import '../../imaging/page_detector.dart';
 import '../../imaging/rgb_image.dart';
 import 'auto_capture.dart';
-import 'frame_worker.dart';
 
 /// How the bytes of a [CameraFrame] are laid out.
 enum FramePixels {
@@ -158,8 +157,7 @@ FrameAnalysis analyzeFrame(CameraFrame frame, {bool smart = true, CornerModel? m
   // Outlines are found in colour where the frame has it: a coloured page on
   // a surface of the same brightness only stands out by its colour.
   final picture = frame.hasColour ? frame.uprightColour() : gray;
-  final fromModel = smart ? model?.find(picture) : null;
-  final quad = fromModel ?? detectPageQuad(picture, workSize: 160, minArea: 0.2, smart: smart);
+  final quad = findPage(picture, model: model, smart: smart, workSize: 160, minArea: 0.2);
   return FrameAnalysis(
     quad: quad,
     signature: quad == null ? null : pageSignature(gray, quad),
@@ -171,28 +169,29 @@ FrameAnalysis analyzeFrame(CameraFrame frame, {bool smart = true, CornerModel? m
 typedef FrameAnalyzer = Future<FrameAnalysis> Function(CameraFrame frame);
 
 /// Analyses preview frames off the UI thread. Tests swap in a direct call.
-/// With smart scanning (Pro), frames go to one long-lived isolate that holds
-/// the corner model ([FrameWorker]); without it, or while the model loads
-/// or if it cannot, each frame runs in a fresh isolate on the hand-made
-/// detector alone.
+/// With smart scanning (Pro), frames go to the shared corner model worker
+/// ([cornerWorkerProvider]); without it, or while the model loads or if it
+/// cannot, each frame runs in a fresh isolate on the hand-made detector
+/// alone.
 final frameAnalyzerProvider = Provider<FrameAnalyzer>((ref) {
   final smart = ref.watch(planIncludesProvider(PlanFeature.smartScan));
-  FrameAnalysis plain(CameraFrame frame) => analyzeFrame(frame, smart: smart);
-  if (!smart) return (frame) => Isolate.run(() => plain(frame));
-  final worker = FrameWorker.start();
-  ref.onDispose(() => worker.then((w) => w?.stop()));
-  return (frame) async {
-    final w = await worker;
-    return w == null ? Isolate.run(() => plain(frame)) : w.analyze(frame);
-  };
+  final worker = ref.watch(cornerWorkerProvider);
+  return (frame) => runCornerJob(worker, _frameJob(frame, smart));
 });
+
+CornerJob<FrameAnalysis> _frameJob(CameraFrame frame, bool smart) =>
+    (model) => analyzeFrame(frame, smart: smart, model: model);
 
 typedef SpreadSplitter = Future<(CropQuad, CropQuad)> Function(String photoPath);
 
 /// Finds the left and right page in a photo of an open book, off the UI
-/// thread (Book mode).
+/// thread (Book mode), with the corner model when it is loaded.
 final spreadSplitterProvider = Provider<SpreadSplitter>((ref) {
   final smart = ref.watch(planIncludesProvider(PlanFeature.smartScan));
-  return (path) =>
-      Isolate.run(() => splitSpread(RgbImage.decode(File(path).readAsBytesSync(), maxDimension: 640), smart: smart));
+  final worker = ref.watch(cornerWorkerProvider);
+  return (path) => runCornerJob(worker, _spreadJob(path, smart));
 });
+
+CornerJob<(CropQuad, CropQuad)> _spreadJob(String path, bool smart) =>
+    (model) =>
+        splitSpread(RgbImage.decode(File(path).readAsBytesSync(), maxDimension: 640), smart: smart, model: model);

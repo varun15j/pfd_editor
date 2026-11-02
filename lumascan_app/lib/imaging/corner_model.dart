@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import '../domain/models.dart';
+import 'page_detector.dart';
 import 'rgb_image.dart';
 
 /// Finds the four corners of a page with a small neural network, as a first
@@ -19,6 +20,14 @@ abstract class CornerModel {
   /// corners.
   CropQuad? find(RgbImage image);
 }
+
+/// The page in [photo]: the [model]'s outline when it is sure of every
+/// corner, otherwise the hand-made detector's ([detectPageQuad], with
+/// [workSize] and [minArea]). The model is asked only with [smart] scanning
+/// (Pro). Every page search goes through here: camera frames, photos and
+/// book spreads.
+CropQuad? findPage(RgbImage photo, {CornerModel? model, bool smart = true, int workSize = 320, double minArea = 0.1}) =>
+    (smart ? model?.find(photo) : null) ?? detectPageQuad(photo, workSize: workSize, minArea: minArea, smart: smart);
 
 /// Side of the square photo the model reads.
 const cornerModelInputSize = 256;

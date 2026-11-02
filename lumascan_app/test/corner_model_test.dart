@@ -2,8 +2,10 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumascan/data/corner_worker.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/features/batch_capture/camera_frame.dart';
+import 'package:lumascan/imaging/book_split.dart';
 import 'package:lumascan/imaging/corner_model.dart';
 import 'package:lumascan/imaging/rgb_image.dart';
 
@@ -106,6 +108,46 @@ void main() {
       final model = _FakeModel(quad);
       analyzeFrame(frame, smart: false, model: model);
       expect(model.calls, 0);
+    });
+  });
+
+  // Photos (camera shots, imports, ID cards, crop, auto crop) and book
+  // spreads search the same way as preview frames.
+  group('findPage, for photos and book spreads', () {
+    final photo = RgbImage(160, 120);
+    final quad = CropQuad(
+      const NormPoint(0.1, 0.1),
+      const NormPoint(0.9, 0.1),
+      const NormPoint(0.9, 0.9),
+      const NormPoint(0.1, 0.9),
+    );
+
+    test('takes the model outline when the model is sure', () {
+      final model = _FakeModel(quad);
+      expect(findPage(photo, model: model), quad);
+      expect(model.calls, 1);
+    });
+
+    test('falls back to the detector when the model is not sure', () {
+      expect(findPage(photo, model: _FakeModel(null)), isNull);
+    });
+
+    test('is not used without smart scanning', () {
+      final model = _FakeModel(quad);
+      findPage(photo, smart: false, model: model);
+      expect(model.calls, 0);
+    });
+
+    test('gives Book mode the model outline as the spread', () {
+      final (left, right) = splitSpread(photo, model: _FakeModel(quad));
+      expect(left.tl, quad.tl);
+      expect(left.bl, quad.bl);
+      expect(right.tr, quad.tr);
+      expect(right.br, quad.br);
+    });
+
+    test('runs on the hand-made detector alone when there is no worker', () async {
+      expect(await runCornerJob<bool>(Future.value(), (model) => model == null), isTrue);
     });
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/corner_worker.dart';
 import '../data/cunning_scanner_service.dart';
 import '../data/library_store.dart';
 import '../data/mlkit_vision.dart';
@@ -81,8 +82,22 @@ final photoPickerProvider = Provider<PhotoPicker>((ref) => FilePickerPhotoPicker
 /// Images shared into the app from the gallery's share sheet.
 final shareInboxProvider = Provider<ShareInbox>((ref) => DirectoryShareInbox(platformShareInboxDir));
 
+/// The corner model (DocAligner), loaded once in its own isolate and shared
+/// by every page search: camera preview, photos, ID cards, crop, auto crop
+/// and book spreads. Null without smart scanning (Pro) or when the model
+/// cannot load, as in tests; then the hand-made detector answers alone.
+final cornerWorkerProvider = Provider<Future<CornerWorker?>>((ref) {
+  if (!ref.watch(planIncludesProvider(PlanFeature.smartScan))) return Future.value();
+  final worker = CornerWorker.start();
+  ref.onDispose(() => worker.then((w) => w?.stop()));
+  return worker;
+});
+
 final photoAnalyzerProvider = Provider<PhotoAnalyzer>(
-  (ref) => DetectorPhotoAnalyzer(smart: ref.watch(planIncludesProvider(PlanFeature.smartScan))),
+  (ref) => DetectorPhotoAnalyzer(
+    smart: ref.watch(planIncludesProvider(PlanFeature.smartScan)),
+    worker: ref.watch(cornerWorkerProvider),
+  ),
 );
 
 /// On-device text recognition. It reads each page as rendered with its crop
