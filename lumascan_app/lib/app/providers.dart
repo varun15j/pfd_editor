@@ -30,6 +30,7 @@ import '../export/word/pdf_text_reader.dart';
 import '../export/word/word_service.dart';
 import '../pdf_edit/pdf_edit_controller.dart';
 import '../features/batch_capture/batch_camera.dart';
+import '../imaging/corner_worker.dart';
 import '../imaging/render_queue.dart';
 import '../imaging/render_service.dart';
 import 'device_load.dart';
@@ -81,9 +82,12 @@ final photoPickerProvider = Provider<PhotoPicker>((ref) => FilePickerPhotoPicker
 /// Images shared into the app from the gallery's share sheet.
 final shareInboxProvider = Provider<ShareInbox>((ref) => DirectoryShareInbox(platformShareInboxDir));
 
-final photoAnalyzerProvider = Provider<PhotoAnalyzer>(
-  (ref) => DetectorPhotoAnalyzer(smart: ref.watch(planIncludesProvider(PlanFeature.smartScan))),
-);
+/// Finds the page in a photo, for every kind of scan: the corner model
+/// first on Pro and Gold, the hand-made detector otherwise.
+final photoAnalyzerProvider = Provider<PhotoAnalyzer>((ref) {
+  final smart = ref.watch(planIncludesProvider(PlanFeature.smartScan));
+  return DetectorPhotoAnalyzer(smart: smart, worker: smart ? ref.watch(cornerWorkerProvider) : null);
+});
 
 /// On-device text recognition. It reads each page as rendered with its crop
 /// and filter, at a size that keeps small print legible, with its masks

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../domain/models.dart';
+import 'corner_model.dart';
 import 'page_detector.dart';
 import 'rgb_image.dart';
 
@@ -14,10 +15,11 @@ const rightHalf = CropQuad(NormPoint(0.5, 0), NormPoint(1, 0), NormPoint(1, 1), 
 /// region found in the photo (the whole photo when none is found), and the
 /// spine is the darkest column in its middle third: the gutter shadow, the
 /// "luminance valley" of the design. Returns the left page, then the right.
-(CropQuad, CropQuad) splitSpread(RgbImage photo, {bool smart = true}) {
+/// With a corner [model], its outline is tried first, as in the camera.
+(CropQuad, CropQuad) splitSpread(RgbImage photo, {bool smart = true, CornerModel? model}) {
   // The gutter can cut the paper in two, so a region that does not reach
   // across the middle is one page, not the spread: use the whole photo.
-  final found = detectPageQuad(photo, minArea: 0.2, smart: smart);
+  final found = (smart ? model?.find(photo) : null) ?? detectPageQuad(photo, minArea: 0.2, smart: smart);
   final spread = found != null && showsSpread(found) ? found : CropQuad.full;
   final s = spineFraction(photo, spread);
   final top = _lerp(spread.tl, spread.tr, s);
