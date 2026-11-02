@@ -255,6 +255,8 @@ void main() {
         scrollable: find.byType(Scrollable).last,
       );
       expect(find.text('Profile image loading'), findsOneWidget);
+      await tester.ensureVisible(find.text('Profile image loading'));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Profile image loading'));
       await tester.pumpAndSettle();
@@ -275,6 +277,8 @@ void main() {
         200,
         scrollable: find.byType(Scrollable).last,
       );
+      await tester.ensureVisible(find.text('Open profiling report'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Open profiling report'));
       await tester.pumpAndSettle();
       expect(find.text('Image loading profile'), findsOneWidget);

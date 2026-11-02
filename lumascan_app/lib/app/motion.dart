@@ -12,7 +12,7 @@ export '../domain/motion_profile.dart';
 /// What the phone has, read once from the platform. Null when it cannot say
 /// (iOS, tests), which means High.
 final deviceSpecProvider = FutureProvider<DeviceSpec?>((ref) async {
-  final load = await ref.read(deviceLoadProbeProvider).sample();
+  final load = await ref.watch(deviceLoadProbeProvider).sample();
   if (load == null) return null;
   final spec = DeviceSpec(totalMb: load.totalMb, cores: load.cores, lowRamDevice: load.lowRamDevice);
   debugPrint('Animation profile: ${motionProfileFor(spec).name} for $spec');

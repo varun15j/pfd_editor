@@ -9,13 +9,23 @@ import 'dart:math' as math;
 /// few keeps memory flat, and taking the newest request first means the pages
 /// on screen now are drawn before the ones the user already scrolled past.
 class RenderQueue {
-  RenderQueue({int? concurrency}) : concurrency = concurrency ?? defaultConcurrency;
+  RenderQueue({int? concurrency}) : _concurrency = concurrency ?? defaultConcurrency;
 
   /// Half the cores, between 1 and 3: enough to keep up with scrolling while
   /// leaving the UI thread room.
   static int get defaultConcurrency => (Platform.numberOfProcessors ~/ 2).clamp(1, 3);
 
-  final int concurrency;
+  int _concurrency;
+
+  /// How many renders may run at the same time.
+  int get concurrency => _concurrency;
+
+  /// Debug builds change this to act like a slower phone. Raising it starts
+  /// waiting jobs; lowering it lets running ones finish.
+  set concurrency(int value) {
+    _concurrency = math.max(1, value);
+    _pump();
+  }
 
   /// Waiting jobs; the last one runs next.
   final _waiting = <_Job>[];

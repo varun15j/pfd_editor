@@ -94,7 +94,13 @@ class PhotoBatchCamera implements BatchCamera {
 
   @override
   Widget buildPreview({Widget? overlay}) => SizedBox.expand(
-    child: Stack(fit: StackFit.expand, children: [const ColoredBox(color: Color(0xFF2E2A28)), ?overlay]),
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        const ColoredBox(color: Color(0xFF2E2A28)),
+        ?overlay,
+      ],
+    ),
   );
 
   @override
@@ -200,7 +206,16 @@ class Journey {
           libraryStoreProvider.overrideWithValue(library),
           draftStoreProvider.overrideWithValue(MemoryDraftStore()),
           uiPrefsStoreProvider.overrideWithValue(MemoryUiPrefsStore(const UiPrefs(dismissedCards: {scanTipsId}))),
-          appSettingsStoreProvider.overrideWithValue(MemoryAppSettingsStore(const AppSettings(eulaAcceptedVersion: eulaVersion, onboardingSeen: true))),
+          appSettingsStoreProvider.overrideWithValue(
+            MemoryAppSettingsStore(
+              AppSettings(
+                eulaAcceptedVersion: eulaVersion,
+                onboardingSeen: true,
+                debugPhone: simulatedPhone,
+                debugBusyCores: simulatedPhone != null && const bool.fromEnvironment('SIM_BUSY'),
+              ),
+            ),
+          ),
           documentTextStoreProvider.overrideWithValue(MemoryDocumentTextStore()),
           launchActionSourceProvider.overrideWithValue(const NoLaunchActions()),
           planProvider.overrideWithValue(AppPlan.gold),
@@ -209,7 +224,9 @@ class Journey {
           photoPickerProvider.overrideWithValue(gallery),
           // The camera's "same page again?" text check runs after a shot and can
           // outlive the test; a busy phone skips it, as the app does.
-          deviceLoadProbeProvider.overrideWithValue(const _BusyPhone()),
+          deviceLoadProbeProvider.overrideWithValue(
+            simulatedPhone == null ? const _BusyPhone() : SimulatedDeviceLoadProbe(const _BusyPhone(), simulatedPhone!),
+          ),
         ],
         child: const LumaScanApp(),
       ),
@@ -217,6 +234,12 @@ class Journey {
     await settle(tester);
   }
 }
+
+/// The cheaper phone to act as for the whole run, from
+/// `--dart-define=SIM_PHONE=go1gb|entry2gb|mid4gb` (docs/phone-simulation.md).
+/// Add `--dart-define=SIM_BUSY=true` to also keep the other cores busy.
+/// Unset runs as the device itself.
+final SimulatedPhone? simulatedPhone = SimulatedPhone.values.asNameMap()[const String.fromEnvironment('SIM_PHONE')];
 
 /// pumpAndSettle with a ceiling: the camera screen animates for ever, so
 /// this pumps frames until nothing is scheduled or [max] passes.
@@ -283,7 +306,11 @@ class _BusyPhone implements DeviceLoadProbe {
 }
 
 /// Waits, pumping frames, until [done] is true.
-Future<void> waitUntil(WidgetTester tester, bool Function() done, {Duration timeout = const Duration(minutes: 2)}) async {
+Future<void> waitUntil(
+  WidgetTester tester,
+  bool Function() done, {
+  Duration timeout = const Duration(minutes: 2),
+}) async {
   final end = DateTime.now().add(timeout);
   while (!done()) {
     if (DateTime.now().isAfter(end)) throw TestFailure('Timed out after $timeout');

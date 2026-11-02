@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../debug/debug_panel.dart';
+import '../debug/phone_simulation.dart';
 import '../features/capture/launch_actions_listener.dart';
 import '../features/capture/shared_images_listener.dart';
 import '../features/onboarding/eula_screen.dart';
@@ -33,7 +34,7 @@ class LumaScanApp extends ConsumerWidget {
         // app lock covers it too.
         builder: (context, child) => MotionScope(
           profile: motion,
-          child: AppLockOverlay(child: DebugPanelHost(child: child!)),
+          child: AppLockOverlay(child: DebugPanelHost(child: PhoneSimulationHost(child: child!))),
         ),
         home: const StartGate(),
       ),

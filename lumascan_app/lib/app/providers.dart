@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/cunning_scanner_service.dart';
@@ -29,6 +30,7 @@ import '../export/word/pdf_text_reader.dart';
 import '../export/word/word_service.dart';
 import '../pdf_edit/pdf_edit_controller.dart';
 import '../features/batch_capture/batch_camera.dart';
+import '../imaging/render_queue.dart';
 import '../imaging/render_service.dart';
 import 'device_load.dart';
 import 'preferences.dart';
@@ -39,8 +41,16 @@ final pageStoreProvider = Provider<PageStore>((ref) => PageStore());
 
 final scannerServiceProvider = Provider<ScannerService>((ref) => CunningScannerService());
 
+/// Limits how many page pictures render at once. Debug builds lower it to
+/// act like a slower phone (lib/debug/phone_simulation.dart).
+final renderQueueProvider = Provider<RenderQueue>((ref) => RenderQueue());
+
 final renderServiceProvider = Provider<RenderService>(
-  (ref) => RenderService(ref.watch(pageStoreProvider), profiler: ref.watch(imageProfilerProvider)),
+  (ref) => RenderService(
+    ref.watch(pageStoreProvider),
+    queue: ref.watch(renderQueueProvider),
+    profiler: ref.watch(imageProfilerProvider),
+  ),
 );
 
 final pdfExporterProvider = Provider<PdfExporter>((ref) => PdfExporter(ref.watch(pageStoreProvider)));
@@ -115,6 +125,13 @@ final qrReaderProvider = Provider<QrReader>((ref) {
 
 /// Makes the live camera for Batch capture, one per visit to the screen.
 /// How busy the phone is, for background work the camera can skip.
-final deviceLoadProbeProvider = Provider<DeviceLoadProbe>((ref) => PlatformDeviceLoadProbe());
+///
+/// Debug builds that act as another phone (debug panel, "Simulate phone")
+/// see that phone's memory and cores instead.
+final deviceLoadProbeProvider = Provider<DeviceLoadProbe>((ref) {
+  final real = PlatformDeviceLoadProbe();
+  final phone = kDebugMode ? ref.watch(appSettingsProvider.select((s) => s.debugPhone)) : null;
+  return phone == null ? real : SimulatedDeviceLoadProbe(real, phone);
+});
 
 final batchCameraProvider = Provider<BatchCameraFactory>((ref) => PluginBatchCamera.new);
