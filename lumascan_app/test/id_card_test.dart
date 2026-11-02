@@ -20,6 +20,7 @@ import 'package:lumascan/features/id_card/id_card_session.dart';
 import 'package:lumascan/features/id_card/id_card_type_screen.dart';
 import 'package:lumascan/features/library/library_controller.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
+import 'package:lumascan/imaging/card_outline.dart';
 import 'package:lumascan/imaging/id_copy_composer.dart';
 import 'package:lumascan/imaging/page_renderer.dart';
 import 'package:lumascan/imaging/render_service.dart';
