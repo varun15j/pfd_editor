@@ -12,6 +12,8 @@ class DeviceLoad {
     this.lowMemory = false,
     this.appCpu,
     this.thermal,
+    this.cores,
+    this.lowRamDevice = false,
   });
 
   /// Memory free for apps, and in all, in MB.
@@ -26,6 +28,12 @@ class DeviceLoad {
 
   /// Android's thermal status (0 none .. 6 shutdown); null when unknown.
   final int? thermal;
+
+  /// CPU cores the app may use; null when unknown.
+  final int? cores;
+
+  /// Android counts this as a low memory phone (Android Go).
+  final bool lowRamDevice;
 
   @override
   String toString() =>
@@ -97,6 +105,8 @@ class PlatformDeviceLoadProbe implements DeviceLoadProbe {
       lowMemory: raw['lowMemory'] as bool? ?? false,
       appCpu: appCpu,
       thermal: raw['thermal'] as int?,
+      cores: raw['cores'] as int?,
+      lowRamDevice: raw['lowRamDevice'] as bool? ?? false,
     );
   }
 }

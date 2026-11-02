@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/app_info.dart';
 import 'image_profiler.dart';
+import 'motion_profile_tile.dart';
 import 'plan_switcher_tile.dart';
 import 'profile_sample.dart';
 import 'profiling_report_screen.dart';
@@ -128,6 +129,8 @@ class DebugPanel extends StatelessWidget {
                 ),
                 const Divider(),
                 const PlanSwitcherTile(),
+                const Divider(),
+                const MotionProfileTile(),
                 const Divider(),
                 SamplePagesTile(onStart: onClose),
                 SamplePagesTile(set: bookSamples, onStart: onClose),

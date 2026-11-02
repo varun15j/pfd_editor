@@ -29,6 +29,9 @@ object DeviceLoad {
             "totalBytes" to memory.totalMem,
             "lowMemory" to memory.lowMemory,
             "cores" to Runtime.getRuntime().availableProcessors(),
+            // Android Go and other phones the system treats as short of memory;
+            // they get the Low animation profile.
+            "lowRamDevice" to activities.isLowRamDevice,
             // CPU time this app has used, and the clock, to work out its share.
             "cpuMs" to Process.getElapsedCpuTime(),
             "clockMs" to SystemClock.elapsedRealtime(),

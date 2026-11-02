@@ -7,13 +7,13 @@ import '../../domain/models.dart';
 import '../batch_capture/batch_capture_screen.dart';
 import '../capture/add_pages_sheet.dart';
 import '../export/export_sheet.dart';
-import '../pages/page_image.dart';
 import '../pages/scan_controller.dart';
 import 'batch_action_bar.dart';
 import 'batch_action_runner.dart';
 import 'batch_completion.dart';
 import 'batch_selection.dart';
 import '../../ui/luma_icons.dart';
+import '../pages/page_thumbnail.dart';
 
 /// Batch Review (BE-02, US-03.5): every page of the draft in a two-column
 /// grid. Tap pages to pick which ones the batch actions apply to. All pages
@@ -208,7 +208,7 @@ class BatchPageTile extends StatelessWidget {
                       padding: const EdgeInsets.all(6),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: PageImage(page: page),
+                        child: PageThumbnail(page: page, number: number),
                       ),
                     ),
                   ),

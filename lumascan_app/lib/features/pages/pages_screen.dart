@@ -16,11 +16,11 @@ import 'add_page_tile.dart';
 import 'adding_progress.dart';
 import 'page_actions.dart';
 import 'page_gallery.dart';
-import 'page_image.dart';
 import 'page_single_view.dart';
 import 'scan_actions.dart';
 import 'scan_controller.dart';
 import '../../ui/luma_icons.dart';
+import 'page_thumbnail.dart';
 
 /// Draft review screen (S08 Pages): every captured page, in order, with
 /// crop, rotate, filter and delete actions, plus add-more and export.
@@ -342,7 +342,7 @@ class _PageCard extends ConsumerWidget {
           padding: const EdgeInsets.all(10),
           child: Row(
             children: [
-              SizedBox(width: 64, height: 84, child: PageImage(page: page)),
+              SizedBox(width: 64, height: 84, child: PageThumbnail(page: page, number: index + 1)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

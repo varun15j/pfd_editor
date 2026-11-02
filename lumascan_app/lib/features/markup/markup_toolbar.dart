@@ -5,6 +5,7 @@ import '../../ui/state_views.dart';
 import '../pdf_editor/annotation_layer.dart';
 import 'markup_style.dart';
 import '../../ui/luma_icons.dart';
+import '../../app/motion.dart';
 
 /// The toolbar under a page being marked up: one colour and thickness picker
 /// for the pen, highlighter and text tools, and a scrollable row of tools
@@ -74,7 +75,7 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
       Scrollable.ensureVisible(
         context,
         alignment: 0.5,
-        duration: const Duration(milliseconds: 200),
+        duration: Motion.of(context).duration(const Duration(milliseconds: 200)),
       );
     });
   }

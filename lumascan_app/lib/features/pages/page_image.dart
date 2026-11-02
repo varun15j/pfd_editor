@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/motion.dart';
 import '../../app/providers.dart';
 import '../../debug/image_profiler.dart';
 import '../../debug/profile_sample.dart';
@@ -142,7 +143,7 @@ class _PageImageState extends ConsumerState<PageImage> {
             final decodeWidth = _decodeWidth(image, constraints, MediaQuery.devicePixelRatioOf(context));
             Widget picture(BoxFit fit) =>
                 Image.file(File(image.path), fit: fit, gaplessPlayback: true, cacheWidth: decodeWidth);
-            return Stack(
+            final shown = Stack(
               fit: StackFit.expand,
               children: [
                 if (widget.showMarks && widget.page.annotations.isNotEmpty)
@@ -173,6 +174,8 @@ class _PageImageState extends ConsumerState<PageImage> {
                   ),
               ],
             );
+            // High profile: the picture fades and settles in as it arrives.
+            return Motion.of(context).animates ? _Reveal(child: shown) : shown;
           },
         );
       },
@@ -192,6 +195,29 @@ class _PageImageState extends ConsumerState<PageImage> {
     };
     final width = (shown * pixelRatio).ceil();
     return width > 0 && width < image.width ? width : null;
+  }
+}
+
+/// Fades [child] in and grows it from 96 % once, when it first appears.
+class _Reveal extends StatelessWidget {
+  const _Reveal({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      child: child,
+      // Always wrapped, so the picture is not rebuilt when the fade ends; at
+      // full opacity and scale both cost nothing.
+      builder: (context, t, child) => Opacity(
+        opacity: t,
+        child: Transform.scale(scale: 0.96 + 0.04 * t, child: child),
+      ),
+    );
   }
 }
 

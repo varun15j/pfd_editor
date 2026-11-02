@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
+import '../app/motion.dart';
 
 /// Scanner-style icon-and-label action with compact visual chrome and a full
 /// 48 dp hit target. Use this in persistent toolbars and action rows where a
@@ -59,7 +60,7 @@ class CompactActionButton extends StatelessWidget {
                 minHeight: minTapTarget,
               ),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
+                duration: Motion.of(context).duration(const Duration(milliseconds: 150)),
                 margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
                 padding: const EdgeInsets.symmetric(
                   horizontal: Space.xs,

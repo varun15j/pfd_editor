@@ -12,6 +12,7 @@ import 'package:lumascan/features/batch_capture/batch_capture_screen.dart';
 import 'package:lumascan/features/batch_edit/batch_review_screen.dart';
 import 'package:lumascan/features/pages/pages_screen.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
+import 'package:lumascan/app/motion.dart';
 
 import 'support/fake_batch_camera.dart';
 import 'support/fake_photos.dart';
@@ -179,6 +180,28 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
       expect(find.bySemanticsLabel('3 pages captured'), findsOneWidget);
       expect(find.bySemanticsLabel('Open preview of 3 captured photos'), findsOneWidget);
+    });
+
+    Finder thumbnailImages() =>
+        find.descendant(of: find.bySemanticsLabel(RegExp(r'^Open preview of')), matching: find.byType(Image));
+
+    testWidgets('High fans the last three shots out on the thumbnail', (tester) async {
+      await open(
+        tester,
+        screen: (_) => const MotionScope(profile: MotionProfile.high, child: BatchCaptureScreen()),
+      );
+      await shoot(tester, times: 4);
+      expect(thumbnailImages(), findsNWidgets(3), reason: 'the newest and the two before it');
+    });
+
+    testWidgets('Low shows a page icon on the thumbnail and decodes no photo', (tester) async {
+      await open(
+        tester,
+        screen: (_) => const MotionScope(profile: MotionProfile.low, child: BatchCaptureScreen()),
+      );
+      await shoot(tester, times: 2);
+      expect(thumbnailImages(), findsNothing);
+      expect(find.bySemanticsLabel('Open preview of 2 captured photos'), findsOneWidget);
     });
 
     testWidgets('quick taps while a photo is being taken are queued, not lost', (tester) async {

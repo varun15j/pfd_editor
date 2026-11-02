@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../domain/models.dart';
 import '../../ui/undo_toast.dart';
-import '../pages/page_image.dart';
 import '../pages/scan_controller.dart';
 import '../../ui/luma_icons.dart';
+import '../pages/page_thumbnail.dart';
 
 /// Reorder (BE-06): the document's pages in order, with a drag handle and
 /// Move up / Move down buttons on each, so the order can be changed without
@@ -123,7 +123,7 @@ class _ReorderTile extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         child: Row(
           children: [
-            SizedBox(width: 52, height: 68, child: PageImage(page: page)),
+            SizedBox(width: 52, height: 68, child: PageThumbnail(page: page, number: index + 1)),
             const SizedBox(width: 12),
             Expanded(
               child: Semantics(

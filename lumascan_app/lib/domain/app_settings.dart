@@ -3,6 +3,7 @@ import 'package:flutter/material.dart' show ThemeMode;
 
 import 'eula.dart';
 import 'models.dart';
+import 'motion_profile.dart';
 import 'ocr_languages.dart';
 import 'plan.dart';
 import 'scan_document.dart';
@@ -86,6 +87,7 @@ class AppSettings {
     this.captureHaptics = true,
     this.autoCaptureSteadiness = AutoCaptureSteadiness.normal,
     this.debugPlan,
+    this.debugMotion,
     this.ocrLanguage = 'en',
     this.appLock = false,
     this.appLockDelay = AppLockDelay.oneMinute,
@@ -141,6 +143,10 @@ class AppSettings {
   /// builds ignore it.
   final AppPlan? debugPlan;
 
+  /// Debug builds only: the animation profile to use instead of the one
+  /// picked for the phone. Null means Auto. Release builds ignore it.
+  final MotionProfile? debugMotion;
+
   /// Language text recognition reads, as a code from [OcrLanguage.all].
   /// Applies to the next read; text already recognised is kept.
   final String ocrLanguage;
@@ -172,6 +178,7 @@ class AppSettings {
     bool? captureHaptics,
     AutoCaptureSteadiness? autoCaptureSteadiness,
     Object? debugPlan = _keep,
+    Object? debugMotion = _keep,
     String? ocrLanguage,
     bool? appLock,
     AppLockDelay? appLockDelay,
@@ -189,6 +196,7 @@ class AppSettings {
     captureHaptics: captureHaptics ?? this.captureHaptics,
     autoCaptureSteadiness: autoCaptureSteadiness ?? this.autoCaptureSteadiness,
     debugPlan: identical(debugPlan, _keep) ? this.debugPlan : debugPlan as AppPlan?,
+    debugMotion: identical(debugMotion, _keep) ? this.debugMotion : debugMotion as MotionProfile?,
     ocrLanguage: ocrLanguage ?? this.ocrLanguage,
     appLock: appLock ?? this.appLock,
     appLockDelay: appLockDelay ?? this.appLockDelay,
@@ -216,6 +224,7 @@ class AppSettings {
     'captureHaptics': captureHaptics,
     'autoCaptureSteadiness': autoCaptureSteadiness.name,
     if (debugPlan != null) 'debugPlan': debugPlan!.name,
+    if (debugMotion != null) 'debugMotion': debugMotion!.name,
     'ocrLanguage': ocrLanguage,
     'appLock': appLock,
     'appLockDelay': appLockDelay.name,
@@ -238,6 +247,7 @@ class AppSettings {
     autoCaptureSteadiness:
         AutoCaptureSteadiness.values.asNameMap()[json['autoCaptureSteadiness']] ?? AutoCaptureSteadiness.normal,
     debugPlan: AppPlan.values.asNameMap()[json['debugPlan']],
+    debugMotion: MotionProfile.values.asNameMap()[json['debugMotion']],
     ocrLanguage: OcrLanguage.byCode(json['ocrLanguage'] as String? ?? '')?.code ?? 'en',
     appLock: json['appLock'] as bool? ?? false,
     appLockDelay: AppLockDelay.values.asNameMap()[json['appLockDelay']] ?? AppLockDelay.oneMinute,
@@ -279,6 +289,7 @@ class AppSettings {
       other.captureHaptics == captureHaptics &&
       other.autoCaptureSteadiness == autoCaptureSteadiness &&
       other.debugPlan == debugPlan &&
+      other.debugMotion == debugMotion &&
       other.ocrLanguage == ocrLanguage &&
       other.appLock == appLock &&
       other.appLockDelay == appLockDelay &&
@@ -298,6 +309,7 @@ class AppSettings {
     captureHaptics,
     autoCaptureSteadiness,
     debugPlan,
+    debugMotion,
     ocrLanguage,
     appLock,
     appLockDelay,
