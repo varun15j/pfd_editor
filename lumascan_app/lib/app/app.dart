@@ -34,7 +34,9 @@ class LumaScanApp extends ConsumerWidget {
         // app lock covers it too.
         builder: (context, child) => MotionScope(
           profile: motion,
-          child: AppLockOverlay(child: DebugPanelHost(child: PhoneSimulationHost(child: child!))),
+          child: AppLockOverlay(
+            child: DebugPanelHost(child: PhoneSimulationHost(child: child!)),
+          ),
         ),
         home: const StartGate(),
       ),

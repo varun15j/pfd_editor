@@ -25,6 +25,8 @@ class DocumentTextStore {
     }
   }
 
-  Future<void> save(Map<String, DocumentText> texts) =>
-      _files.writeFileAtomically(file, utf8.encode(jsonEncode({for (final e in texts.entries) e.key: e.value.toJson()})));
+  Future<void> save(Map<String, DocumentText> texts) => _files.writeFileAtomically(
+    file,
+    utf8.encode(jsonEncode({for (final e in texts.entries) e.key: e.value.toJson()})),
+  );
 }

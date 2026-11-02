@@ -10,10 +10,10 @@ import '../../domain/models.dart';
 import '../../domain/plan.dart';
 import '../../imaging/book_split.dart';
 import '../../imaging/corner_model.dart';
+import '../../imaging/corner_worker.dart';
 import '../../imaging/page_detector.dart';
 import '../../imaging/rgb_image.dart';
 import 'auto_capture.dart';
-import 'frame_worker.dart';
 
 /// How the bytes of a [CameraFrame] are laid out.
 enum FramePixels {
@@ -170,29 +170,55 @@ FrameAnalysis analyzeFrame(CameraFrame frame, {bool smart = true, CornerModel? m
 
 typedef FrameAnalyzer = Future<FrameAnalysis> Function(CameraFrame frame);
 
+/// One preview frame for the [CornerWorker].
+class FrameCornerJob extends CornerJob<FrameAnalysis> {
+  const FrameCornerJob(this.frame);
+
+  final CameraFrame frame;
+
+  @override
+  FrameAnalysis run(CornerModel? model) => analyzeFrame(frame, model: model);
+}
+
 /// Analyses preview frames off the UI thread. Tests swap in a direct call.
-/// With smart scanning (Pro), frames go to one long-lived isolate that holds
-/// the corner model ([FrameWorker]); without it, or while the model loads
-/// or if it cannot, each frame runs in a fresh isolate on the hand-made
-/// detector alone.
+/// With smart scanning (Pro), frames go to the [CornerWorker], which holds
+/// the corner model; without it, or if the model cannot run, each frame
+/// runs in a fresh isolate on the hand-made detector alone.
 final frameAnalyzerProvider = Provider<FrameAnalyzer>((ref) {
   final smart = ref.watch(planIncludesProvider(PlanFeature.smartScan));
   FrameAnalysis plain(CameraFrame frame) => analyzeFrame(frame, smart: smart);
   if (!smart) return (frame) => Isolate.run(() => plain(frame));
-  final worker = FrameWorker.start();
-  ref.onDispose(() => worker.then((w) => w?.stop()));
+  final worker = ref.watch(cornerWorkerProvider);
   return (frame) async {
-    final w = await worker;
-    return w == null ? Isolate.run(() => plain(frame)) : w.analyze(frame);
+    final w = await worker();
+    return w == null ? Isolate.run(() => plain(frame)) : w.run(FrameCornerJob(frame));
   };
 });
 
 typedef SpreadSplitter = Future<(CropQuad, CropQuad)> Function(String photoPath);
 
+/// A book spread photo for the [CornerWorker].
+class SpreadCornerJob extends CornerJob<(CropQuad, CropQuad)> {
+  const SpreadCornerJob(this.path);
+
+  final String path;
+
+  @override
+  (CropQuad, CropQuad) run(CornerModel? model) =>
+      splitSpread(RgbImage.decode(File(path).readAsBytesSync(), maxDimension: 640), model: model);
+}
+
 /// Finds the left and right page in a photo of an open book, off the UI
-/// thread (Book mode).
+/// thread (Book mode). With smart scanning the corner model looks for the
+/// spread first.
 final spreadSplitterProvider = Provider<SpreadSplitter>((ref) {
   final smart = ref.watch(planIncludesProvider(PlanFeature.smartScan));
-  return (path) =>
+  Future<(CropQuad, CropQuad)> plain(String path) =>
       Isolate.run(() => splitSpread(RgbImage.decode(File(path).readAsBytesSync(), maxDimension: 640), smart: smart));
+  if (!smart) return plain;
+  final worker = ref.watch(cornerWorkerProvider);
+  return (path) async {
+    final w = await worker();
+    return w == null ? plain(path) : w.run(SpreadCornerJob(path));
+  };
 });

@@ -52,9 +52,7 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
   final _keys = <EditorTool, GlobalKey>{};
 
   bool get _showsStyle =>
-      widget.tool == EditorTool.pen ||
-      widget.tool == EditorTool.highlighter ||
-      widget.tool == EditorTool.text;
+      widget.tool == EditorTool.pen || widget.tool == EditorTool.highlighter || widget.tool == EditorTool.text;
 
   @override
   void initState() {
@@ -106,9 +104,7 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
                               color: MarkupStyle.palette[i],
                               name: MarkupStyle.paletteNames[i],
                               selected: MarkupStyle.palette[i] == style.color,
-                              onTap: () => widget.onStyle(
-                                style.copyWith(color: MarkupStyle.palette[i]),
-                              ),
+                              onTap: () => widget.onStyle(style.copyWith(color: MarkupStyle.palette[i])),
                             ),
                         ],
                       ),
@@ -120,8 +116,7 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
                             ChoiceChip(
                               label: Text(s.label),
                               selected: s == style.size,
-                              onSelected: (_) =>
-                                  widget.onStyle(style.copyWith(size: s)),
+                              onSelected: (_) => widget.onStyle(style.copyWith(size: s)),
                             ),
                         ],
                       ),
@@ -208,12 +203,7 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
 
 /// One colour in the picker. The circle is small, the tap area is not.
 class _Swatch extends StatelessWidget {
-  const _Swatch({
-    required this.color,
-    required this.name,
-    required this.selected,
-    required this.onTap,
-  });
+  const _Swatch({required this.color, required this.name, required this.selected, required this.onTap});
 
   final Color color;
   final String name;
@@ -242,10 +232,7 @@ class _Swatch extends StatelessWidget {
               decoration: BoxDecoration(
                 color: color,
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: selected ? scheme.primary : scheme.outlineVariant,
-                  width: selected ? 3 : 1,
-                ),
+                border: Border.all(color: selected ? scheme.primary : scheme.outlineVariant, width: selected ? 3 : 1),
               ),
             ),
           ),

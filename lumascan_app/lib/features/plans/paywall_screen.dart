@@ -58,7 +58,8 @@ class PaywallScreen extends ConsumerWidget {
           if (!state.available)
             _Note(
               icon: LumaIcons.storefront,
-              text: 'Plans cannot be bought on this device. Install $appName from Google Play or the App Store to buy Pro or Gold.',
+              text:
+                  'Plans cannot be bought on this device. Install $appName from Google Play or the App Store to buy Pro or Gold.',
             )
           else if (state.offers.isEmpty && state.offersFailed)
             _Note(

@@ -141,8 +141,7 @@ DateTime? _date(String? y, String? m, String? d) {
   return date;
 }
 
-String _isoDate(DateTime d) =>
-    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+String _isoDate(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
 /// The first line that reads like a title: mostly letters, two to twelve
 /// words, not a date, a phone number, an address line or a web address.

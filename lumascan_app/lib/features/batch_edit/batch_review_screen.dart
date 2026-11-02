@@ -151,11 +151,7 @@ class _SelectionRow extends StatelessWidget {
             onPressed: allSelected ? onClear : onSelectAll,
             child: Text(allSelected ? 'Clear' : 'Select all'),
           ),
-          IconButton(
-            tooltip: 'Add pages',
-            icon: const Icon(LumaIcons.addPhoto),
-            onPressed: busy ? null : onAddPages,
-          ),
+          IconButton(tooltip: 'Add pages', icon: const Icon(LumaIcons.addPhoto), onPressed: busy ? null : onAddPages),
         ],
       ),
     );

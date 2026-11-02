@@ -141,7 +141,11 @@ class ErrorState extends StatelessWidget {
             ),
             if (onRetry != null) ...[
               const SizedBox(height: Space.xl),
-              OutlinedButton.icon(onPressed: onRetry, icon: const Icon(LumaIcons.retry), label: const Text('Try again')),
+              OutlinedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(LumaIcons.retry),
+                label: const Text('Try again'),
+              ),
             ],
           ],
         ),
