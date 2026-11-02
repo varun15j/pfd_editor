@@ -120,7 +120,10 @@ void main() {
     await tapOn(tester, find.text('2'));
     final oldSecond = page(tester, 1).id;
     await tapOn(tester, find.text('Retake'));
-    await waitFor(tester, find.text('Page 2 retaken'));
+    // Retake opens the camera for one new photo (since #91), then comes back.
+    await waitFor(tester, find.text('Retaking page 2. Take the new photo.'));
+    await tapOn(tester, find.bySemanticsLabel(RegExp(r'^Take (the new )?photo$')));
+    await waitFor(tester, find.text('Page 2 retaken'), timeout: const Duration(minutes: 2));
     // Its Undo bar sits over the page tools until it times out.
     await waitGone(tester, find.text('Page 2 retaken'));
     expect(page(tester, 1).id, isNot(oldSecond), reason: 'page 2 was replaced in place');
