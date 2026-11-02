@@ -24,7 +24,8 @@ class StorageUsage {
 /// exported PDFs. Scanner output lives in a plugin cache that can be cleared
 /// at any time, so every page is copied here before it is shown.
 class PageStore {
-  PageStore({Future<Directory> Function()? rootDir}) : _rootDir = rootDir ?? getApplicationDocumentsDirectory;
+  PageStore({Future<Directory> Function()? rootDir})
+      : _rootDir = rootDir ?? getApplicationDocumentsDirectory;
 
   final Future<Directory> Function() _rootDir;
   int _counter = 0;

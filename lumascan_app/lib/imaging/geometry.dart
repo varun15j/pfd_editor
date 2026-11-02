@@ -11,13 +11,17 @@ RgbImage warpPerspective(RgbImage src, CropQuad quad) {
 
   final sw = src.width - 1.0, sh = src.height - 1.0;
   final pts = quad.points.map((p) => (p.x * sw, p.y * sh)).toList();
-  double dist((double, double) a, (double, double) b) => math.sqrt(math.pow(a.$1 - b.$1, 2) + math.pow(a.$2 - b.$2, 2));
+  double dist((double, double) a, (double, double) b) =>
+      math.sqrt(math.pow(a.$1 - b.$1, 2) + math.pow(a.$2 - b.$2, 2));
 
   final outW = math.max(dist(pts[0], pts[1]), dist(pts[3], pts[2])).round().clamp(1, 20000);
   final outH = math.max(dist(pts[0], pts[3]), dist(pts[1], pts[2])).round().clamp(1, 20000);
 
   // Homography from the output rectangle to the source quad.
-  final h = _homography([(0.0, 0.0), (outW - 1.0, 0.0), (outW - 1.0, outH - 1.0), (0.0, outH - 1.0)], pts);
+  final h = _homography(
+    [(0.0, 0.0), (outW - 1.0, 0.0), (outW - 1.0, outH - 1.0), (0.0, outH - 1.0)],
+    pts,
+  );
 
   final out = RgbImage(outW, outH);
   final s = src.data, d = out.data;

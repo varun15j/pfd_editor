@@ -32,13 +32,14 @@ RgbImage flattenBookPage(RgbImage page) {
   final x0 = (sw * 0.04).round(), x1 = (sw * 0.96).round();
   final stripWidth = (x1 - x0) / strips;
   final profiles = [
-    for (var k = 0; k < strips; k++)
-      _profile(ink, sw, sh, (x0 + k * stripWidth).round(), (x0 + (k + 1) * stripWidth).round()),
+    for (var k = 0; k < strips; k++) _profile(ink, sw, sh, (x0 + k * stripWidth).round(), (x0 + (k + 1) * stripWidth).round()),
   ];
   final centre = strips ~/ 2;
   // Line spacing from the strips around the middle; a picture in one of
   // them must not hide the lines.
-  final spacings = [for (var k = centre - 4; k <= centre + 4; k += 2) ?_lineSpacing(profiles[k], sh)]..sort();
+  final spacings = [
+    for (var k = centre - 4; k <= centre + 4; k += 2) ?_lineSpacing(profiles[k], sh),
+  ]..sort();
   final spacing = spacings.length < 2 ? null : spacings[spacings.length ~/ 2];
   if (spacing == null) return page;
 

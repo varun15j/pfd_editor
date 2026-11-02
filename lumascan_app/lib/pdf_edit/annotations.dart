@@ -223,7 +223,14 @@ class SignatureAnnotation extends Annotation {
       for (final s in strokes)
         if (s.isNotEmpty) [for (final (x, y) in s) NormPoint((x - minX) / w, (y - minY) / h)],
     ];
-    return centred(id: id, strokes: normalized, aspectRatio: w / h, color: color, pageAspect: pageAspect, width: width);
+    return centred(
+      id: id,
+      strokes: normalized,
+      aspectRatio: w / h,
+      color: color,
+      pageAspect: pageAspect,
+      width: width,
+    );
   }
 
   /// Places already-normalized [strokes], such as a signature saved in the

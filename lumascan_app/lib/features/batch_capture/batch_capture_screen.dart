@@ -336,9 +336,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     if (!_watchesPages && _mode != CameraMode.qr) return;
     final now = DateTime.now();
     final low = ref.read(motionProfileProvider) == MotionProfile.low;
-    final gap = _mode == CameraMode.qr
-        ? (low ? _lowQrFrameGap : _qrFrameGap)
-        : (low ? _lowPageFrameGap : _pageFrameGap);
+    final gap = _mode == CameraMode.qr ? (low ? _lowQrFrameGap : _qrFrameGap) : (low ? _lowPageFrameGap : _pageFrameGap);
     if (now.difference(_lastAnalysis) < gap) return;
     _lastAnalysis = now;
     _analysing = true;

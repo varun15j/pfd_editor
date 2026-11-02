@@ -50,7 +50,12 @@ class CreateSheet extends StatelessWidget {
       (context, ref) => openIdCardStudio(context),
     ),
     (LumaIcons.editPdf, 'Edit a PDF', 'Add text, drawings or a signature', pickAndEditPdf),
-    (LumaIcons.document, 'Open a Word file', 'Turn a .docx from your files into a PDF in your Library', importWordFile),
+    (
+      LumaIcons.document,
+      'Open a Word file',
+      'Turn a .docx from your files into a PDF in your Library',
+      importWordFile,
+    ),
   ];
 
   @override

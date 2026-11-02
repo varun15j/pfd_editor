@@ -35,7 +35,9 @@ class CompactActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = LumaColors.of(context);
     final available = enabled && onPressed != null;
-    final foreground = available ? (selected ? colors.accent : colors.ink) : colors.muted;
+    final foreground = available
+        ? (selected ? colors.accent : colors.ink)
+        : colors.muted;
     final background = selected ? colors.accentSoft : Colors.transparent;
 
     return Semantics(
@@ -53,11 +55,17 @@ class CompactActionButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(ControlMetrics.radius),
             onTap: onPressed,
             child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: minWidth, minHeight: minTapTarget),
+              constraints: BoxConstraints(
+                minWidth: minWidth,
+                minHeight: minTapTarget,
+              ),
               child: AnimatedContainer(
                 duration: Motion.of(context).duration(const Duration(milliseconds: 150)),
                 margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-                padding: const EdgeInsets.symmetric(horizontal: Space.xs, vertical: Space.xs),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Space.xs,
+                  vertical: Space.xs,
+                ),
                 decoration: BoxDecoration(
                   color: background,
                   borderRadius: BorderRadius.circular(ControlMetrics.radius),
@@ -72,8 +80,12 @@ class CompactActionButton extends StatelessWidget {
                       label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall
-                          ?.copyWith(color: foreground, fontWeight: selected ? FontWeight.w700 : FontWeight.w600),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: foreground,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),

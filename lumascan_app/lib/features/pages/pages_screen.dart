@@ -342,11 +342,7 @@ class _PageCard extends ConsumerWidget {
           padding: const EdgeInsets.all(10),
           child: Row(
             children: [
-              SizedBox(
-                width: 64,
-                height: 84,
-                child: PageThumbnail(page: page, number: index + 1),
-              ),
+              SizedBox(width: 64, height: 84, child: PageThumbnail(page: page, number: index + 1)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

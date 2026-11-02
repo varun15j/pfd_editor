@@ -46,7 +46,8 @@ class NormPoint {
   }
 
   @override
-  bool operator ==(Object other) => other is NormPoint && other.x == x && other.y == y;
+  bool operator ==(Object other) =>
+      other is NormPoint && other.x == x && other.y == y;
 
   @override
   int get hashCode => Object.hash(x, y);
@@ -60,7 +61,12 @@ class NormPoint {
 class CropQuad {
   const CropQuad(this.tl, this.tr, this.br, this.bl);
 
-  static const full = CropQuad(NormPoint(0, 0), NormPoint(1, 0), NormPoint(1, 1), NormPoint(0, 1));
+  static const full = CropQuad(
+    NormPoint(0, 0),
+    NormPoint(1, 0),
+    NormPoint(1, 1),
+    NormPoint(0, 1),
+  );
 
   final NormPoint tl;
   final NormPoint tr;
@@ -123,7 +129,11 @@ class CropQuad {
 
   @override
   bool operator ==(Object other) =>
-      other is CropQuad && other.tl == tl && other.tr == tr && other.br == br && other.bl == bl;
+      other is CropQuad &&
+      other.tl == tl &&
+      other.tr == tr &&
+      other.br == br &&
+      other.bl == bl;
 
   @override
   int get hashCode => Object.hash(tl, tr, br, bl);
@@ -167,32 +177,33 @@ class EditRecipe {
     double? brightness,
     double? contrast,
     bool? bookFix,
-  }) => EditRecipe(
-    crop: crop ?? this.crop,
-    quarterTurns: (quarterTurns ?? this.quarterTurns) % 4,
-    filter: filter ?? this.filter,
-    brightness: brightness ?? this.brightness,
-    contrast: contrast ?? this.contrast,
-    bookFix: bookFix ?? this.bookFix,
-  );
+  }) =>
+      EditRecipe(
+        crop: crop ?? this.crop,
+        quarterTurns: (quarterTurns ?? this.quarterTurns) % 4,
+        filter: filter ?? this.filter,
+        brightness: brightness ?? this.brightness,
+        contrast: contrast ?? this.contrast,
+        bookFix: bookFix ?? this.bookFix,
+      );
 
   Map<String, Object?> toJson() => {
-    if (!crop.isFull) 'crop': crop.toJson(),
-    'quarterTurns': quarterTurns,
-    'filter': filter.id,
-    if (brightness != 0) 'brightness': brightness,
-    if (contrast != 0) 'contrast': contrast,
-    if (bookFix) 'bookFix': true,
-  };
+        if (!crop.isFull) 'crop': crop.toJson(),
+        'quarterTurns': quarterTurns,
+        'filter': filter.id,
+        if (brightness != 0) 'brightness': brightness,
+        if (contrast != 0) 'contrast': contrast,
+        if (bookFix) 'bookFix': true,
+      };
 
   static EditRecipe fromJson(Map<String, Object?> json) => EditRecipe(
-    crop: json['crop'] == null ? CropQuad.full : CropQuad.fromJson(json['crop']),
-    quarterTurns: ((json['quarterTurns'] as num?)?.toInt() ?? 0) % 4,
-    filter: DocumentFilter.fromId(json['filter'] as String? ?? DocumentFilter.original.id),
-    brightness: ((json['brightness'] as num?)?.toDouble() ?? 0).clamp(-1.0, 1.0),
-    contrast: ((json['contrast'] as num?)?.toDouble() ?? 0).clamp(-1.0, 1.0),
-    bookFix: json['bookFix'] == true,
-  );
+        crop: json['crop'] == null ? CropQuad.full : CropQuad.fromJson(json['crop']),
+        quarterTurns: ((json['quarterTurns'] as num?)?.toInt() ?? 0) % 4,
+        filter: DocumentFilter.fromId(json['filter'] as String? ?? DocumentFilter.original.id),
+        brightness: ((json['brightness'] as num?)?.toDouble() ?? 0).clamp(-1.0, 1.0),
+        contrast: ((json['contrast'] as num?)?.toDouble() ?? 0).clamp(-1.0, 1.0),
+        bookFix: json['bookFix'] == true,
+      );
 
   /// Stable key used to cache rendered derivatives.
   String get cacheKey {
@@ -255,20 +266,20 @@ class ScanPage {
   /// folder can move between launches (iOS changes it on every update).
   /// [fromJson] resolves it against the current originals folder.
   Map<String, Object?> toJson() => {
-    'id': id,
-    'file': path.basename(originalPath),
-    'recipe': recipe.toJson(),
-    if (annotations.isNotEmpty) 'annotations': [for (final a in annotations) a.toJson()],
-    if (text != null) 'text': text,
-  };
+        'id': id,
+        'file': path.basename(originalPath),
+        'recipe': recipe.toJson(),
+        if (annotations.isNotEmpty) 'annotations': [for (final a in annotations) a.toJson()],
+        if (text != null) 'text': text,
+      };
 
   static ScanPage fromJson(Map<String, Object?> json, {required String originalsDir}) => ScanPage(
-    id: json['id']! as String,
-    originalPath: path.join(originalsDir, json['file']! as String),
-    recipe: EditRecipe.fromJson((json['recipe'] as Map?)?.cast<String, Object?>() ?? const {}),
-    annotations: Annotation.listFromJson(json['annotations']),
-    text: json['text'] as String?,
-  );
+        id: json['id']! as String,
+        originalPath: path.join(originalsDir, json['file']! as String),
+        recipe: EditRecipe.fromJson((json['recipe'] as Map?)?.cast<String, Object?>() ?? const {}),
+        annotations: Annotation.listFromJson(json['annotations']),
+        text: json['text'] as String?,
+      );
 }
 
 enum PdfPageSize {

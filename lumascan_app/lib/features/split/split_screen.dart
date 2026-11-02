@@ -171,7 +171,11 @@ class _SplitScreenState extends ConsumerState<SplitScreen> {
                     icon: const Icon(LumaIcons.split),
                     enabled: _pageCount > 1,
                   ),
-                  const ButtonSegment(value: SplitMode.extract, label: Text('Extract'), icon: Icon(LumaIcons.extract)),
+                  const ButtonSegment(
+                    value: SplitMode.extract,
+                    label: Text('Extract'),
+                    icon: Icon(LumaIcons.extract),
+                  ),
                 ],
                 selected: {_mode},
                 onSelectionChanged: _busy ? null : (s) => setState(() => _mode = s.single),

@@ -96,12 +96,7 @@ class DocumentTextController extends Notifier<DocumentTextState> {
   void _forgetDeleted(List<SavedDocument> docs) {
     final ids = {for (final d in docs) d.id};
     if (state.texts.keys.every(ids.contains)) return;
-    state = state.copyWith(
-      texts: {
-        for (final e in state.texts.entries)
-          if (ids.contains(e.key)) e.key: e.value,
-      },
-    );
+    state = state.copyWith(texts: {for (final e in state.texts.entries) if (ids.contains(e.key)) e.key: e.value});
   }
 
   Future<void> _save() async {

@@ -45,7 +45,10 @@ class TextPdfNextSheet extends ConsumerWidget {
           children: [
             Text('Text PDF saved', style: textTheme.headlineSmall),
             const SizedBox(height: 4),
-            Text('${p.basename(pdfPath)} · $pageCount page${pageCount == 1 ? '' : 's'}', style: textTheme.bodySmall),
+            Text(
+              '${p.basename(pdfPath)} · $pageCount page${pageCount == 1 ? '' : 's'}',
+              style: textTheme.bodySmall,
+            ),
             const SizedBox(height: 8),
             _NextOption(
               icon: LumaIcons.library,
@@ -53,10 +56,17 @@ class TextPdfNextSheet extends ConsumerWidget {
               subtitle: 'Keep it with your documents',
               onTap: () => _saveToLibrary(context),
             ),
-            _NextOption(icon: LumaIcons.openExternal, title: 'Open in another PDF app', onTap: () => _open(context)),
+            _NextOption(
+              icon: LumaIcons.openExternal,
+              title: 'Open in another PDF app',
+              onTap: () => _open(context),
+            ),
             Builder(
-              builder: (tileContext) =>
-                  _NextOption(icon: LumaIcons.share, title: 'Share', onTap: () => _share(context, ref, tileContext)),
+              builder: (tileContext) => _NextOption(
+                icon: LumaIcons.share,
+                title: 'Share',
+                onTap: () => _share(context, ref, tileContext),
+              ),
             ),
             _NextOption(
               icon: LumaIcons.folder,

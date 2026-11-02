@@ -123,11 +123,7 @@ class _ReorderTile extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         child: Row(
           children: [
-            SizedBox(
-              width: 52,
-              height: 68,
-              child: PageThumbnail(page: page, number: index + 1),
-            ),
+            SizedBox(width: 52, height: 68, child: PageThumbnail(page: page, number: index + 1)),
             const SizedBox(width: 12),
             Expanded(
               child: Semantics(
