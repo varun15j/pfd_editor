@@ -16,6 +16,7 @@ import 'package:lumascan/features/library/document_tile.dart';
 import 'package:lumascan/features/library/library_controller.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 import 'package:path/path.dart' as path;
+
 import 'support/temp_dir.dart';
 
 class FakeScanner implements ScannerService {
@@ -263,6 +264,38 @@ void main() {
       expect(c.read(scanControllerProvider).parked, isEmpty);
       expect(File(path.join(tmp.path, DraftStore.parkedDir, '$id.json')).existsSync(), isFalse);
       expect(images.any((p) => File(p).existsSync()), isFalse);
+    });
+
+    test('scans keep their favorite heart after a restart, and a favorite scan is not deleted', () async {
+      final c = launch();
+      final controller = c.read(scanControllerProvider.notifier);
+      await controller.scan(ScanSource.camera);
+      await controller.startNewDocument();
+      final id = c.read(scanControllerProvider).parked.single.id;
+      await controller.scan(ScanSource.camera);
+
+      controller.setFavorite(true);
+      await controller.setParkedFavorite(id, true);
+      await controller.draftSaved;
+      expect(c.read(scanControllerProvider).info!.favorite, isTrue);
+      expect(c.read(scanControllerProvider).parked.single.favorite, isTrue);
+
+      final again = launch();
+      await again.read(scanControllerProvider.notifier).draftSaved;
+      expect(again.read(scanControllerProvider).info!.favorite, isTrue);
+      expect(again.read(scanControllerProvider).parked.single.favorite, isTrue);
+
+      await controller.deleteParked(id);
+      expect(c.read(scanControllerProvider).parked, hasLength(1));
+      expect(File(path.join(tmp.path, DraftStore.parkedDir, '$id.json')).existsSync(), isTrue);
+
+      // Taking the heart off is stored too, and then the scan can go.
+      await controller.setParkedFavorite(id, false);
+      final third = launch();
+      await third.read(scanControllerProvider.notifier).draftSaved;
+      expect(third.read(scanControllerProvider).parked.single.favorite, isFalse);
+      await controller.deleteParked(id);
+      expect(c.read(scanControllerProvider).parked, isEmpty);
     });
 
     test('a draft saved before scans had names gets one from its date', () async {

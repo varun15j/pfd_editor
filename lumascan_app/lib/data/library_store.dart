@@ -179,12 +179,23 @@ class DraftStore {
   Future<void> deleteParked(String id) => _files.deleteFile('$parkedDir/$id.json');
 
   /// Renames earlier document [id]. Does nothing if it cannot be read.
-  Future<void> renameParked(String id, String name) async {
+  Future<void> renameParked(String id, String name) => _editParked(id, (info) => info.copyWith(name: name));
+
+  /// Adds earlier document [id] to favorites or takes it off. Does nothing
+  /// if it cannot be read.
+  Future<void> setParkedFavorite(String id, bool favorite) =>
+      _editParked(id, (info) => info.copyWith(favorite: favorite));
+
+  Future<void> _editParked(String id, ScanDocInfo Function(ScanDocInfo) change) async {
     final text = await _files.readText('$parkedDir/$id.json');
     if (text == null) return;
     final json = (jsonDecode(text) as Map).cast<String, Object?>();
     final savedAt = DateTime.tryParse(json['savedAt'] as String? ?? '')?.toLocal() ?? DateTime.now();
-    json.addAll(_info(json, fallback: savedAt).copyWith(name: name).toJson());
+    final info = change(_info(json, fallback: savedAt));
+    // Keys left out when off (such as favorite) must not survive.
+    json
+      ..remove('favorite')
+      ..addAll(info.toJson());
     await _files.writeFileAtomically('$parkedDir/$id.json', utf8.encode(jsonEncode(json)));
   }
 
@@ -232,14 +243,12 @@ class ParkedDraft {
 
   String get name => info.name;
 
-  ParkedDraft renamed(String name) => ParkedDraft(
-    id: id,
-    pageCount: pageCount,
-    savedAt: savedAt,
-    exported: exported,
-    cover: cover,
-    info: info.copyWith(name: name),
-  );
+  bool get favorite => info.favorite;
+
+  ParkedDraft renamed(String name) => withInfo(info.copyWith(name: name));
+
+  ParkedDraft withInfo(ScanDocInfo info) =>
+      ParkedDraft(id: id, pageCount: pageCount, savedAt: savedAt, exported: exported, cover: cover, info: info);
   final int pageCount;
   final DateTime savedAt;
 

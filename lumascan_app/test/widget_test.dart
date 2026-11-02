@@ -18,6 +18,7 @@ import 'package:lumascan/ui/state_views.dart';
 import 'support/fake_batch_camera.dart';
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
+
 import 'package:lumascan/ui/luma_icons.dart';
 
 /// A camera whose access is turned off; it never takes a photo.
@@ -218,6 +219,44 @@ void main() {
       // The other scan is kept, now as an earlier one, with its own name.
       expect(find.text('2026-10-11 Scan'), findsOneWidget);
       expect(find.text('2026-10-11 Scan 2'), findsOneWidget);
+    });
+
+    testWidgets('scans on home have a heart; favorites lead and cannot be deleted', (tester) async {
+      final store = MemoryDraftStore(const [ScanPage(id: 'a', originalPath: '/nowhere/a.jpg')])
+        ..info = ScanDocInfo(name: 'Draft now', createdAt: DateTime(2026, 10, 11, 10));
+      await store.park(const [
+        ScanPage(id: 'x', originalPath: '/nowhere/x.jpg'),
+      ], info: ScanDocInfo(name: 'Older scan', createdAt: DateTime(2026, 10, 11, 9)));
+      await pumpApp(tester, draft: store, overrides: [_noImages]);
+      double top(String name) => tester.getTopLeft(find.text(name)).dy;
+      expect(top('Draft now'), lessThan(top('Older scan')));
+
+      await tester.tap(find.byTooltip('Add Older scan to favorites'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(store.parkedPages.values.single.$1.favorite, isTrue);
+      expect(top('Older scan'), lessThan(top('Draft now')));
+
+      await tester.tap(find.byTooltip('More for Older scan'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Remove from favorites to delete'), findsOneWidget);
+      await tester.tap(find.text('Delete'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(store.parkedPages, hasLength(1));
+      // A disabled item leaves the menu open; close it.
+      await tester.tapAt(const Offset(5, 5));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // The draft on screen has a heart too, saved with the draft.
+      await tester.tap(find.byTooltip('Add Draft now to favorites'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(store.info?.favorite, isTrue);
+      expect(find.byTooltip('Remove Draft now from favorites'), findsOneWidget);
     });
 
     testWidgets('a scan on home can be renamed and deleted from its menu', (tester) async {

@@ -82,6 +82,12 @@ class MemoryDraftStore extends DraftStore {
     final entry = parkedPages[id];
     if (entry != null) parkedPages[id] = (entry.$1.renamed(name), entry.$2);
   }
+
+  @override
+  Future<void> setParkedFavorite(String id, bool favorite) async {
+    final entry = parkedPages[id];
+    if (entry != null) parkedPages[id] = (entry.$1.withInfo(entry.$1.info.copyWith(favorite: favorite)), entry.$2);
+  }
 }
 
 class MemoryUiPrefsStore extends UiPrefsStore {

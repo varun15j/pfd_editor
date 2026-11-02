@@ -90,9 +90,17 @@ String? documentLabels(SavedDocument doc, LibraryIndex index) {
 /// The heart on a document: outline when not a favorite, filled when it
 /// is. Tapping it toggles. While selecting it only shows the state.
 class FavoriteButton extends StatelessWidget {
-  const FavoriteButton({super.key, required this.document, required this.onPressed, this.size = 22});
+  const FavoriteButton({
+    super.key,
+    required this.name,
+    required this.favorite,
+    required this.onPressed,
+    this.size = 22,
+  });
 
-  final SavedDocument document;
+  /// The document's name, for the tooltip.
+  final String name;
+  final bool favorite;
 
   /// Null shows the state without a button, for favorites while selecting.
   final VoidCallback? onPressed;
@@ -101,7 +109,7 @@ class FavoriteButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = LumaColors.of(context);
-    final on = document.favorite;
+    final on = favorite;
     final icon = AnimatedSwitcher(
       duration: Motion.of(context).duration(const Duration(milliseconds: 200)),
       transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
@@ -119,7 +127,7 @@ class FavoriteButton extends StatelessWidget {
       );
     }
     return IconButton(
-      tooltip: on ? 'Remove ${document.name} from favorites' : 'Add ${document.name} to favorites',
+      tooltip: on ? 'Remove $name from favorites' : 'Add $name to favorites',
       isSelected: on,
       onPressed: onPressed,
       icon: icon,
@@ -165,7 +173,8 @@ class _DocumentInteraction {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (heart && document.favorite) FavoriteButton(document: document, onPressed: null, size: 18),
+          if (heart && document.favorite)
+            FavoriteButton(name: document.name, favorite: true, onPressed: null, size: 18),
           ExcludeSemantics(
             child: Checkbox(value: selected, onChanged: (_) => onTap()),
           ),
@@ -175,7 +184,7 @@ class _DocumentInteraction {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (heart) FavoriteButton(document: document, onPressed: onFavorite),
+        if (heart) FavoriteButton(name: document.name, favorite: document.favorite, onPressed: onFavorite),
         _menu(context),
       ],
     );
@@ -431,7 +440,11 @@ class DocumentGridCard extends StatelessWidget {
                   top: Space.xs,
                   right: Space.xs,
                   child: FavoriteBadge(
-                    child: FavoriteButton(document: document, onPressed: selecting ? null : onFavorite),
+                    child: FavoriteButton(
+                      name: document.name,
+                      favorite: document.favorite,
+                      onPressed: selecting ? null : onFavorite,
+                    ),
                   ),
                 ),
               ],

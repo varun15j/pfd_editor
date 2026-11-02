@@ -7,7 +7,7 @@ import 'id_copy.dart';
 /// the first shot; exporting to PDF or JPG makes copies and changes nothing.
 @immutable
 class ScanDocInfo {
-  const ScanDocInfo({required this.name, required this.createdAt, this.idCopy});
+  const ScanDocInfo({required this.name, required this.createdAt, this.idCopy, this.favorite = false});
 
   final String name;
   final DateTime createdAt;
@@ -18,16 +18,22 @@ class ScanDocInfo {
   /// set aside.
   final IdCopyDraft? idCopy;
 
-  ScanDocInfo copyWith({String? name, Object? idCopy = _keep}) => ScanDocInfo(
+  /// Marked with the heart on Home. Favorites are listed first and can't be
+  /// deleted until the heart is taken off.
+  final bool favorite;
+
+  ScanDocInfo copyWith({String? name, Object? idCopy = _keep, bool? favorite}) => ScanDocInfo(
     name: name ?? this.name,
     createdAt: createdAt,
     idCopy: identical(idCopy, _keep) ? this.idCopy : idCopy as IdCopyDraft?,
+    favorite: favorite ?? this.favorite,
   );
 
   Map<String, Object?> toJson() => {
     'name': name,
     'createdAt': createdAt.toUtc().toIso8601String(),
     if (idCopy != null) 'idCopy': idCopy!.toJson(),
+    if (favorite) 'favorite': true,
   };
 
   /// Null when [json] has no name (a file from before documents had names).
@@ -39,15 +45,20 @@ class ScanDocInfo {
       name: name,
       createdAt: created is String ? DateTime.parse(created).toLocal() : DateTime.now(),
       idCopy: IdCopyDraft.fromJson(json['idCopy']),
+      favorite: json['favorite'] == true,
     );
   }
 
   @override
   bool operator ==(Object other) =>
-      other is ScanDocInfo && other.name == name && other.createdAt == createdAt && other.idCopy == idCopy;
+      other is ScanDocInfo &&
+      other.name == name &&
+      other.createdAt == createdAt &&
+      other.idCopy == idCopy &&
+      other.favorite == favorite;
 
   @override
-  int get hashCode => Object.hash(name, createdAt, idCopy);
+  int get hashCode => Object.hash(name, createdAt, idCopy, favorite);
 }
 
 const Object _keep = Object();

@@ -729,6 +729,26 @@ class ScanController extends Notifier<ScanState> {
     _persistDraft();
   }
 
+  /// Adds the document on screen to favorites, or takes it off.
+  void setFavorite(bool favorite) {
+    final info = state.info;
+    if (info == null || info.favorite == favorite) return;
+    state = state.copyWith(info: info.copyWith(favorite: favorite));
+    _persistDraft();
+  }
+
+  /// Adds earlier document [id] to favorites, or takes it off.
+  Future<void> setParkedFavorite(String id, bool favorite) async {
+    if (!state.parked.any((d) => d.id == id && d.favorite != favorite)) return;
+    state = state.copyWith(
+      parked: [for (final d in state.parked) d.id == id ? d.withInfo(d.info.copyWith(favorite: favorite)) : d],
+    );
+    _draftIo = _draftIo
+        .then((_) => ref.read(draftStoreProvider).setParkedFavorite(id, favorite))
+        .catchError((Object e) => debugPrint('Could not change favorite: $e'));
+    await _draftIo;
+  }
+
   /// Renames earlier document [id]. Blank names are ignored.
   Future<void> renameParked(String id, String name) async {
     final n = name.trim();
@@ -741,9 +761,9 @@ class ScanController extends Notifier<ScanState> {
   }
 
   /// Deletes earlier document [id] and its page images. Exported PDFs and
-  /// JPGs are kept.
+  /// JPGs are kept. A favorite is kept: its heart has to come off first.
   Future<void> deleteParked(String id) async {
-    if (!state.parked.any((d) => d.id == id)) return;
+    if (!state.parked.any((d) => d.id == id && !d.favorite)) return;
     state = state.copyWith(
       parked: [
         for (final d in state.parked)
