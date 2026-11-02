@@ -4,6 +4,7 @@ import 'package:flutter/material.dart' show ThemeMode;
 import 'eula.dart';
 import 'models.dart';
 import 'motion_profile.dart';
+import 'simulated_phone.dart';
 import 'ocr_languages.dart';
 import 'plan.dart';
 import 'scan_document.dart';
@@ -88,6 +89,9 @@ class AppSettings {
     this.autoCaptureSteadiness = AutoCaptureSteadiness.normal,
     this.debugPlan,
     this.debugMotion,
+    this.debugPhone,
+    this.debugPerfOverlay = false,
+    this.debugBusyCores = false,
     this.ocrLanguage = 'en',
     this.appLock = false,
     this.appLockDelay = AppLockDelay.oneMinute,
@@ -147,6 +151,17 @@ class AppSettings {
   /// picked for the phone. Null means Auto. Release builds ignore it.
   final MotionProfile? debugMotion;
 
+  /// Debug builds only: the cheaper phone to act as (debug panel, "Simulate
+  /// phone"). Null means this phone as it is. Release builds ignore it.
+  final SimulatedPhone? debugPhone;
+
+  /// Debug builds only: show frame times and memory over the app.
+  final bool debugPerfOverlay;
+
+  /// Debug builds only: while acting as [debugPhone], keep the other cores
+  /// busy so the app gets about that phone's CPU.
+  final bool debugBusyCores;
+
   /// Language text recognition reads, as a code from [OcrLanguage.all].
   /// Applies to the next read; text already recognised is kept.
   final String ocrLanguage;
@@ -158,6 +173,7 @@ class AppSettings {
 
   /// How long the app may be in the background before the lock asks again.
   final AppLockDelay appLockDelay;
+
   /// Version of the End User Licence Agreement the user last accepted; 0 when
   /// they never have. Below [eulaVersion], the agreement is shown at start.
   final int eulaAcceptedVersion;
@@ -179,6 +195,9 @@ class AppSettings {
     AutoCaptureSteadiness? autoCaptureSteadiness,
     Object? debugPlan = _keep,
     Object? debugMotion = _keep,
+    Object? debugPhone = _keep,
+    bool? debugPerfOverlay,
+    bool? debugBusyCores,
     String? ocrLanguage,
     bool? appLock,
     AppLockDelay? appLockDelay,
@@ -197,6 +216,9 @@ class AppSettings {
     autoCaptureSteadiness: autoCaptureSteadiness ?? this.autoCaptureSteadiness,
     debugPlan: identical(debugPlan, _keep) ? this.debugPlan : debugPlan as AppPlan?,
     debugMotion: identical(debugMotion, _keep) ? this.debugMotion : debugMotion as MotionProfile?,
+    debugPhone: identical(debugPhone, _keep) ? this.debugPhone : debugPhone as SimulatedPhone?,
+    debugPerfOverlay: debugPerfOverlay ?? this.debugPerfOverlay,
+    debugBusyCores: debugBusyCores ?? this.debugBusyCores,
     ocrLanguage: ocrLanguage ?? this.ocrLanguage,
     appLock: appLock ?? this.appLock,
     appLockDelay: appLockDelay ?? this.appLockDelay,
@@ -225,6 +247,9 @@ class AppSettings {
     'autoCaptureSteadiness': autoCaptureSteadiness.name,
     if (debugPlan != null) 'debugPlan': debugPlan!.name,
     if (debugMotion != null) 'debugMotion': debugMotion!.name,
+    if (debugPhone != null) 'debugPhone': debugPhone!.name,
+    if (debugPerfOverlay) 'debugPerfOverlay': true,
+    if (debugBusyCores) 'debugBusyCores': true,
     'ocrLanguage': ocrLanguage,
     'appLock': appLock,
     'appLockDelay': appLockDelay.name,
@@ -248,6 +273,9 @@ class AppSettings {
         AutoCaptureSteadiness.values.asNameMap()[json['autoCaptureSteadiness']] ?? AutoCaptureSteadiness.normal,
     debugPlan: AppPlan.values.asNameMap()[json['debugPlan']],
     debugMotion: MotionProfile.values.asNameMap()[json['debugMotion']],
+    debugPhone: SimulatedPhone.values.asNameMap()[json['debugPhone']],
+    debugPerfOverlay: json['debugPerfOverlay'] as bool? ?? false,
+    debugBusyCores: json['debugBusyCores'] as bool? ?? false,
     ocrLanguage: OcrLanguage.byCode(json['ocrLanguage'] as String? ?? '')?.code ?? 'en',
     appLock: json['appLock'] as bool? ?? false,
     appLockDelay: AppLockDelay.values.asNameMap()[json['appLockDelay']] ?? AppLockDelay.oneMinute,
@@ -290,6 +318,9 @@ class AppSettings {
       other.autoCaptureSteadiness == autoCaptureSteadiness &&
       other.debugPlan == debugPlan &&
       other.debugMotion == debugMotion &&
+      other.debugPhone == debugPhone &&
+      other.debugPerfOverlay == debugPerfOverlay &&
+      other.debugBusyCores == debugBusyCores &&
       other.ocrLanguage == ocrLanguage &&
       other.appLock == appLock &&
       other.appLockDelay == appLockDelay &&
@@ -310,6 +341,9 @@ class AppSettings {
     autoCaptureSteadiness,
     debugPlan,
     debugMotion,
+    debugPhone,
+    debugPerfOverlay,
+    debugBusyCores,
     ocrLanguage,
     appLock,
     appLockDelay,

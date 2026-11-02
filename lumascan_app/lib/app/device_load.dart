@@ -1,6 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../domain/simulated_phone.dart';
+
+export '../domain/simulated_phone.dart';
+
 /// How busy the phone is: free memory, this app's share of the CPU and how
 /// hot it runs. Background work the user did not ask for, such as reading
 /// the text of each auto-captured page, runs only when there is room.
@@ -107,6 +111,40 @@ class PlatformDeviceLoadProbe implements DeviceLoadProbe {
       thermal: raw['thermal'] as int?,
       cores: raw['cores'] as int?,
       lowRamDevice: raw['lowRamDevice'] as bool? ?? false,
+    );
+  }
+}
+
+/// Debug builds acting as a cheaper [phone]: the real readings, scaled to
+/// that phone's memory and cores. The app's CPU share is counted against the
+/// phone's cores, so work that takes one of eight cores here counts as one of
+/// four on an entry phone.
+class SimulatedDeviceLoadProbe implements DeviceLoadProbe {
+  SimulatedDeviceLoadProbe(this.real, this.phone);
+
+  final DeviceLoadProbe real;
+  final SimulatedPhone phone;
+
+  @override
+  Future<DeviceLoad?> sample() async => simulate(await real.sample(), phone);
+
+  /// [load] as it would read on [phone]. With no reading (iOS, tests) a
+  /// quarter of the phone's memory counts as free.
+  static DeviceLoad simulate(DeviceLoad? load, SimulatedPhone phone) {
+    if (load == null) {
+      return DeviceLoad(availableMb: phone.totalMb ~/ 4, totalMb: phone.totalMb, cores: phone.cores);
+    }
+    final realCores = load.cores ?? phone.cores;
+    final cpu = load.appCpu == null ? null : (load.appCpu! * realCores / phone.fastCoreShare).clamp(0.0, 1.0);
+    final free = phone.freeMbFor(realFreeMb: load.availableMb, realTotalMb: load.totalMb);
+    return DeviceLoad(
+      availableMb: free,
+      totalMb: phone.totalMb,
+      lowMemory: load.lowMemory || free < minFreeMb,
+      appCpu: cpu,
+      thermal: load.thermal,
+      cores: phone.cores,
+      lowRamDevice: load.lowRamDevice,
     );
   }
 }

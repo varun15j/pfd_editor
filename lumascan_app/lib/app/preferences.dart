@@ -10,6 +10,7 @@ import '../domain/models.dart';
 import '../domain/motion_profile.dart';
 import '../domain/ocr_languages.dart';
 import '../domain/plan.dart';
+import '../domain/simulated_phone.dart';
 import '../domain/ui_prefs.dart';
 import 'providers.dart';
 import 'purchases.dart';
@@ -78,6 +79,15 @@ class AppSettingsController extends Notifier<AppSettings> {
 
   /// Debug builds: use [profile] for animations, or the phone's own when null.
   void setDebugMotion(MotionProfile? profile) => _set(state.copyWith(debugMotion: profile));
+
+  /// Debug builds: act as [phone], or as this phone when null.
+  void setDebugPhone(SimulatedPhone? phone) => _set(state.copyWith(debugPhone: phone));
+
+  /// Debug builds: show or hide the performance overlay.
+  void setDebugPerfOverlay(bool value) => _set(state.copyWith(debugPerfOverlay: value));
+
+  /// Debug builds: keep the other cores busy while acting as a cheaper phone.
+  void setDebugBusyCores(bool value) => _set(state.copyWith(debugBusyCores: value));
 
   void setOcrLanguage(String code) => _set(state.copyWith(ocrLanguage: code));
 
