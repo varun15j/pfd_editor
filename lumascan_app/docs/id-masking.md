@@ -6,7 +6,8 @@ Added 2026-10-26. Code: `lib/pdf_edit/annotations.dart` (`MaskAnnotation`), `lib
 
 A mask is a solid box over part of a page, for hiding an Aadhaar number, a PAN or anything else that should not be shared. There are two ways to add one:
 
-- **By hand, on every plan.** In Markup (and in the PDF editor) choose **Mask** and drag over what to hide.
+- **By hand, on every plan.** In Markup (and in the PDF editor) choose **Mask** and drag over what to hide. On Basic, and in the PDF editor, this is a solid black box.
+- **Smart hand mask, on Pro and Gold** (`PlanFeature.digitMask`, added 2026-11-02). In Markup, the box dragged over a number is read with OCR and turned into an X over every third digit inside it (`23X56X89X12`), the way partly masked numbers are printed. Counting runs on across the words and lines in the box; label words caught in the box ("Card No") are not counted, and a box with no digits crosses out every third letter instead. The black box shows straight away and stays when nothing is read there; Undo after the Xs appear brings it back. Code: `EveryNthMask` in `lib/domain/id_masking.dart`.
 - **Auto mask, on Pro and Gold.** "Auto mask ID numbers" reads the page on the device and masks every ID number it finds, leaving the last four characters readable, the way UIDAI's own masked Aadhaar does.
 
 A mask is an ordinary mark: it can be dragged, made larger or smaller from its menu in Move mode, erased with the eraser, and taken back with Undo. Like other marks it is removed when the page is cropped or rotated, because it would no longer line up.
@@ -64,7 +65,8 @@ Auto mask is Pro and Gold (`PlanFeature.autoMask`). It runs from **Auto mask ID 
 **2. Labels, for any country.** A label marks what follows it on the line, or the line below when the label ends its line:
 
 - Date of birth: `DOB`, `D.O.B`, `Date of Birth`, `Birth date`, `Born`, `YOB`, `Year of Birth`, and the German, French and Spanish words. Dates like `01/01/1990`, `1990-01-31`, `31.01.1990`, `12 Jan 1990` and a year alone are hidden whole.
-- ID numbers: `Passport No`, `Document No`, `ID No`, `Identity`, `National ID`, `Social Security`, `SSN`, `SIN`, `NIN`, `TIN`, `Tax ID`, `NIC`, `CNIC`, `Licence No`, `DL No`, `Card No`, `Account No`, `Aadhaar`, `UID`, `VID`, `EPIC`, `Personal No`, and the German, French and Spanish words. The words with digits after the label are taken as the number, and all but its last four characters are hidden.
+- ID numbers: `Passport No`, `Document No`, `ID No`, `Identity`, `National ID`, `Social Security`, `SSN`, `SIN`, `NIN`, `TIN`, `Tax ID`, `NIC`, `CNIC`, `Licence No`, `DL No`, `Card No`, `Account No`, `Aadhaar`, `UID`, `VID`, `EPIC`, `Personal No`, `Unique ID`, `Enrolment No`, `Registration No`, `Employee / Member / Customer / Student / Policy / Roll ID or No`, `Folio No`, and the German, French and Spanish words. The words with digits after the label are taken as the number, and all but its last four characters are hidden.
+- Card security code: `CVV`, `CVC`, `CID`, `Security code`. The three or four digits after it are hidden whole.
 
 **3. Unreadable after a label.** Anything number-like after a label that is not a clean number gets a black box (above).
 
