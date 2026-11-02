@@ -132,7 +132,12 @@ class SimulatedDeviceLoadProbe implements DeviceLoadProbe {
   /// quarter of the phone's memory counts as free.
   static DeviceLoad simulate(DeviceLoad? load, SimulatedPhone phone) {
     if (load == null) {
-      return DeviceLoad(availableMb: phone.totalMb ~/ 4, totalMb: phone.totalMb, cores: phone.cores);
+      return DeviceLoad(
+        availableMb: phone.totalMb ~/ 4,
+        totalMb: phone.totalMb,
+        cores: phone.cores,
+        lowRamDevice: phone.lowRamDevice,
+      );
     }
     final realCores = load.cores ?? phone.cores;
     final cpu = load.appCpu == null ? null : (load.appCpu! * realCores / phone.fastCoreShare).clamp(0.0, 1.0);
@@ -144,7 +149,7 @@ class SimulatedDeviceLoadProbe implements DeviceLoadProbe {
       appCpu: cpu,
       thermal: load.thermal,
       cores: phone.cores,
-      lowRamDevice: load.lowRamDevice,
+      lowRamDevice: load.lowRamDevice || phone.lowRamDevice,
     );
   }
 }

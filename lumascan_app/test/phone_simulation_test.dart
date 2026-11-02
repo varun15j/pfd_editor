@@ -51,6 +51,19 @@ void main() {
       expect(load.lowMemory, isTrue);
     });
 
+    test('1 GB Go: low RAM device, Low profile, no room for background reads', () {
+      final load = SimulatedDeviceLoadProbe.simulate(_onePlus, SimulatedPhone.go1gb);
+      expect(load.totalMb, 900);
+      expect(load.lowRamDevice, isTrue);
+      expect(load.availableMb, 450);
+      expect(affordsTextCheck(load, pending: 0), isFalse);
+      expect(
+        motionProfileFor(DeviceSpec(totalMb: load.totalMb, cores: load.cores, lowRamDevice: load.lowRamDevice)),
+        MotionProfile.low,
+      );
+      expect(SimulatedPhone.go1gb.busyCoresOn(8), 7);
+    });
+
     test('no reading at all still gives the phone', () {
       final load = SimulatedDeviceLoadProbe.simulate(null, SimulatedPhone.mid4gb);
       expect(load.totalMb, 3650);

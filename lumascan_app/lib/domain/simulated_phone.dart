@@ -13,6 +13,19 @@
 ///
 /// The performance overlay compares the app's memory with [memoryBudgetMb].
 enum SimulatedPhone {
+  /// An Android Go phone: 1 GB, four very slow cores (MT6739 / SC9863A
+  /// class). Android marks these as low memory devices.
+  go1gb(
+    '1 GB Go',
+    totalMb: 900,
+    cores: 4,
+    renderSlots: 1,
+    imageCacheMb: 16,
+    memoryBudgetMb: 200,
+    fastCoreShare: 1,
+    lowRamDevice: true,
+  ),
+
   /// A ₹7,000-10,000 phone: 2 GB, four slow cores (Helio A22 / Unisoc class).
   entry2gb(
     '2 GB entry',
@@ -35,6 +48,7 @@ enum SimulatedPhone {
     required this.imageCacheMb,
     required this.memoryBudgetMb,
     required this.fastCoreShare,
+    this.lowRamDevice = false,
   });
 
   final String label;
@@ -58,6 +72,9 @@ enum SimulatedPhone {
   /// That phone's CPU, in cores of a recent flagship: its whole CPU does
   /// about as much as this many fast cores.
   final double fastCoreShare;
+
+  /// Android counts that phone as a low memory device (Android Go).
+  final bool lowRamDevice;
 
   /// Cores to keep busy on a phone with [realCores] so the app is left with
   /// about [fastCoreShare] of them. At least one core stays free.

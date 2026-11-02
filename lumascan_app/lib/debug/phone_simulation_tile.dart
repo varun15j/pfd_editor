@@ -41,6 +41,7 @@ class PhoneSimulationTile extends ConsumerWidget {
               ButtonSegment(value: null, label: Text('Real')),
               ButtonSegment(value: SimulatedPhone.mid4gb, label: Text('4 GB')),
               ButtonSegment(value: SimulatedPhone.entry2gb, label: Text('2 GB')),
+              ButtonSegment(value: SimulatedPhone.go1gb, label: Text('1 GB')),
             ],
             selected: {phone},
             onSelectionChanged: (s) => ref.read(appSettingsProvider.notifier).setDebugPhone(s.first),
