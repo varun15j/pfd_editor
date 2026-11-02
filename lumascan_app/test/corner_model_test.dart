@@ -1,9 +1,13 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/features/batch_capture/camera_frame.dart';
+import 'package:lumascan/data/photo_import_services.dart';
+import 'package:lumascan/imaging/book_split.dart';
 import 'package:lumascan/imaging/corner_model.dart';
 import 'package:lumascan/imaging/rgb_image.dart';
 
@@ -106,6 +110,75 @@ void main() {
       final model = _FakeModel(quad);
       analyzeFrame(frame, smart: false, model: model);
       expect(model.calls, 0);
+    });
+  });
+
+  group('the corner model in every scan path', () {
+    late Directory tmp;
+    late String photo;
+    final quad = CropQuad(
+      const NormPoint(0.2, 0.15),
+      const NormPoint(0.8, 0.15),
+      const NormPoint(0.8, 0.85),
+      const NormPoint(0.2, 0.85),
+    );
+
+    setUp(() {
+      tmp = Directory.systemTemp.createTempSync('lumascan_corners');
+      // A plain grey photo: the hand-made detector finds no page in it.
+      photo = (File(
+        '${tmp.path}/card.jpg',
+      )..writeAsBytesSync(img.encodeJpg(img.Image(width: 400, height: 300)..clear(img.ColorRgb8(128, 128, 128))))).path;
+    });
+    tearDown(() => tmp.deleteSync(recursive: true));
+
+    test('a photo (shot, import, ID card side, Auto crop) takes the model outline first', () {
+      final model = _FakeModel(quad);
+      expect(PhotoCornerJob(photo).run(model), quad);
+      expect(model.calls, 1);
+    });
+
+    test('a photo falls back to the hand-made detector when the model is not sure or fails', () {
+      expect(PhotoCornerJob(photo).run(_FakeModel(null)), isNull);
+      expect(PhotoCornerJob(photo).run(null), isNull);
+    });
+
+    test('without smart scanning a photo never asks the model', () {
+      final model = _FakeModel(quad);
+      PhotoCornerJob(photo, smart: false).run(model);
+      expect(model.calls, 0);
+    });
+
+    test('an unreadable photo still throws, so imports can say which one failed', () {
+      final bad = (File('${tmp.path}/bad.jpg')..writeAsStringSync('not a picture')).path;
+      expect(() => PhotoCornerJob(bad).run(_FakeModel(quad)), throwsA(anything));
+    });
+
+    test('a book spread found by the model is split at its spine', () {
+      final spread = CropQuad(
+        const NormPoint(0.05, 0.1),
+        const NormPoint(0.95, 0.1),
+        const NormPoint(0.95, 0.9),
+        const NormPoint(0.05, 0.9),
+      );
+      final model = _FakeModel(spread);
+      final (left, right) = splitSpread(RgbImage.decode(File(photo).readAsBytesSync()), model: model);
+      expect(model.calls, 1);
+      expect(left.tl.x, closeTo(0.05, 0.001));
+      expect(right.tr.x, closeTo(0.95, 0.001));
+      expect(left.tr.x, right.tl.x, reason: 'the two pages meet at the spine');
+    });
+
+    test('jobs for frames and spreads carry the model to the detector', () {
+      final model = _FakeModel(quad);
+      expect(FrameCornerJob(CameraFrame.gray(120, 160, Uint8List(120 * 160))).run(model).quad, quad);
+      expect(SpreadCornerJob(photo).run(model), isA<(CropQuad, CropQuad)>());
+      expect(model.calls, 2);
+    });
+
+    test('the photo analyzer finds pages on its own when the model cannot run', () async {
+      final none = DetectorPhotoAnalyzer(worker: () async => null);
+      expect(await none.analyze(photo), isNull);
     });
   });
 }
