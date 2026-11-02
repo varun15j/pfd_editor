@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/motion.dart';
 import '../../app/preferences.dart';
 import '../../app/theme.dart';
 import '../../domain/library.dart';
@@ -13,6 +14,8 @@ import '../../ui/luma_icons.dart';
 enum DocumentMenuAction { rename, move, tags, share, password, textPdf, word, split, delete }
 
 /// First-page thumbnail on a white page, or a PDF icon when there is none.
+/// Low animation profile: always the icon; the pages show once the document
+/// is opened.
 class DocumentThumbnail extends StatelessWidget {
   const DocumentThumbnail({super.key, required this.document, this.iconSize = 24});
 
@@ -22,7 +25,7 @@ class DocumentThumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = LumaColors.of(context);
-    final thumb = document.thumbnailPath;
+    final thumb = Motion.of(context).pageThumbnails ? document.thumbnailPath : null;
     return ColoredBox(
       color: c.canvas,
       child: thumb != null && File(thumb).existsSync()

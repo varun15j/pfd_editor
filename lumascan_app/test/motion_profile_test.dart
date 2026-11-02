@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +11,8 @@ import 'package:lumascan/app/theme.dart';
 import 'package:lumascan/domain/app_settings.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/debug/motion_profile_tile.dart';
+import 'package:lumascan/features/library/document_tile.dart';
+import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/features/pages/page_image.dart';
 import 'package:lumascan/features/pages/page_thumbnail.dart';
 
@@ -125,6 +129,33 @@ void main() {
     expect(find.byType(PageImage), findsNothing);
     expect(find.text('Page 3'), findsOneWidget);
     expect(find.text('4'), findsOneWidget, reason: 'small tiles show only the number');
+  });
+
+  testWidgets('Low shows saved documents in the gallery as an icon, not their cover', (tester) async {
+    final dir = Directory.systemTemp.createTempSync('motion_cover');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final cover = File('${dir.path}/cover.jpg')..writeAsBytesSync([0xFF, 0xD8, 0xFF, 0xD9]);
+    final doc = SavedDocument(
+      id: 'd1',
+      name: 'Scan',
+      pdfPath: '${dir.path}/scan.pdf',
+      pageCount: 2,
+      type: ScanType.values.first,
+      createdAt: DateTime(2026),
+      modifiedAt: DateTime(2026),
+      thumbnailPath: cover.path,
+    );
+    Widget at(MotionProfile profile) => MaterialApp(
+      theme: buildLumaTheme(Brightness.light),
+      home: MotionScope(
+        profile: profile,
+        child: SizedBox(width: 120, height: 160, child: DocumentThumbnail(document: doc)),
+      ),
+    );
+    await tester.pumpWidget(at(MotionProfile.low));
+    expect(find.byType(Image), findsNothing);
+    await tester.pumpWidget(at(MotionProfile.high));
+    expect(find.byType(Image), findsOneWidget);
   });
 
   test('Low drops route animations and the ink sparkle; High keeps the theme', () {

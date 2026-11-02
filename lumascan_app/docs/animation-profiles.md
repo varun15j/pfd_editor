@@ -32,13 +32,14 @@ any profile, but keeps page pictures.
 | Camera page outline analysis | About 6 frames a second (QR 4) | About 4 a second (QR 3) |
 | Camera mode strip, toast, count pill, QR frame, import/thumbnail switch | Animated | Instant |
 | Page grids and strips (Batch Review, Reorder, document grid and list, strip under the opened page) | Page picture, fades in as it arrives | Page icon with "Page N" (or N on small tiles) |
+| Home and Library documents (gallery and list) | First-page cover | Document or PDF icon; pages show once the document is opened |
 | Opened page (the big page view) | Picture | Picture (the only place Low draws one) |
 | Page turns and strip scrolling | Animated | Jump |
 | Screen transitions | Platform default | None (iOS keeps its own for the back swipe) |
 | Button ink | Platform default (sparkle shader on Android) | Plain ripple |
 | Intro dots and page turns, markup toolbar, compact buttons | Animated | Instant |
 
-Library and Home document covers, filter previews, crop, markup and the ID card
+Filter previews, crop, markup and the ID card
 screens draw pictures on both profiles: there the picture is the point of the
 screen.
 
