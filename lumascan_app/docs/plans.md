@@ -30,6 +30,10 @@ OCR turns a draft, a saved document or any PDF of photos into a PDF of real text
 
 On-device OCR finds Aadhaar, VID, PAN, voter ID, passport and driving licence numbers on a page and hides all but their last four characters (`docs/id-masking.md`). Drawing a mask by hand is on every plan, including Basic, because hiding your own ID number is basic privacy (Varun, 2026-10-26).
 
+## Smart hand mask (`PlanFeature.digitMask`, Pro and Gold)
+
+Added 2026-11-02 (Varun). In Markup, a mask dragged over a number is read with OCR and every third digit inside it is crossed out with an X, leaving the rest readable. Basic keeps the solid black box (`docs/id-masking.md`).
+
 ## Watermark and page numbers (`PlanFeature.noWatermark`, `PlanFeature.pageNumbers`, Pro and Gold)
 
 Decided by Varun on 2026-10-27.
