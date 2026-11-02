@@ -667,6 +667,33 @@ void main() {
       expect(mask.crosses, 0);
     });
 
+    testWidgets('while dragging, the mask area is a dashed outline with the page showing through', (tester) async {
+      await tester.runAsync(() => setUpContainer(plan: AppPlan.basic));
+      await pumpMarkup(tester);
+      await selectTool(tester, 'Mask');
+
+      List<MaskAnnotation> solid() => [
+        for (final p in tester.widgetList<CustomPaint>(find.byType(CustomPaint)))
+          if (p.painter case final MaskPainter m) ...m.masks,
+      ];
+      Finder outline() => find.byWidgetPredicate(
+        (w) =>
+            w is CustomPaint && w.painter is MaskSelectionPainter && (w.painter! as MaskSelectionPainter).mask != null,
+      );
+
+      final rect = tester.getRect(find.byType(AnnotationLayer));
+      final gesture = await tester.startGesture(rect.topLeft + Offset(rect.width * 0.2, rect.height * 0.3));
+      await gesture.moveBy(Offset(rect.width * 0.4, rect.height * 0.08));
+      await tester.pump();
+      expect(outline(), findsOneWidget);
+      expect(solid(), isEmpty, reason: 'no black box while choosing the area');
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(outline(), findsNothing);
+      expect(solid(), hasLength(1), reason: 'the mask is made when the finger lifts');
+    });
+
     testWidgets('a mask too small to see is dropped', (tester) async {
       await tester.runAsync(setUpContainer);
       await pumpMarkup(tester);
