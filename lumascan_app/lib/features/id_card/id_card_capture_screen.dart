@@ -10,6 +10,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
+import '../../data/photo_import_services.dart';
 import '../../domain/id_copy.dart';
 import '../../domain/models.dart';
 import '../../domain/scanner_service.dart';
@@ -133,7 +134,7 @@ class _IdCardCaptureScreenState extends ConsumerState<IdCardCaptureScreen> with 
       final store = ref.read(pageStoreProvider);
       final copy = p.join((await store.renderDir).path, 'import_${store.newId()}${p.extension(photos.first.path)}');
       await File(photos.first.path).copy(copy);
-      await _addSide(copy);
+      await _addSide(copy, imported: true);
     } on FileSystemException {
       _toast('That photo could not be read. Pick another one.');
     } finally {
@@ -143,7 +144,7 @@ class _IdCardCaptureScreenState extends ConsumerState<IdCardCaptureScreen> with 
 
   /// Puts the photo at [path] in the draft as the current side, cropped to
   /// the card found in it, or to the guide when none is found, then moves on.
-  Future<void> _addSide(String path) async {
+  Future<void> _addSide(String path, {bool imported = false}) async {
     final draft = _draft;
     if (draft == null) return;
     final controller = ref.read(scanControllerProvider.notifier);
@@ -153,7 +154,7 @@ class _IdCardCaptureScreenState extends ConsumerState<IdCardCaptureScreen> with 
       _toast('That photo could not be saved. Take it again.');
       return;
     }
-    controller.applyDetectedCrop(page.id, await _cropFor(page));
+    controller.applyDetectedCrop(page.id, await _cropFor(page, imported: imported));
     ref.read(idCopyDraftProvider.notifier).update((d) => d.withSide(_side, page.id));
     if (!mounted) return;
     final next = ref.read(idCopyDraftProvider)!;
@@ -172,20 +173,26 @@ class _IdCardCaptureScreenState extends ConsumerState<IdCardCaptureScreen> with 
     }
   }
 
-  Future<CropQuad> _cropFor(ScanPage page) async {
+  /// The card in [page]'s photo. The guide is where the card was held in a
+  /// camera shot, so that shot falls back to it; it says nothing about
+  /// where the card is in an [imported] photo, which keeps all of it
+  /// instead, never a strip across the card.
+  Future<CropQuad> _cropFor(ScanPage page, {required bool imported}) async {
     final guide = CropQuad(
       NormPoint(_guide.left, _guide.top),
       NormPoint(_guide.right, _guide.top),
       NormPoint(_guide.right, _guide.bottom),
       NormPoint(_guide.left, _guide.bottom),
     );
+    final fallback = imported ? CropQuad.full : guide;
+    final aspect = (_draft?.type ?? IdCopyType.idCard).aspect;
     try {
       final found = await ref.read(photoAnalyzerProvider).analyze(page.originalPath);
-      if (found != null && isCardLike(found, guide)) return found;
+      return await idCardCrop(page.originalPath, aspect: aspect, found: found, guide: imported ? null : guide) ??
+          fallback;
     } on Object {
-      // Fall back to the guide.
+      return fallback;
     }
-    return guide;
   }
 
   /// A short note over the bottom of the preview. Not a snack bar, which
@@ -337,14 +344,6 @@ Rect cardGuide(Size size, IdCopyType type) {
   }
   final left = (size.width - w) / 2, top = (size.height - h) / 2;
   return Rect.fromLTWH(left / size.width, top / size.height, w / size.width, h / size.height);
-}
-
-/// Whether a page [found] in the photo is the card in the [guide], not a
-/// table edge or a small label: valid, and not far smaller or larger.
-bool isCardLike(CropQuad found, CropQuad guide) {
-  if (!found.isValid()) return false;
-  final ratio = found.area / guide.area;
-  return ratio > 0.35 && ratio < 2.2;
 }
 
 class _GuidePainter extends CustomPainter {

@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 
 import '../domain/models.dart';
 import '../domain/photo_import.dart';
+import '../imaging/card_outline.dart';
 import '../imaging/corner_model.dart';
 import '../imaging/corner_worker.dart';
 import '../imaging/page_detector.dart';
@@ -54,6 +55,29 @@ class DetectorPhotoAnalyzer implements PhotoAnalyzer {
     return Isolate.run(() => PhotoCornerJob(path, smart: smart).run(null));
   }
 }
+
+/// The card in the ID card photo at [path], for a document [aspect] wide to
+/// high, or null when none is found: the page [found] by the
+/// [PhotoAnalyzer] or the card's printed outline ([findCardOutline]), in the
+/// card's shape and, for a camera shot, close to the [guide] in size.
+///
+/// The page found is kept when it fits, as it is a card on a table, but
+/// for an imported photo ([guide] null) where it is nearly all the frame.
+/// That photo is often a photocopy or scan of a card, and what was found is
+/// the sheet of paper (in the card's shape too when the photo is cropped
+/// close), so the outline is looked for first there.
+Future<CropQuad?> idCardCrop(String path, {required double aspect, CropQuad? found, CropQuad? guide}) =>
+    Isolate.run(() {
+      final image = RgbImage.decode(File(path).readAsBytesSync(), maxDimension: DetectorPhotoAnalyzer.decodeSize);
+      bool fits(CropQuad? q) =>
+          q != null &&
+          cardShaped(q, image.width, image.height, aspect) &&
+          (guide == null ? q.area >= 0.15 : isCardLike(q, guide));
+      if (fits(found) && (guide != null || found!.area < 0.85)) return found;
+      final outline = findCardOutline(image, aspect: aspect);
+      if (fits(outline)) return outline;
+      return fits(found) ? found : null;
+    });
 
 /// One photo on disk for the [CornerWorker]: its page outline.
 class PhotoCornerJob extends CornerJob<CropQuad?> {
