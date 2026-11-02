@@ -13,7 +13,7 @@ import '../markup/markup_screen.dart';
 import '../pages/page_image.dart';
 import '../pages/scan_controller.dart';
 import '../pdf_editor/annotation_layer.dart';
-import 'id_card_capture_screen.dart';
+import 'id_card_retake.dart';
 import 'id_card_saved_screen.dart';
 import 'id_card_session.dart';
 import '../../ui/luma_icons.dart';
@@ -119,9 +119,7 @@ class _IdCardReviewScreenState extends ConsumerState<IdCardReviewScreen> {
     }
   }
 
-  Future<void> _retake(int side) =>
-      Navigator.of(context)
-          .push(MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => IdCardCaptureScreen(retakeSide: side)));
+  Future<void> _retake(int side) => retakeIdSide(context, side);
 
   Future<void> _filter() async {
     final page = _selectedPage();
@@ -241,6 +239,10 @@ class _IdCardReviewScreenState extends ConsumerState<IdCardReviewScreen> {
                         setState(() => _selected = i);
                         _edit();
                       },
+                      onRetakeSide: (i) {
+                        setState(() => _selected = i);
+                        _retake(i);
+                      },
                     ),
                   ),
                 ),
@@ -290,12 +292,16 @@ class IdCopyPagePreview extends StatelessWidget {
     required this.sides,
     required this.selected,
     required this.onTapSide,
+    this.onRetakeSide,
   });
 
   final IdCopyDraft draft;
   final List<ScanPage?> sides;
   final int selected;
   final ValueChanged<int> onTapSide;
+
+  /// Shows a Retake button on each side taken, which takes that side again.
+  final ValueChanged<int>? onRetakeSide;
 
   @override
   Widget build(BuildContext context) {
@@ -327,6 +333,7 @@ class IdCopyPagePreview extends StatelessWidget {
                       selected: i == selected,
                       watermark: draft.watermark,
                       onTap: () => onTapSide(i),
+                      onRetake: onRetakeSide == null ? null : () => onRetakeSide!(i),
                     ),
                   ),
                 const Positioned(
@@ -355,6 +362,7 @@ class _SideSlot extends StatelessWidget {
     required this.selected,
     required this.watermark,
     required this.onTap,
+    this.onRetake,
   });
 
   final String name;
@@ -362,11 +370,12 @@ class _SideSlot extends StatelessWidget {
   final bool selected;
   final String? watermark;
   final VoidCallback onTap;
+  final VoidCallback? onRetake;
 
   @override
   Widget build(BuildContext context) {
     final page = this.page;
-    return Semantics(
+    final slot = Semantics(
       button: true,
       selected: selected,
       label: page == null ? '$name not taken. Take it' : '$name. Edit',
@@ -404,7 +413,58 @@ class _SideSlot extends StatelessWidget {
         ),
       ),
     );
+    if (page == null || onRetake == null) return slot;
+    return Stack(
+      fit: StackFit.expand,
+      clipBehavior: Clip.none,
+      children: [
+        slot,
+        Positioned(
+          right: 4,
+          bottom: 4,
+          child: _RetakeChip(name: name, onTap: onRetake!),
+        ),
+      ],
+    );
   }
+}
+
+/// Small Retake button in the corner of a side on the review page: takes
+/// that side again with the ID card camera.
+class _RetakeChip extends StatelessWidget {
+  const _RetakeChip({required this.name, required this.onTap});
+
+  final String name;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: 'Retake ${name.toLowerCase()}',
+    excludeSemantics: true,
+    child: Material(
+      color: const Color(0xCC000000),
+      shape: const StadiumBorder(),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(LumaIcons.retake, size: 14, color: Colors.white),
+              SizedBox(width: 4),
+              Text(
+                'Retake',
+                style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _WatermarkPainter extends CustomPainter {
@@ -511,11 +571,7 @@ class _Toolbar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: Space.sm, horizontal: Space.sm),
       child: Row(
         children: [
-          tool(
-            hasWatermark ? LumaIcons.watermarkFilled : LumaIcons.watermark,
-            'Add Watermark',
-            onWatermark,
-          ),
+          tool(hasWatermark ? LumaIcons.watermarkFilled : LumaIcons.watermark, 'Add Watermark', onWatermark),
           tool(LumaIcons.edit, 'Edit', onEdit, semantics: 'Edit: crop, resize or rotate the selected side'),
           tool(LumaIcons.enhance, 'Filter', onFilter),
           Expanded(

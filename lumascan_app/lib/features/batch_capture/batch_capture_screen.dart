@@ -74,6 +74,16 @@ Future<void> openBatchCapture(
   if (exit == BatchOutcome.export && context.mounted) await showExportSheet(context);
 }
 
+/// Opens the camera to take page [pageId] again: one photo replaces the
+/// page, in its place, and the camera closes straight away, back to the
+/// screen that asked. True when the page was replaced.
+Future<bool> retakeWithCamera(BuildContext context, String pageId) async {
+  final done = await Navigator.of(
+    context,
+  ).push<Object>(MaterialPageRoute(fullscreenDialog: true, builder: (_) => BatchCaptureScreen(retakePageId: pageId)));
+  return done == true;
+}
+
 /// What the camera closes with when photo import is picked instead.
 const _importPhotosInstead = #importPhotos;
 
@@ -98,7 +108,17 @@ const _idCardInstead = #idCard;
 /// document has a page, Gallery and Files import buttons stand where the
 /// thumbnail goes.
 class BatchCaptureScreen extends ConsumerStatefulWidget {
-  const BatchCaptureScreen({super.key, this.returnToReview = false, this.initialMode = CameraMode.docs});
+  const BatchCaptureScreen({
+    super.key,
+    this.returnToReview = false,
+    this.initialMode = CameraMode.docs,
+    this.retakePageId,
+  });
+
+  /// Retake of one page (see [retakeWithCamera]): the next photo replaces
+  /// this page and the camera closes with true, or with false when the
+  /// retake is cancelled.
+  final String? retakePageId;
 
   /// The capture mode selected when the camera opens.
   final CameraMode initialMode;
@@ -235,6 +255,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
   void initState() {
     super.initState();
     _startedEmpty = ref.read(scanControllerProvider).pages.isEmpty;
+    _retakeId = widget.retakePageId;
     _container;
     _tracker.stableFrames = _settings.autoCaptureSteadiness.frames;
     _filter = _settings.defaultFilter;
@@ -404,7 +425,22 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
       });
       final saved = _save(path, replacing, mode, auto: auto, seen: seen);
       _saves = _saves.then((_) => saved);
-      if (!_batch) unawaited(saved.then((page) => page != null && mounted ? _review() : null));
+      if (_retakeOnly) {
+        // One photo, then back to the page it replaced. When it could not
+        // be saved, the camera stays on the retake to try again.
+        unawaited(
+          saved.then((page) {
+            if (!mounted) return;
+            if (page != null) {
+              Navigator.of(context).pop(true);
+            } else {
+              setState(() => _retakeId = widget.retakePageId);
+            }
+          }),
+        );
+      } else if (!_batch) {
+        unawaited(saved.then((page) => page != null && mounted ? _review() : null));
+      }
     } on ScannerFailure catch (e) {
       _queuedShots = 0;
       if (mounted) _showToast('Photo not taken: ${e.message}');
@@ -682,10 +718,19 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
 
   void _retake(String pageId) => setState(() => _retakeId = pageId);
 
-  void _cancelRetake() => setState(() => _retakeId = null);
+  /// Opened just for a retake ([BatchCaptureScreen.retakePageId]).
+  bool get _retakeOnly => widget.retakePageId != null;
+
+  void _cancelRetake() {
+    if (_retakeOnly) return Navigator.of(context).pop(false);
+    setState(() => _retakeId = null);
+  }
 
   void _setMode(CameraMode mode) {
     if (mode == _mode) return;
+    // A retake needs a page photo: modes that add no page, and ID card mode
+    // with its own camera, are not offered.
+    if (_retakeOnly && (!mode.addsPages || mode == CameraMode.idCard)) return;
     // ID card mode has its own camera; pages taken here stay in the draft.
     if (mode == CameraMode.idCard) return Navigator.of(context).pop(_idCardInstead);
     setState(() {
@@ -1700,12 +1745,7 @@ class _ImportButtons extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _ImportButton(
-          icon: LumaIcons.gallery,
-          label: 'Gallery',
-          semantics: 'Import from gallery',
-          onTap: onGallery,
-        ),
+        _ImportButton(icon: LumaIcons.gallery, label: 'Gallery', semantics: 'Import from gallery', onTap: onGallery),
         const SizedBox(width: 6),
         _ImportButton(icon: LumaIcons.folderOpen, label: 'Files', semantics: 'Import from file', onTap: onFiles),
       ],
@@ -2147,7 +2187,11 @@ class _SettingsSheet extends StatelessWidget {
                       ],
                     ),
                   ),
-                  IconButton(tooltip: 'Close', onPressed: () => Navigator.pop(context), icon: const Icon(LumaIcons.close)),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(LumaIcons.close),
+                  ),
                 ],
               ),
             ),
@@ -2363,7 +2407,11 @@ class _TextResultSheet extends StatelessWidget {
                       ],
                     ),
                   ),
-                  IconButton(tooltip: 'Close', onPressed: () => Navigator.pop(context), icon: const Icon(LumaIcons.close)),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(LumaIcons.close),
+                  ),
                 ],
               ),
             ),

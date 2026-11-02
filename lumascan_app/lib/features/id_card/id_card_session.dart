@@ -32,6 +32,10 @@ class IdCopyDraftNotifier extends Notifier<IdCopyDraft?> {
   /// them as they were does not make it again.
   List<ScanPage?>? _madeFrom;
 
+  /// Copy pages waiting to be made again. The saved PDF is brought up to
+  /// date once, after the last of them.
+  int _toRemake = 0;
+
   @override
   IdCopyDraft? build() {
     ref.listen(scanControllerProvider, _sidesMayHaveChanged);
@@ -66,25 +70,56 @@ class IdCopyDraftNotifier extends Notifier<IdCopyDraft?> {
     final was = sidePages(before.info!.idCopy!, before);
     final now = sidePages(draft, after);
     if (listEquals(was, now) || now.any((s) => s == null)) return;
-    _remaking = _remaking.then((_) => _remakeCopy()).catchError((Object e) => debugPrint('ID copy remake failed: $e'));
+    _toRemake++;
+    _remaking = _remaking.then((_) async {
+      var made = false;
+      try {
+        made = await _remakeCopy();
+      } on Object catch (e) {
+        debugPrint('ID copy remake failed: $e');
+      }
+      _toRemake--;
+      if (made) _remadeSinceSave = true;
+      if (_toRemake == 0 && _remadeSinceSave && ref.mounted) {
+        _remadeSinceSave = false;
+        await _resave();
+      }
+    });
   }
 
-  Future<void> _remakeCopy() async {
+  bool _remadeSinceSave = false;
+
+  /// The copy was saved as a PDF in the Library when it was made, so that
+  /// file is saved again with the new copy page: opened from Documents or
+  /// shared from there, it shows the side as it is now, not the old one.
+  Future<void> _resave() async {
+    try {
+      await savePdf();
+    } on Object catch (e) {
+      debugPrint('ID copy PDF not saved again: $e');
+    }
+  }
+
+  /// Makes the copy page again from the sides as they are now. True when it
+  /// was made again.
+  Future<bool> _remakeCopy() async {
     final draft = ref.read(scanControllerProvider).info?.idCopy;
     final scan = ref.read(scanControllerProvider);
     final copyId = draft?.compositeId;
-    if (draft == null || copyId == null || scan.pageById(copyId) == null) return;
+    if (draft == null || copyId == null || scan.pageById(copyId) == null) return false;
     final sides = sidePages(draft, scan);
-    if (sides.any((s) => s == null) || listEquals(sides, _madeFrom)) return;
+    if (sides.any((s) => s == null) || listEquals(sides, _madeFrom)) return false;
     final jpeg = await _compose(
       paper: draft.paper,
       slots: idCopySlots(draft.type, paper: draft.paper, scale: draft.scale),
       pages: [for (final s in sides) s!],
       watermark: draft.watermark,
     );
-    if (!ref.mounted) return;
+    if (!ref.mounted) return false;
     final page = await _scan.replaceMadePage(copyId, await _tempFile(jpeg));
-    if (page != null) _madeFrom = sides;
+    if (page == null) return false;
+    _madeFrom = sides;
+    return true;
   }
 
   /// Completes once every copy page being made again is in the draft.

@@ -168,9 +168,7 @@ class _IdCardCaptureScreenState extends ConsumerState<IdCardCaptureScreen> with 
       setState(() => _side = next.nextSide);
       _toast('${next.type.sideName(0)} saved. Now the ${next.type.sideName(_side).toLowerCase()}.');
     } else {
-      await Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const IdCardReviewScreen()),
-      );
+      await Navigator.of(context).pushReplacement(MaterialPageRoute<void>(builder: (_) => const IdCardReviewScreen()));
     }
   }
 
@@ -232,9 +230,7 @@ class _IdCardCaptureScreenState extends ConsumerState<IdCardCaptureScreen> with 
                         top: Space.md,
                         left: 0,
                         right: 0,
-                        child: Center(
-                          child: _Pill('${_side + 1} of ${type.sides}'),
-                        ),
+                        child: Center(child: _Pill('${_side + 1} of ${type.sides}')),
                       ),
                     if (_note != null)
                       Positioned(
@@ -403,7 +399,10 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: Space.md, vertical: Space.xs),
     decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
-    child: Text(text, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+    child: Text(
+      text,
+      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+    ),
   );
 }
 
@@ -432,7 +431,10 @@ class _FrontThumbnail extends StatelessWidget {
             child: PageImage(page: page),
           ),
           const SizedBox(height: 2),
-          const Text('Retake front', style: TextStyle(color: Colors.white, fontSize: 12, shadows: [Shadow(blurRadius: 4)])),
+          const Text(
+            'Retake front',
+            style: TextStyle(color: Colors.white, fontSize: 12, shadows: [Shadow(blurRadius: 4)]),
+          ),
         ],
       ),
     ),
@@ -550,7 +552,11 @@ class _Message extends StatelessWidget {
             style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: Space.sm),
-          Text(body, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
+          Text(
+            body,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white70),
+          ),
           const SizedBox(height: Space.lg),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: LumaColors.scan, foregroundColor: LumaColors.onScan),

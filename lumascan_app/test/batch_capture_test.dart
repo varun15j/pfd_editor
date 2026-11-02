@@ -10,6 +10,7 @@ import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/features/batch_capture/batch_capture_screen.dart';
 import 'package:lumascan/features/batch_edit/batch_review_screen.dart';
+import 'package:lumascan/features/pages/page_actions.dart';
 import 'package:lumascan/features/pages/pages_screen.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 import 'package:lumascan/app/motion.dart';
@@ -451,6 +452,45 @@ void main() {
       await shoot(tester);
 
       expect(harness.pages, hasLength(3));
+    });
+
+    testWidgets('Retake in a page\'s options takes one photo with the camera, then goes back', (tester) async {
+      await open(
+        tester,
+        pageCount: 2,
+        screen: (_) => Scaffold(
+          body: Consumer(
+            builder: (context, ref, _) => TextButton(
+              onPressed: () {
+                final pages = ref.read(scanControllerProvider).pages;
+                runPageAction(context, ref, PageAction.retake, pages[1], 1);
+              },
+              child: const Text('retake'),
+            ),
+          ),
+        ),
+      );
+      final before = [for (final p in harness.pages) p.id];
+      await tester.tap(find.text('retake'));
+      await harness.settle(tester);
+      expect(find.byType(BatchCaptureScreen), findsOneWidget);
+      expect(find.text('Retaking page 2. Take the new photo.'), findsOneWidget);
+
+      await shoot(tester);
+      expect(find.byType(BatchCaptureScreen), findsNothing, reason: 'one photo, then back');
+      final after = [for (final p in harness.pages) p.id];
+      expect(after, hasLength(2));
+      expect(after.first, before.first);
+      expect(after.last, isNot(before.last));
+      expect(find.text('Page 2 retaken'), findsOneWidget);
+
+      // Cancel goes back too, leaving the page as it was.
+      await tester.tap(find.text('retake'));
+      await harness.settle(tester);
+      await tester.tap(find.text('Cancel').first);
+      await harness.settle(tester);
+      expect(find.byType(BatchCaptureScreen), findsNothing);
+      expect([for (final p in harness.pages) p.id], after);
     });
 
     testWidgets('blocked camera access explains itself and links to Settings', (tester) async {
