@@ -497,6 +497,56 @@ void main() {
       expect(find.text('Import'), findsWidgets);
     });
 
+    Future<List<String>> saveCopy(WidgetTester tester) async {
+      await tap(tester, find.text('Make it now'));
+      await tap(tester, find.bySemanticsLabel('Take front page'));
+      await tap(tester, find.bySemanticsLabel('Take back page'));
+      await tap(tester, find.bySemanticsLabel('Save the copy'));
+      await until(tester, find.text('Collage'));
+      return [for (final p in harness.pages) p.id];
+    }
+
+    testWidgets('Retake on the front in the saved grid opens the ID camera and remakes the copy', (tester) async {
+      await open(tester);
+      final [copy, front, back] = await saveCopy(tester);
+
+      await tap(tester, find.bySemanticsLabel('Page 02, Front page'));
+      await tap(tester, find.text('Retake'));
+      expect(find.text('Front page'), findsOneWidget, reason: 'the ID card camera, on the front');
+      await tap(tester, find.bySemanticsLabel('Take front page'));
+      await finish(tester, harness.container.read(idCopyDraftProvider.notifier).remade);
+
+      expect(find.text('Collage'), findsOneWidget, reason: 'one photo, then back to the saved grid');
+      final draft = harness.container.read(idCopyDraftProvider)!;
+      final pages = harness.pages;
+      expect(pages[1].id, isNot(front));
+      expect(draft.sideIds, [pages[1].id, back]);
+      expect(pages.first.id, isNot(copy));
+      expect(pages.first.id, draft.compositeId);
+      expect(composed.last.imagePaths, [pages[1].originalPath, pages[2].originalPath]);
+      // The PDF in Documents is saved again with the new copy page.
+      expect(exporter.calls, hasLength(2));
+      expect(exporter.calls.last.$1.first.id, draft.compositeId);
+    });
+
+    testWidgets('the review has a Retake button on each side, and the copy shows the new front', (tester) async {
+      await open(tester);
+      final [_, front, back] = await saveCopy(tester);
+
+      await tap(tester, find.bySemanticsLabel('Page 01, ID copy'));
+      expect(find.bySemanticsLabel('Retake front page'), findsOneWidget);
+      expect(find.bySemanticsLabel('Retake back page'), findsOneWidget);
+      await tap(tester, find.bySemanticsLabel('Retake front page'));
+      await tap(tester, find.bySemanticsLabel('Take front page'));
+      await finish(tester, harness.container.read(idCopyDraftProvider.notifier).remade);
+      var draft = harness.container.read(idCopyDraftProvider)!;
+      expect(draft.sideIds.first, isNot(front));
+      expect(draft.sideIds.last, back);
+      final newFront = harness.container.read(scanControllerProvider).pageById(draft.sideIds.first)!;
+      expect(composed.last.imagePaths.first, newFront.originalPath, reason: 'the copy shows the new front');
+      expect(harness.pages.first.id, draft.compositeId);
+    });
+
     testWidgets('the front can be retaken from the back camera, and the sides swapped in review', (tester) async {
       await open(tester);
       await tap(tester, find.text('Make it now'));
