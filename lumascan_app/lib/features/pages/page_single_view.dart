@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/motion.dart';
 import '../../app/theme.dart';
 import '../../domain/models.dart';
 import '../../imaging/render_service.dart';
@@ -13,6 +14,7 @@ import 'page_actions.dart';
 import 'page_image.dart';
 import 'scan_controller.dart';
 import '../../ui/luma_icons.dart';
+import 'page_thumbnail.dart';
 
 /// Single-page layout for the Pages screen: one large page you can swipe
 /// through, previous/next buttons around a "Page X of N" label, a strip of
@@ -65,7 +67,7 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
 
   void _goTo(int i) {
     if (i < 0 || i > widget.pages.length) return;
-    _pager.animateToPage(i, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+    Motion.of(context).toPage(_pager, i);
   }
 
   void _onPageChanged(int i) {
@@ -76,11 +78,7 @@ class _PageSingleViewState extends ConsumerState<PageSingleView> {
     if (_strip.hasClients) {
       final position = _strip.position;
       final target = i * _stripItemExtent - (position.viewportDimension - _stripItemExtent) / 2;
-      _strip.animateTo(
-        target.clamp(0.0, position.maxScrollExtent),
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-      );
+      Motion.of(context).scrollTo(_strip, target.clamp(0.0, position.maxScrollExtent));
     }
   }
 
@@ -252,7 +250,7 @@ class _StripThumb extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  PageImage(page: page),
+                  PageThumbnail(page: page, number: number),
                   Align(
                     alignment: Alignment.bottomCenter,
                     child: Container(

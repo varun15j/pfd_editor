@@ -8,6 +8,7 @@ import '../features/onboarding/eula_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import 'app_info.dart';
 import 'app_lock.dart';
+import 'motion.dart';
 import 'preferences.dart';
 import 'purchases.dart';
 import 'shell.dart';
@@ -18,17 +19,22 @@ class LumaScanApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // High or Low animations for this phone (debug panel can override).
+    final motion = ref.watch(motionProfileProvider);
     return AppLockScope(
       child: MaterialApp(
         title: appName,
         debugShowCheckedModeBanner: false,
-        theme: buildLumaTheme(Brightness.light),
-        darkTheme: buildLumaTheme(Brightness.dark),
+        theme: themeForMotion(buildLumaTheme(Brightness.light), motion),
+        darkTheme: themeForMotion(buildLumaTheme(Brightness.dark), motion),
         themeMode: ref.watch(themeModeProvider),
         navigatorKey: debugNavigatorKey,
         // Debug builds: swipe in from the left edge for the debug panel. The
         // app lock covers it too.
-        builder: (context, child) => AppLockOverlay(child: DebugPanelHost(child: child!)),
+        builder: (context, child) => MotionScope(
+          profile: motion,
+          child: AppLockOverlay(child: DebugPanelHost(child: child!)),
+        ),
         home: const StartGate(),
       ),
     );

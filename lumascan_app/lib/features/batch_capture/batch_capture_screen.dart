@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/device_load.dart';
+import '../../app/motion.dart';
 import '../../app/preferences.dart';
 import '../../domain/plan.dart';
 import '../../app/providers.dart';
@@ -141,6 +142,11 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
   /// for the page outline, fewer for QR codes.
   static const _pageFrameGap = Duration(milliseconds: 150);
   static const _qrFrameGap = Duration(milliseconds: 250);
+
+  /// Low animation profile (2 GB, one or two cores): about 4 a second for
+  /// the page outline and 3 for QR codes, leaving the CPU to the preview.
+  static const _lowPageFrameGap = Duration(milliseconds: 250);
+  static const _lowQrFrameGap = Duration(milliseconds: 350);
 
   /// The same QR code read twice within this time is accepted
   /// (identicalPayloadCount ≥ 2 within 500 ms).
@@ -329,7 +335,9 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     if (!mounted || _analysing || _covered || _sheetOpen || _reading) return;
     if (!_watchesPages && _mode != CameraMode.qr) return;
     final now = DateTime.now();
-    if (now.difference(_lastAnalysis) < (_mode == CameraMode.qr ? _qrFrameGap : _pageFrameGap)) return;
+    final low = ref.read(motionProfileProvider) == MotionProfile.low;
+    final gap = _mode == CameraMode.qr ? (low ? _lowQrFrameGap : _qrFrameGap) : (low ? _lowPageFrameGap : _pageFrameGap);
+    if (now.difference(_lastAnalysis) < gap) return;
     _lastAnalysis = now;
     _analysing = true;
     unawaited(_analyse(frame).whenComplete(() => _analysing = false));
@@ -935,7 +943,10 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
   @override
   Widget build(BuildContext context) {
     final pages = ref.watch(scanControllerProvider.select((s) => s.pages));
-    final last = _taken.isEmpty ? (pages.isEmpty ? null : pages.last) : _taken.last;
+    final shown = _taken.isEmpty ? pages : _taken;
+    final last = shown.isEmpty ? null : shown.last;
+    // Up to the last three shots, oldest first, for the fanned thumbnail.
+    final recent = shown.length <= 3 ? shown : shown.sublist(shown.length - 3);
     final retakeNumber = _retakeId == null ? 0 : pages.indexWhere((p) => p.id == _retakeId) + 1;
     final ready = _status == _CameraStatus.ready;
     final autoRunning = ready && _autoCapture && _mode.canAutoCapture;
@@ -1032,7 +1043,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
                       right: 16,
                       child: Center(
                         child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 150),
+                          duration: Motion.of(context).duration(const Duration(milliseconds: 150)),
                           child: _toast == null
                               ? const SizedBox.shrink()
                               : _Toast(key: ValueKey(_toastSerial), text: _toast!),
@@ -1046,6 +1057,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
                 count: pages.length,
                 showCount: _batch && _mode.addsPages,
                 lastPage: last,
+                recentPages: recent,
                 // A new document offers import until its first photo is taken.
                 showImport: pages.isEmpty && _taken.isEmpty && _saving == 0 && !_shooting && _retakeId == null,
                 saving: _saving > 0,
@@ -1249,7 +1261,7 @@ class _CountPill extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
+              duration: Motion.of(context).duration(const Duration(milliseconds: 180)),
               transitionBuilder: (child, a) => ScaleTransition(scale: a, child: child),
               child: Container(
                 key: ValueKey(count),
@@ -1279,42 +1291,69 @@ class _CountPill extends StatelessWidget {
 
 /// The latest page, with the page count. Drawn from a small decode of the
 /// photo, so it appears straight after the shot.
+///
+/// High profile: the two shots before it fan out behind it, and each new
+/// shot pops in on top. Low profile: a page icon only; nothing is decoded
+/// until the pages are opened.
 class _Thumbnail extends StatelessWidget {
-  const _Thumbnail({required this.page, required this.count, required this.saving});
+  const _Thumbnail({required this.page, this.recent = const [], required this.count, required this.saving});
 
   final ScanPage? page;
+
+  /// The last few shots, oldest first, ending with [page].
+  final List<ScanPage> recent;
   final int count;
   final bool saving;
+
+  /// Tilt of the cards behind, nearest first, in radians.
+  static const _fan = [-0.14, 0.12];
 
   @override
   Widget build(BuildContext context) {
     final colors = LumaColors.of(context);
+    final motion = Motion.of(context);
     final dpr = MediaQuery.devicePixelRatioOf(context);
+    Widget card(ScanPage? shot) => Container(
+      decoration: BoxDecoration(
+        color: colors.surfaceRaised,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.line),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: shot == null || !motion.pageThumbnails
+          ? Icon(LumaIcons.document, color: colors.muted)
+          : Image.file(
+              File(shot.originalPath),
+              key: ValueKey(shot.id),
+              fit: BoxFit.cover,
+              cacheWidth: (52 * dpr).round(),
+              gaplessPlayback: true,
+              errorBuilder: (_, _, _) => Icon(LumaIcons.document, color: colors.muted),
+            ),
+    );
+    // Nearest first: the shot just before [page], then the one before that.
+    final behind = motion.pageThumbnails
+        ? recent.reversed.where((p) => p.id != page?.id).take(_fan.length).toList()
+        : const <ScanPage>[];
     return SizedBox(
       width: 52,
       height: 52,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                color: colors.surfaceRaised,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: colors.line),
+          for (var i = behind.length - 1; i >= 0; i--)
+            Positioned.fill(
+              key: ValueKey('behind-${behind[i].id}'),
+              child: Transform.rotate(
+                angle: _fan[i],
+                alignment: Alignment.bottomCenter,
+                child: Opacity(opacity: i == 0 ? 0.9 : 0.75, child: card(behind[i])),
               ),
-              clipBehavior: Clip.antiAlias,
-              child: page == null
-                  ? Icon(LumaIcons.document, color: colors.muted)
-                  : Image.file(
-                      File(page!.originalPath),
-                      key: ValueKey(page!.id),
-                      fit: BoxFit.cover,
-                      cacheWidth: (52 * dpr).round(),
-                      gaplessPlayback: true,
-                      errorBuilder: (_, _, _) => Icon(LumaIcons.document, color: colors.muted),
-                    ),
             ),
+          Positioned.fill(
+            child: motion.animates && page != null
+                ? _PopIn(key: ValueKey('top-${page!.id}'), child: card(page))
+                : card(page),
           ),
           if (saving)
             Positioned.fill(
@@ -1350,6 +1389,27 @@ class _Thumbnail extends StatelessWidget {
   }
 }
 
+/// A new shot landing on the thumbnail: grows from half size with a small
+/// overshoot and fades in. High profile only.
+class _PopIn extends StatelessWidget {
+  const _PopIn({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 280),
+      child: child,
+      builder: (context, t, child) => Opacity(
+        opacity: Curves.easeOut.transform(t),
+        child: Transform.scale(scale: 0.5 + 0.5 * Curves.easeOutBack.transform(t), child: child),
+      ),
+    );
+  }
+}
+
 /// The white flash over the preview when a photo is taken.
 class _CaptureFlash extends StatelessWidget {
   const _CaptureFlash({required this.serial});
@@ -1358,7 +1418,9 @@ class _CaptureFlash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (serial == 0 || MediaQuery.disableAnimationsOf(context)) return const SizedBox.shrink();
+    // Low profile: no full-screen fade over the live preview; the shutter
+    // still dips and the count still rises.
+    if (serial == 0 || !Motion.of(context).animates) return const SizedBox.shrink();
     return TweenAnimationBuilder<double>(
       key: ValueKey(serial),
       tween: Tween(begin: 0.6, end: 0),
@@ -1520,6 +1582,7 @@ class _ControlPanel extends StatelessWidget {
     required this.count,
     required this.showCount,
     required this.lastPage,
+    this.recentPages = const [],
     required this.showImport,
     required this.saving,
     required this.shooting,
@@ -1539,6 +1602,9 @@ class _ControlPanel extends StatelessWidget {
   final int count;
   final bool showCount;
   final ScanPage? lastPage;
+
+  /// The last few shots, oldest first, ending with [lastPage].
+  final List<ScanPage> recentPages;
 
   /// Shows the Gallery and Files import buttons instead of the thumbnail.
   final bool showImport;
@@ -1561,6 +1627,7 @@ class _ControlPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = LumaColors.of(context);
+    final motion = Motion.of(context);
     return Material(
       color: colors.surface,
       child: SafeArea(
@@ -1574,7 +1641,7 @@ class _ControlPanel extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: AnimatedOpacity(
                   opacity: showCount ? 1 : 0,
-                  duration: const Duration(milliseconds: 150),
+                  duration: motion.duration(const Duration(milliseconds: 150)),
                   child: _CountPill(count: count),
                 ),
               ),
@@ -1587,7 +1654,7 @@ class _ControlPanel extends StatelessWidget {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
+                        duration: motion.duration(const Duration(milliseconds: 200)),
                         transitionBuilder: (child, a) => FadeTransition(
                           opacity: a,
                           child: ScaleTransition(scale: Tween(begin: 0.9, end: 1.0).animate(a), child: child),
@@ -1610,7 +1677,12 @@ class _ControlPanel extends StatelessWidget {
                                   onTap: onPhotos,
                                   child: Padding(
                                     padding: const EdgeInsets.all(6),
-                                    child: _Thumbnail(page: lastPage, count: count, saving: saving),
+                                    child: _Thumbnail(
+                                      page: lastPage,
+                                      recent: recentPages,
+                                      count: count,
+                                      saving: saving,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -1776,7 +1848,7 @@ class _ModeStripState extends State<_ModeStrip> {
       Scrollable.ensureVisible(
         target,
         alignment: 0.5,
-        duration: animate ? const Duration(milliseconds: 200) : Duration.zero,
+        duration: animate ? Motion.of(context).duration(const Duration(milliseconds: 200)) : Duration.zero,
       );
     }
     _updateFade();
@@ -1833,7 +1905,7 @@ class _ModeStripState extends State<_ModeStrip> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: minTapTarget),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
+              duration: Motion.of(context).duration(const Duration(milliseconds: 150)),
               margin: const EdgeInsets.symmetric(vertical: 6),
               constraints: const BoxConstraints(minHeight: ControlMetrics.visualHeight),
               alignment: Alignment.center,
@@ -2019,7 +2091,7 @@ class _PreviewOverlay extends StatelessWidget {
               child: AspectRatio(
                 aspectRatio: 1,
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
+                  duration: Motion.of(context).duration(const Duration(milliseconds: 150)),
                   decoration: BoxDecoration(
                     border: Border.all(color: qrFound ? accent : Colors.white, width: qrFound ? 4 : 2),
                     borderRadius: BorderRadius.circular(16),

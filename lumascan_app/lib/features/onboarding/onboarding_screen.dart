@@ -5,6 +5,7 @@ import '../../app/app_info.dart';
 import '../../app/preferences.dart';
 import '../../app/theme.dart';
 import '../../ui/luma_icons.dart';
+import '../../app/motion.dart';
 
 /// First-run intro: three short pages, then one question about usage data.
 /// Skip goes to that question, and the answer never limits what the app can
@@ -52,7 +53,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _goTo(int page) {
     setState(() => _page = page);
-    _controller.animateToPage(page, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+    Motion.of(context).toPage(_controller, page);
   }
 
   void _finish(bool? analytics) {
@@ -232,7 +233,7 @@ class _Dots extends StatelessWidget {
           children: [
             for (var i = 0; i < count; i++)
               AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
+                duration: Motion.of(context).duration(const Duration(milliseconds: 200)),
                 margin: const EdgeInsets.symmetric(horizontal: 4),
                 width: i == index ? 24 : 8,
                 height: 8,

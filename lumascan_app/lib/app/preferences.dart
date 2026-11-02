@@ -7,6 +7,7 @@ import '../data/ui_prefs_store.dart';
 import '../domain/app_settings.dart';
 import '../domain/eula.dart';
 import '../domain/models.dart';
+import '../domain/motion_profile.dart';
 import '../domain/ocr_languages.dart';
 import '../domain/plan.dart';
 import '../domain/ui_prefs.dart';
@@ -74,6 +75,9 @@ class AppSettingsController extends Notifier<AppSettings> {
 
   /// Debug builds: behave as [plan], or as the real plan when null.
   void setDebugPlan(AppPlan? plan) => _set(state.copyWith(debugPlan: plan));
+
+  /// Debug builds: use [profile] for animations, or the phone's own when null.
+  void setDebugMotion(MotionProfile? profile) => _set(state.copyWith(debugMotion: profile));
 
   void setOcrLanguage(String code) => _set(state.copyWith(ocrLanguage: code));
 

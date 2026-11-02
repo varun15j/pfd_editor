@@ -6,8 +6,8 @@ import '../../domain/models.dart';
 import 'add_page_tile.dart';
 import 'adding_progress.dart';
 import 'page_actions.dart';
-import 'page_image.dart';
 import 'scan_controller.dart';
+import 'page_thumbnail.dart';
 
 /// Gallery layout for the Pages screen: a grid of page thumbnails with the
 /// page number under each. Tap a page for its actions; long-press and drag
@@ -92,7 +92,7 @@ class _GalleryTile extends ConsumerWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(9),
-        child: PageImage(page: page),
+        child: PageThumbnail(page: page, number: index + 1),
       ),
     );
 

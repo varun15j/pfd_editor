@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/motion.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../data/library_store.dart';
@@ -159,7 +160,8 @@ String _details(HomeDoc d) {
   return '${formatModified(d.time, DateTime.now())} · ${pageCountLabel(d.pageCount)} · $kind';
 }
 
-/// First page of the document, filling its box.
+/// First page of the document, filling its box. Low animation profile: a
+/// document icon instead; the pages show once the document is opened.
 class _Preview extends StatelessWidget {
   const _Preview({required this.doc});
 
@@ -169,7 +171,9 @@ class _Preview extends StatelessWidget {
   Widget build(BuildContext context) => switch (doc) {
     ScanHomeDoc(:final cover) => ColoredBox(
       color: LumaColors.of(context).canvas,
-      child: PageImage(page: cover, fit: BoxFit.cover),
+      child: Motion.of(context).pageThumbnails
+          ? PageImage(page: cover, fit: BoxFit.cover)
+          : Center(child: Icon(LumaIcons.document, size: 36, color: LumaColors.of(context).muted)),
     ),
     PdfHomeDoc(:final document) => DocumentThumbnail(document: document, iconSize: 36),
   };
