@@ -42,8 +42,8 @@ class PendingDeletion extends Notifier<Set<String>> {
   }
 }
 
-/// Saved documents as the UI shows them: newest first, without the ones
-/// waiting to be deleted.
+/// Saved documents as the UI shows them: favorites first, then newest
+/// first, without the ones waiting to be deleted.
 final visibleDocumentsProvider = Provider<List<SavedDocument>>((ref) {
   final hidden = ref.watch(pendingDeletionProvider);
   final docs = ref.watch(savedDocumentsProvider);
@@ -82,14 +82,46 @@ Future<void> shareDocuments(BuildContext context, List<SavedDocument> docs) asyn
   );
 }
 
+/// Message shown when a favorite would be deleted.
+const favoriteDeleteHint = 'Favorites can\'t be deleted. Tap the heart to remove it from favorites first.';
+
+/// Adds the document to favorites, or takes it off, and says so.
+Future<void> toggleFavorite(BuildContext context, WidgetRef ref, SavedDocument doc) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final favorite = !doc.favorite;
+  await ref.read(libraryProvider.notifier).setFavorite([doc.id], favorite);
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(content: Text(favorite ? '${doc.name} added to favorites' : '${doc.name} removed from favorites')),
+    );
+}
+
 /// Hides the documents at once and deletes them when the Undo snackbar
-/// closes without being tapped.
-Future<void> deleteWithUndo(BuildContext context, WidgetRef ref, List<SavedDocument> docs) async {
-  if (docs.isEmpty) return;
+/// closes without being tapped. Favorites are left out and kept; when only
+/// favorites were picked, nothing is deleted and the hint says why.
+Future<void> deleteWithUndo(BuildContext context, WidgetRef ref, List<SavedDocument> picked) async {
+  if (picked.isEmpty) return;
+  final docs = [
+    for (final d in picked)
+      if (!d.favorite) d,
+  ];
+  final kept = picked.length - docs.length;
+  final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+  if (docs.isEmpty) {
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          kept == 1 ? favoriteDeleteHint : 'Favorites can\'t be deleted. Remove them from favorites first.',
+        ),
+      ),
+    );
+    return;
+  }
   final ids = [for (final d in docs) d.id];
   final pending = ref.read(pendingDeletionProvider.notifier)..hide(ids);
-  final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
-  final label = docs.length == 1 ? '${docs.single.name} deleted' : '${docs.length} documents deleted';
+  final deleted = docs.length == 1 ? '${docs.single.name} deleted' : '${docs.length} documents deleted';
+  final label = kept == 0 ? deleted : '$deleted. $kept favorite${kept == 1 ? '' : 's'} kept';
   final reason = await messenger
       .showSnackBar(
         SnackBar(

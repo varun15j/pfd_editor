@@ -200,6 +200,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   PreferredSizeWidget _selectionBar(List<SavedDocument> docs) {
     final picked = _selectedDocs(docs);
     final all = picked.length == docs.length;
+    final allFavorite = picked.isNotEmpty && picked.every((d) => d.favorite);
     return AppBar(
       leading: IconButton(tooltip: 'Cancel selection', icon: const Icon(LumaIcons.close), onPressed: _clearSelection),
       title: Semantics(liveRegion: true, child: Text('${picked.length} selected')),
@@ -231,14 +232,28 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           onSelected: (v) {
             final docs = _selectedDocs(ref.read(filteredDocumentsProvider));
             _clearSelection();
-            v == 0 ? moveToFolderSheet(context, ref, docs) : editTagsSheet(context, ref, docs);
+            switch (v) {
+              case 0:
+                moveToFolderSheet(context, ref, docs);
+              case 1:
+                editTagsSheet(context, ref, docs);
+              case 2:
+                ref.read(libraryProvider.notifier).setFavorite([for (final d in docs) d.id], !allFavorite);
+            }
           },
-          itemBuilder: (_) => const [
+          itemBuilder: (_) => [
             PopupMenuItem(
+              value: 2,
+              child: ListTile(
+                leading: Icon(allFavorite ? LumaIcons.favorite : LumaIcons.favoriteFilled),
+                title: Text(allFavorite ? 'Remove from favorites' : 'Add to favorites'),
+              ),
+            ),
+            const PopupMenuItem(
               value: 0,
               child: ListTile(leading: Icon(LumaIcons.moveToFolder), title: Text('Move to folder')),
             ),
-            PopupMenuItem(
+            const PopupMenuItem(
               value: 1,
               child: ListTile(leading: Icon(LumaIcons.tag), title: Text('Tags')),
             ),
@@ -407,6 +422,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         onTap: () => _onTap(doc),
         onLongPress: () => _toggle(doc.id),
         onMenu: (a) => _onMenu(doc, a),
+        onFavorite: () => toggleFavorite(context, ref, doc),
       );
     },
   );
@@ -446,6 +462,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             onTap: () => _onTap(doc),
             onLongPress: () => _toggle(doc.id),
             onMenu: (a) => _onMenu(doc, a),
+            onFavorite: () => toggleFavorite(context, ref, doc),
           );
         },
       );

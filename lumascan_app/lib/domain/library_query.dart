@@ -127,12 +127,15 @@ class LibraryQuery {
           d,
     ];
     int byName(SavedDocument a, SavedDocument b) => a.name.toLowerCase().compareTo(b.name.toLowerCase());
-    out.sort(switch (sort) {
-      LibrarySort.newest => (a, b) => b.modifiedAt.compareTo(a.modifiedAt),
-      LibrarySort.oldest => (a, b) => a.modifiedAt.compareTo(b.modifiedAt),
-      LibrarySort.nameAz => byName,
-      LibrarySort.nameZa => (a, b) => byName(b, a),
-    });
+    // Favorites stay on top whatever the sort; the sort orders each group.
+    out.sort(
+      favoritesFirst(switch (sort) {
+        LibrarySort.newest => (a, b) => b.modifiedAt.compareTo(a.modifiedAt),
+        LibrarySort.oldest => (a, b) => a.modifiedAt.compareTo(b.modifiedAt),
+        LibrarySort.nameAz => byName,
+        LibrarySort.nameZa => (a, b) => byName(b, a),
+      }),
+    );
     return out;
   }
 
