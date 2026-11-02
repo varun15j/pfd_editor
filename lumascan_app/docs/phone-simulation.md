@@ -38,3 +38,13 @@ The simulation is in debug builds only, and debug builds run Dart much slower th
 - **Memory pressure on the phone**: `adb shell am send-trim-memory com.mobi.scanner RUNNING_CRITICAL` tells the app memory is running out (send while the app is open). `adb shell dumpsys meminfo com.mobi.scanner` shows the app's real memory use.
 - **A true 2 GB / 4 GB test**: an Android emulator AVD (Device Manager, Edit, Advanced settings) with RAM 2048 MB and 2 cores, or 4096 MB and 4 cores. Android then really has only that memory and closes the app when it runs out. The CPU is still the PC's, so frame times are not those of a real cheap phone.
 - **The best test** is a real entry phone (a 2 GB Android Go phone costs little second-hand).
+
+## Journey tests as a cheaper phone
+
+The user journey tests take the same phones from the command line:
+
+```
+flutter test integration_test/user_journeys_test.dart -d <device> --dart-define=SIM_PHONE=go1gb
+```
+
+`SIM_PHONE` is `go1gb`, `entry2gb` or `mid4gb`; leave it out to run as the device itself (8 GB on the OnePlus). Add `--dart-define=SIM_BUSY=true` to keep the other cores busy as well.
