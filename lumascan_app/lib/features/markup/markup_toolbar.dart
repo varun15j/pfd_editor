@@ -23,6 +23,7 @@ class MarkupToolbar extends StatefulWidget {
     this.onAutoMask,
     this.autoMaskLocked = false,
     this.autoMaskBusy = false,
+    this.handMaskReads = false,
   });
 
   final List<EditorTool> tools;
@@ -44,6 +45,10 @@ class MarkupToolbar extends StatefulWidget {
   /// Auto mask is reading the page.
   final bool autoMaskBusy;
 
+  /// A mask dragged by hand is read and every third digit crossed out
+  /// (Pro and Gold), so the hint says so.
+  final bool handMaskReads;
+
   @override
   State<MarkupToolbar> createState() => _MarkupToolbarState();
 }
@@ -52,9 +57,7 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
   final _keys = <EditorTool, GlobalKey>{};
 
   bool get _showsStyle =>
-      widget.tool == EditorTool.pen ||
-      widget.tool == EditorTool.highlighter ||
-      widget.tool == EditorTool.text;
+      widget.tool == EditorTool.pen || widget.tool == EditorTool.highlighter || widget.tool == EditorTool.text;
 
   @override
   void initState() {
@@ -106,9 +109,7 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
                               color: MarkupStyle.palette[i],
                               name: MarkupStyle.paletteNames[i],
                               selected: MarkupStyle.palette[i] == style.color,
-                              onTap: () => widget.onStyle(
-                                style.copyWith(color: MarkupStyle.palette[i]),
-                              ),
+                              onTap: () => widget.onStyle(style.copyWith(color: MarkupStyle.palette[i])),
                             ),
                         ],
                       ),
@@ -120,8 +121,7 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
                             ChoiceChip(
                               label: Text(s.label),
                               selected: s == style.size,
-                              onSelected: (_) =>
-                                  widget.onStyle(style.copyWith(size: s)),
+                              onSelected: (_) => widget.onStyle(style.copyWith(size: s)),
                             ),
                         ],
                       ),
@@ -175,7 +175,9 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Drag over a number to hide it. Masks are burned into the saved file.',
+            widget.handMaskReads
+                ? 'Drag over a number to cross out every 3rd digit. Masks are burned into the saved file.'
+                : 'Drag over a number to hide it. Masks are burned into the saved file.',
             style: text.bodySmall,
             textAlign: TextAlign.center,
           ),
@@ -208,12 +210,7 @@ class _MarkupToolbarState extends State<MarkupToolbar> {
 
 /// One colour in the picker. The circle is small, the tap area is not.
 class _Swatch extends StatelessWidget {
-  const _Swatch({
-    required this.color,
-    required this.name,
-    required this.selected,
-    required this.onTap,
-  });
+  const _Swatch({required this.color, required this.name, required this.selected, required this.onTap});
 
   final Color color;
   final String name;
@@ -242,10 +239,7 @@ class _Swatch extends StatelessWidget {
               decoration: BoxDecoration(
                 color: color,
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: selected ? scheme.primary : scheme.outlineVariant,
-                  width: selected ? 3 : 1,
-                ),
+                border: Border.all(color: selected ? scheme.primary : scheme.outlineVariant, width: selected ? 3 : 1),
               ),
             ),
           ),

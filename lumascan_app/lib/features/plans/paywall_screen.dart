@@ -58,7 +58,8 @@ class PaywallScreen extends ConsumerWidget {
           if (!state.available)
             _Note(
               icon: LumaIcons.storefront,
-              text: 'Plans cannot be bought on this device. Install $appName from Google Play or the App Store to buy Pro or Gold.',
+              text:
+                  'Plans cannot be bought on this device. Install $appName from Google Play or the App Store to buy Pro or Gold.',
             )
           else if (state.offers.isEmpty && state.offersFailed)
             _Note(
@@ -204,6 +205,7 @@ class _PlanCard extends StatelessWidget {
     PlanFeature.textPdf => 'Text PDF: searchable text from scans',
     PlanFeature.word => 'PDF to Word',
     PlanFeature.autoMask => 'Auto mask: cross out ID, card and birth date numbers',
+    PlanFeature.digitMask => 'Smart hand mask: every 3rd digit crossed out with X',
     PlanFeature.noWatermark => 'No "Scanned with" mark on exported PDFs',
     PlanFeature.pageNumbers => 'Page numbers on exported PDFs',
     PlanFeature.signatureLibrary => 'Saved signatures, initials and date stamps',

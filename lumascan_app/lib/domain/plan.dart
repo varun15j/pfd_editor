@@ -40,6 +40,12 @@ enum PlanFeature {
   /// privacy (Varun, 2026-10-26).
   autoMask(AppPlan.pro),
 
+  /// Smart hand mask: a mask dragged over a number is read with on-device
+  /// OCR and every third digit is crossed out with an X, so the rest stays
+  /// readable ("23X56X89X12"), the way partly masked numbers are printed.
+  /// Basic gets the plain black box (Varun, 2026-11-02).
+  digitMask(AppPlan.pro),
+
   /// Exported PDFs without the "Scanned with" mark that Basic
   /// prints at the foot of each page (Varun, 2026-10-27).
   noWatermark(AppPlan.pro),

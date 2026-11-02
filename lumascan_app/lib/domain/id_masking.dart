@@ -16,6 +16,7 @@ enum IdKind {
   drivingLicence('Driving licence number'),
   ssn('Social Security number'),
   card('Card number'),
+  cardSecurityCode('Card security code', visible: 0),
   nationalId('ID number'),
   dateOfBirth('Date of birth', visible: 0);
 
@@ -85,8 +86,9 @@ class IdMatch {
 ///    licence numbers, UK National Insurance numbers, and the
 ///    machine-readable lines at the foot of a passport.
 /// 2. **Labels**: words such as "DOB", "Passport No", "ID Number", "SSN" or
-///    "Card No" mark what follows them on the line (or the line below, when
-///    the label ends its line) as private, in any country's format.
+///    "Card No", "Unique ID" or "Enrolment No" mark what follows them on the line (or the line below, when
+///    the label ends its line) as private, in any country's format. A card's
+///    "CVV" code is hidden whole.
 /// 3. **Unreadable after a label**: when a label is followed by something
 ///    with digits in it that is not a clean number, that part of the line is
 ///    hidden with a solid box instead, so a misread number is still covered.
@@ -261,16 +263,24 @@ class IdNumberFinder {
     r'national\s*(id|insurance)|social\s+security|\bssn\b|\bsin\b|\bnin\b|\bnino\b|\btin\b|tax\s*(id|no|number)|'
     r'\bnic\b|\bcnic\b|licen[cs]e\s*(no|number|#)|\bdl\s*no|card\s*(no|number|#)|account\s*(no|number|#)|'
     r'\ba/?c\s*no|aadhaa?r|\buid\b|\bvid\b|permanent\s+account|\bepic\b|personal\s*(no|number)|'
-    r'personalausweis|ausweis|numéro|n[º°o]\.?\s*(de\s+)?(documento|pasaporte|passeport))',
+    r'personalausweis|ausweis|numéro|n[º°o]\.?\s*(de\s+)?(documento|pasaporte|passeport)|'
+    r'unique\s*(id|no|number|identification)|enrol+ment\s*(id|no|number)?|registration\s*(no|number)|\breg\.?\s*no|'
+    r'(employee|member|customer|student|policy|roll|folio)\s*(id|no|number|#))',
     caseSensitive: false,
   );
+
+  static final _cvvLabel = RegExp(r'(\bcvv2?\b|\bcvc2?\b|\bcid\b|security\s+code)', caseSensitive: false);
 
   /// Values marked private by a label on the line, such as "DOB: 01/01/1990"
   /// or "Passport No. X1234567". Words already matched in pass 1 are left.
   List<IdMatch> _byLabel(List<OcrBox> words, Set<int> used, OcrLine? next) {
     final out = <IdMatch>[];
     final text = words.map((w) => w.text).join(' ');
-    for (final (label, kind) in [(_dobLabel, IdKind.dateOfBirth), (_idLabel, IdKind.nationalId)]) {
+    for (final (label, kind) in [
+      (_dobLabel, IdKind.dateOfBirth),
+      (_idLabel, IdKind.nationalId),
+      (_cvvLabel, IdKind.cardSecurityCode),
+    ]) {
       // The last label on the line is the one next to the value, as in
       // "जन्म तिथि/DOB: 01/01/1990".
       final all = label.allMatches(text);
@@ -287,7 +297,11 @@ class IdNumberFinder {
         source = next.words.isNotEmpty ? next.words : estimateWords(next);
         value = [for (var k = 0; k < source.length; k++) k];
       }
-      final hit = kind == IdKind.dateOfBirth ? _date(source, value) : _labelledId(source, value);
+      final hit = switch (kind) {
+        IdKind.dateOfBirth => _date(source, value),
+        IdKind.cardSecurityCode => _securityCode(source, value),
+        _ => _labelledId(source, value),
+      };
       if (hit != null) out.add(hit);
     }
     return out;
@@ -357,6 +371,22 @@ class IdNumberFinder {
       }
     }
     return _unreadable(IdKind.dateOfBirth, words, value);
+  }
+
+  /// A card's three or four digit security code after "CVV", hidden whole.
+  IdMatch? _securityCode(List<OcrBox> words, List<int> value) {
+    if (value.isEmpty) return null;
+    final w = words[value.first];
+    final t = w.text.contains(':') ? w.text.substring(w.text.lastIndexOf(':') + 1) : w.text;
+    final digits = digitsOf(t);
+    if (digits == null || digits.length < 3 || digits.length > 4) return null;
+    return IdMatch(
+      kind: IdKind.cardSecurityCode,
+      text: digits,
+      pieces: [
+        _piece(w.left, w.right, [w], digits.length),
+      ],
+    );
   }
 
   /// An ID number in [value] words of [words]: the words that hold digits,
@@ -560,4 +590,87 @@ class IdNumberFinder {
     [2, 7, 9, 3, 8, 0, 6, 4, 1, 5],
     [7, 0, 4, 6, 9, 1, 3, 2, 5, 8],
   ];
+}
+
+/// A mask drawn by hand on Pro and Gold: the text read inside the box is
+/// kept readable except every third character, which is crossed out with an
+/// X ("23X56X89X12"). Counting runs on across the words and lines in the
+/// box, in reading order.
+///
+/// Only the characters of words that hold a digit are counted, so a label
+/// such as "Card No" caught in the box stays as it is; when the box holds no
+/// digits at all, every third letter of its words is crossed out instead.
+class EveryNthMask {
+  const EveryNthMask({this.every = 3});
+
+  /// Every how many characters one is crossed out.
+  final int every;
+
+  /// The label put on the masks this makes.
+  static const label = 'Every 3rd digit';
+
+  /// One single-character piece per crossed-out character inside the box
+  /// from ([left], [top]) to ([right], [bottom]), as fractions of the page.
+  /// Empty when nothing was read there.
+  List<IdPiece> piecesIn(
+    OcrLayout layout, {
+    required double left,
+    required double top,
+    required double right,
+    required double bottom,
+  }) {
+    // The characters inside the box, word by word, in reading order.
+    final words = <({OcrBox box, List<int> chars})>[];
+    final lines = [
+      for (final block in layout.blocks)
+        ...(block.lines.isEmpty
+            ? [OcrLine(text: block.text, left: block.left, top: block.top, right: block.right, bottom: block.bottom)]
+            : block.lines),
+    ]..sort((a, b) => a.top.compareTo(b.top));
+    for (final line in lines) {
+      final midY = (line.top + line.bottom) / 2;
+      if (midY < top || midY > bottom) continue;
+      final ws = [...(line.words.isNotEmpty ? line.words : IdNumberFinder.estimateWords(line))]
+        ..sort((a, b) => a.left.compareTo(b.left));
+      for (final w in ws) {
+        final n = w.text.length;
+        if (n == 0) continue;
+        final width = (w.right - w.left) / n;
+        final inside = <int>[
+          for (var c = 0; c < n; c++)
+            if (RegExp(r'[A-Za-z0-9]').hasMatch(w.text[c]) &&
+                w.left + width * (c + 0.5) >= left &&
+                w.left + width * (c + 0.5) <= right)
+              c,
+        ];
+        if (inside.isNotEmpty) words.add((box: w, chars: inside));
+      }
+    }
+    bool hasDigit(({OcrBox box, List<int> chars}) w) => w.chars.any((c) => RegExp(r'[0-9]').hasMatch(w.box.text[c]));
+    final numbers = words.where(hasDigit).toList();
+    final counted = numbers.isNotEmpty ? numbers : words;
+
+    final pieces = <IdPiece>[];
+    var count = 0;
+    for (final w in counted) {
+      final b = w.box, n = b.text.length;
+      final width = (b.right - b.left) / n;
+      final grow = (b.bottom - b.top) * IdNumberFinder.pad;
+      final side = width * 0.12;
+      for (final c in w.chars) {
+        count++;
+        if (count % every != 0) continue;
+        pieces.add(
+          IdPiece(
+            left: (b.left + width * c - side).clamp(0.0, 1.0),
+            top: (b.top - grow).clamp(0.0, 1.0),
+            right: (b.left + width * (c + 1) + side).clamp(0.0, 1.0),
+            bottom: (b.bottom + grow).clamp(0.0, 1.0),
+            chars: 1,
+          ),
+        );
+      }
+    }
+    return pieces;
+  }
 }

@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/preferences.dart';
 import '../../app/providers.dart';
+import '../../domain/id_masking.dart';
 import '../../domain/models.dart';
+import '../../domain/ocr.dart';
 import '../../domain/plan.dart';
 import '../../imaging/page_renderer.dart';
 import '../../imaging/render_service.dart';
@@ -46,6 +48,10 @@ class _MarkupScreenState extends ConsumerState<MarkupScreen> {
   MarkupStyle _style = const MarkupStyle();
   bool _autoMasking = false;
 
+  /// The page as read by OCR without any marks, kept for the next mask
+  /// drawn by hand so each one does not read the page again.
+  Future<OcrLayout>? _bareLayout;
+
   /// True once something changed since the screen opened.
   bool get _dirty => _undo.isNotEmpty;
 
@@ -71,7 +77,10 @@ class _MarkupScreenState extends ConsumerState<MarkupScreen> {
 
   AnnotationCallbacks _callbacks(EditorPage page) => AnnotationCallbacks(
     newId: _newId,
-    onAdd: (a) => _change([..._marks!, a]),
+    onAdd: (a) {
+      _change([..._marks!, a]);
+      if (a is MaskAnnotation && a.label == null && !a.crossesOut) _readHandMask(a);
+    },
     onReplace: (a) => _change([for (final x in _marks!) x.id == a.id ? a : x]),
     onRemove: (id) => _change([
       for (final x in _marks!)
@@ -167,6 +176,60 @@ class _MarkupScreenState extends ConsumerState<MarkupScreen> {
     }
   }
 
+  /// On Pro and Gold, a mask drawn by hand is read with OCR and its black
+  /// box becomes Xs over every third digit inside it, so the number reads as
+  /// partly masked ("23X56X89X12"). The black box stays when nothing is read
+  /// there, on Basic, or when the device cannot read text. Undo brings the
+  /// black box back.
+  Future<void> _readHandMask(MaskAnnotation box) async {
+    if (!ref.read(planIncludesProvider(PlanFeature.digitMask))) return;
+    final page = ref.read(scanControllerProvider).pageById(widget.pageId);
+    if (page == null) return;
+    final (engine, _) = await autoMaskEngine(ref.read(ocrEngineProvider));
+    if (engine == null || !mounted) return;
+    final List<IdPiece> pieces;
+    try {
+      final layout = await (_bareLayout ??= engine.recognizeLayout(
+        page.copyWith(annotations: const []),
+        languageCode: 'en',
+      ));
+      pieces = const EveryNthMask().piecesIn(
+        layout,
+        left: box.left,
+        top: box.top,
+        right: box.right,
+        bottom: box.bottom,
+      );
+    } catch (_) {
+      _bareLayout = null;
+      return;
+    }
+    // Leave it as a black box if nothing was read, or if it was moved or
+    // removed while the page was being read.
+    if (!mounted || pieces.isEmpty || !_marks!.contains(box)) return;
+    _change([
+      for (final x in _marks!)
+        if (x.id == box.id)
+          for (final p in pieces)
+            MaskAnnotation(
+              id: _newId(),
+              left: p.left,
+              top: p.top,
+              right: p.right,
+              bottom: p.bottom,
+              label: EveryNthMask.label,
+              crosses: p.chars,
+            )
+        else
+          x,
+    ]);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text('Crossed out every 3rd digit (${pieces.length}). Undo for a full black box.')),
+      );
+  }
+
   void _done() {
     ref.read(scanControllerProvider.notifier).setAnnotations(widget.pageId, _marks!);
     Navigator.of(context).pop();
@@ -248,6 +311,7 @@ class _MarkupScreenState extends ConsumerState<MarkupScreen> {
                   onAutoMask: () => _autoMask(page),
                   autoMaskLocked: !ref.watch(planIncludesProvider(PlanFeature.autoMask)),
                   autoMaskBusy: _autoMasking,
+                  handMaskReads: ref.watch(planIncludesProvider(PlanFeature.digitMask)),
                 ),
               ],
             );

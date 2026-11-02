@@ -310,6 +310,79 @@ void main() {
     });
   });
 
+  group('more labels and card codes', () {
+    test('a unique ID, enrolment or customer number after its label keeps its last four', () {
+      for (final text in [
+        'Unique ID: 98765432109',
+        'Enrolment No: 1234/56789/01234',
+        'Customer ID 556677889900',
+        'Registration No. KA0420231234',
+      ]) {
+        final hit = finder.findInLine(_line(text)).single;
+        expect(hit.kind, IdKind.nationalId, reason: text);
+        final hidden = hit.pieces.fold<int>(0, (a, p) => a + p.chars);
+        expect(hidden, hit.text.length - 4, reason: text);
+      }
+    });
+
+    test("a card's CVV is hidden whole, next to its card number", () {
+      final hits = finder.findInLine(_line('4111 1111 1111 1111 CVV 123'));
+      expect(hits.map((h) => h.kind), [IdKind.card, IdKind.cardSecurityCode]);
+      expect(hits.last.pieces.single.chars, 3);
+      expect(finder.findInLine(_line('CVV: 12')), isEmpty, reason: 'too short to be a code');
+    });
+  });
+
+  group('every 3rd digit in a hand-drawn mask', () {
+    const nth = EveryNthMask();
+
+    test('crosses out the 3rd, 6th, 9th and 12th digit across the groups', () {
+      final line = _line('2345 6789 0120');
+      final pieces = nth.piecesIn(_layout([line]), left: 0, top: 0.4, right: 1, bottom: 0.7);
+      expect(pieces, hasLength(4));
+      expect(pieces.every((p) => p.chars == 1), isTrue);
+      // Digit 3 is the third character of the first word; digit 6 the second
+      // of the next.
+      final w = line.words;
+      double centreOf(OcrBox b, int c) => b.left + (b.right - b.left) * (c + 0.5) / b.text.length;
+      expect((pieces[0].left + pieces[0].right) / 2, closeTo(centreOf(w[0], 2), 0.002));
+      expect((pieces[1].left + pieces[1].right) / 2, closeTo(centreOf(w[1], 1), 0.002));
+      expect((pieces[3].left + pieces[3].right) / 2, closeTo(centreOf(w[2], 3), 0.002));
+      expect(pieces[0].top, lessThan(line.top));
+      expect(pieces[0].bottom, greaterThan(line.bottom));
+    });
+
+    test('only the characters inside the box count, and a label beside the number does not', () {
+      final line = _line('Card No 4111 1111 1111 1111', left: 0.1, right: 0.9);
+      final firstDigit = line.words[2].left;
+      final all = nth.piecesIn(_layout([line]), left: 0, top: 0.4, right: 1, bottom: 0.7);
+      expect(all, hasLength(5), reason: '16 digits, the label left out');
+      expect(all.first.left, greaterThan(firstDigit - 0.01));
+
+      // A box over the first two groups only.
+      final half = nth.piecesIn(_layout([line]), left: firstDigit, top: 0.4, right: line.words[3].right, bottom: 0.7);
+      expect(half, hasLength(2));
+    });
+
+    test('counting runs on from one line to the next', () {
+      final layout = _layout([_line('12345', top: 0.2, bottom: 0.25), _line('6789', top: 0.3, bottom: 0.35)]);
+      final pieces = nth.piecesIn(layout, left: 0, top: 0.1, right: 1, bottom: 0.4);
+      expect(pieces, hasLength(3), reason: 'digits 3, 6 and 9');
+      expect(pieces[1].top, greaterThan(0.25), reason: 'the 6th digit is on the second line');
+    });
+
+    test('lines outside the box are left alone', () {
+      final layout = _layout([_line('123456', top: 0.2, bottom: 0.25), _line('999999', top: 0.6, bottom: 0.65)]);
+      expect(nth.piecesIn(layout, left: 0, top: 0.1, right: 1, bottom: 0.3), hasLength(2));
+    });
+
+    test('a box with only words crosses out every 3rd letter; an empty box gives nothing', () {
+      final layout = _layout([_line('RAHUL KUMAR')]);
+      expect(nth.piecesIn(layout, left: 0, top: 0.4, right: 1, bottom: 0.7), hasLength(3));
+      expect(nth.piecesIn(layout, left: 0, top: 0.0, right: 1, bottom: 0.2), isEmpty);
+    });
+  });
+
   group('mask marks', () {
     test('a mask survives a JSON round trip, and other marks still load', () {
       const mask = MaskAnnotation(
@@ -540,6 +613,58 @@ void main() {
       expect(mask.left, closeTo(0.2, 0.03));
       expect(mask.right, closeTo(0.6, 0.03));
       expect(mask.label, isNull, reason: 'drawn by hand, so no label');
+    });
+
+    Future<void> dragOverNumber(WidgetTester tester) async {
+      // The number sits at 0.5 to 0.56 of the page height, across 0.1 to 0.9.
+      final rect = tester.getRect(find.byType(AnnotationLayer));
+      final gesture = await tester.startGesture(rect.topLeft + Offset(rect.width * 0.05, rect.height * 0.47));
+      await gesture.moveBy(Offset(rect.width * 0.9, rect.height * 0.12));
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('on Pro a hand mask over a number crosses out every 3rd digit', (tester) async {
+      await tester.runAsync(setUpContainer);
+      await pumpMarkup(tester);
+      await selectTool(tester, 'Mask');
+      expect(find.textContaining('cross out every 3rd digit'), findsOneWidget);
+      await dragOverNumber(tester);
+      expect(find.textContaining('Crossed out every 3rd digit (4)'), findsOneWidget);
+      expect(ocr.readPages.single.annotations, isEmpty, reason: 'read without the black box over it');
+
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      final masks = pages().single.annotations.cast<MaskAnnotation>().toList();
+      expect(masks, hasLength(4));
+      expect(masks.every((m) => m.crosses == 1 && m.label == EveryNthMask.label), isTrue);
+    });
+
+    testWidgets('undo after the digits are crossed out brings the black box back', (tester) async {
+      await tester.runAsync(setUpContainer);
+      await pumpMarkup(tester);
+      await selectTool(tester, 'Mask');
+      await dragOverNumber(tester);
+      await tester.tap(find.byTooltip('Undo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      final mask = pages().single.annotations.single as MaskAnnotation;
+      expect(mask.crosses, 0);
+    });
+
+    testWidgets('on Basic a hand mask stays a black box and nothing is read', (tester) async {
+      await tester.runAsync(() => setUpContainer(plan: AppPlan.basic));
+      await pumpMarkup(tester);
+      await selectTool(tester, 'Mask');
+      expect(find.textContaining('Drag over a number to hide it'), findsOneWidget);
+      await dragOverNumber(tester);
+      expect(ocr.readPages, isEmpty);
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      final mask = pages().single.annotations.single as MaskAnnotation;
+      expect(mask.crosses, 0);
     });
 
     testWidgets('a mask too small to see is dropped', (tester) async {
