@@ -212,7 +212,9 @@ class _ScopeChips extends StatelessWidget {
         for (final s in DocScope.values) ...[
           if (s != DocScope.docs) const SizedBox(width: Space.sm),
           ChoiceChip(
-            avatar: s == DocScope.saved ? const Icon(LumaIcons.save, size: 18) : null,
+            // A selected chip draws its checkmark over the avatar, so the
+            // icon shows only while Saved is not picked.
+            avatar: s == DocScope.saved && s != scope ? const Icon(LumaIcons.save, size: 18) : null,
             label: Text('${s.label} (${count(s)})'),
             selected: s == scope,
             onSelected: (_) => onSelected(s),

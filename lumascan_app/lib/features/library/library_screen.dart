@@ -358,7 +358,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           for (final scope in DocScope.values) ...[
             if (scope != DocScope.docs) const SizedBox(width: Space.sm),
             ChoiceChip(
-              avatar: scope == DocScope.saved ? const Icon(LumaIcons.save, size: 18) : null,
+              // A selected chip draws its checkmark over the avatar, so the
+              // icon shows only while Saved is not picked.
+              avatar: scope == DocScope.saved && !(current == null && query.scope == scope)
+                  ? const Icon(LumaIcons.save, size: 18)
+                  : null,
               label: Text(scope.label),
               selected: current == null && query.scope == scope,
               onSelected: (_) => q.showScope(scope),
