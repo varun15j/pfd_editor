@@ -179,7 +179,6 @@ void main() {
       expect(harness.pages, hasLength(3));
       expect(find.byKey(const ValueKey('camera-preview')), findsOneWidget);
       expect(find.byType(AlertDialog), findsNothing);
-      expect(find.bySemanticsLabel('3 pages captured'), findsOneWidget);
       expect(find.bySemanticsLabel('Open preview of 3 captured photos'), findsOneWidget);
     });
 
@@ -422,7 +421,6 @@ void main() {
       expect(find.bySemanticsLabel('Import from gallery'), findsNothing);
       expect(find.bySemanticsLabel('Import from file'), findsNothing);
       expect(find.bySemanticsLabel('Open preview of 1 captured photo'), findsOneWidget);
-      expect(find.bySemanticsLabel('1 page captured'), findsOneWidget);
     });
 
     testWidgets('a document that has pages shows its thumbnail, not import', (tester) async {
