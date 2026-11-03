@@ -8,7 +8,10 @@ import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../data/library_store.dart';
 import '../../domain/library.dart';
+import '../../domain/library_query.dart';
 import '../../domain/models.dart';
+import '../../domain/saved_export.dart';
+import '../export/saved_word_tile.dart';
 import '../id_card/id_card_saved_screen.dart';
 import '../library/document_tile.dart';
 import '../library/library_actions.dart';
@@ -88,11 +91,36 @@ class PdfHomeDoc extends HomeDoc {
   bool get favorite => document.favorite;
 }
 
-/// Home's documents: favorites first (scans and PDFs alike), then the
-/// rest. In each group the scan last on screen leads, then the others
-/// newest first.
-List<HomeDoc> homeDocuments(ScanState scan, List<SavedDocument> pdfs) {
-  final current = scan.pages.isEmpty
+/// A Word file exported from a scan, in the Saved folder.
+class WordHomeDoc extends HomeDoc {
+  const WordHomeDoc(this.export);
+
+  final SavedExport export;
+
+  @override
+  String get name => export.name;
+  @override
+  DateTime get time => export.exportedAt;
+  @override
+  int get pageCount => export.pageCount;
+  @override
+  String get key => 'word-${export.path}';
+  @override
+  bool get favorite => false;
+}
+
+/// Home's documents in [scope]: Docs are the scans and the PDFs worked on,
+/// Saved the files exported from scans (PDFs and [words]), All both.
+/// Favorites come first, then the rest. In each group the scan last on
+/// screen leads, then the others newest first.
+List<HomeDoc> homeDocuments(
+  ScanState scan,
+  List<SavedDocument> pdfs, {
+  DocScope scope = DocScope.all,
+  List<SavedExport> words = const [],
+}) {
+  final showScans = scope != DocScope.saved;
+  final current = !showScans || scan.pages.isEmpty
       ? null
       : ScanHomeDoc(
           name: scan.info?.name ?? 'Scan',
@@ -102,8 +130,14 @@ List<HomeDoc> homeDocuments(ScanState scan, List<SavedDocument> pdfs) {
           exported: scan.exported,
           favorite: scan.info?.favorite ?? false,
         );
-  final others = <HomeDoc>[for (final d in scan.parked) ScanHomeDoc.parked(d), for (final d in pdfs) PdfHomeDoc(d)]
-    ..sort((a, b) => b.time.compareTo(a.time));
+  final others = <HomeDoc>[
+    if (showScans)
+      for (final d in scan.parked) ScanHomeDoc.parked(d),
+    for (final d in pdfs)
+      if (scope.includes(d)) PdfHomeDoc(d),
+    if (scope != DocScope.docs)
+      for (final w in words) WordHomeDoc(w),
+  ]..sort((a, b) => b.time.compareTo(a.time));
   // The one last worked on stays first in its group, whatever its date.
   final all = [?current, ...others];
   return [
@@ -155,6 +189,8 @@ class HomeDocumentsView extends ConsumerWidget {
     switch (doc) {
       case PdfHomeDoc(:final document):
         await openDocument(context, ref, document);
+      case WordHomeDoc(:final export):
+        await openWordFile(context, export);
       case ScanHomeDoc(:final parkedId):
         if (parkedId != null) await ref.read(scanControllerProvider.notifier).openParked(parkedId);
         if (!context.mounted) return;
@@ -175,7 +211,8 @@ String _semantics(HomeDoc d) =>
 String _details(HomeDoc d) {
   final kind = switch (d) {
     ScanHomeDoc(:final exported) => exported ? 'Images, PDF made' : 'Images',
-    PdfHomeDoc() => 'PDF',
+    PdfHomeDoc(:final document) => document.isScanExport ? 'Saved PDF' : 'PDF',
+    WordHomeDoc() => 'Saved Word file',
   };
   return '${formatModified(d.time, DateTime.now())} · ${pageCountLabel(d.pageCount)} · $kind';
 }
@@ -196,6 +233,10 @@ class _Preview extends StatelessWidget {
           : Center(child: Icon(LumaIcons.document, size: 36, color: LumaColors.of(context).muted)),
     ),
     PdfHomeDoc(:final document) => DocumentThumbnail(document: document, iconSize: 36),
+    WordHomeDoc() => ColoredBox(
+      color: LumaColors.of(context).canvas,
+      child: Center(child: Icon(LumaIcons.article, size: 36, color: LumaColors.of(context).muted)),
+    ),
   };
 }
 
@@ -227,11 +268,12 @@ class _HomeDocCard extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     ExcludeSemantics(child: _Preview(doc: d)),
-                    Positioned(
-                      top: Space.xs,
-                      right: Space.xs,
-                      child: FavoriteBadge(child: _HomeFavorite(doc: d)),
-                    ),
+                    if (d is! WordHomeDoc)
+                      Positioned(
+                        top: Space.xs,
+                        right: Space.xs,
+                        child: FavoriteBadge(child: _HomeFavorite(doc: d)),
+                      ),
                   ],
                 ),
               ),
@@ -250,7 +292,11 @@ class _HomeDocCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (d is ScanHomeDoc) _ScanMenu(doc: d) else const SizedBox(width: Space.sm),
+                    switch (d) {
+                      ScanHomeDoc() => _ScanMenu(doc: d),
+                      WordHomeDoc() => SavedWordMenu(export: d.export),
+                      _ => const SizedBox(width: Space.sm),
+                    },
                   ],
                 ),
               ),
@@ -316,8 +362,9 @@ class _HomeDocRow extends StatelessWidget {
                   ),
                 ),
               ),
-              _HomeFavorite(doc: d),
+              if (d is! WordHomeDoc) _HomeFavorite(doc: d),
               if (d is ScanHomeDoc) _ScanMenu(doc: d),
+              if (d is WordHomeDoc) SavedWordMenu(export: d.export),
             ],
           ),
         ),
@@ -347,6 +394,8 @@ class _HomeFavorite extends ConsumerWidget {
 /// Adds a Home document to favorites or takes it off, and says so.
 Future<void> toggleHomeFavorite(BuildContext context, WidgetRef ref, HomeDoc doc) async {
   switch (doc) {
+    case WordHomeDoc():
+      return;
     case PdfHomeDoc(:final document):
       await toggleFavorite(context, ref, document);
     case ScanHomeDoc(:final parkedId, :final favorite, :final name):

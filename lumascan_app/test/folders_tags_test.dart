@@ -17,7 +17,7 @@ SavedDocument doc(String id, String name, {String? folderId, List<String> tags =
   name: name,
   pdfPath: '/nowhere/$name.pdf',
   pageCount: 1,
-  type: ScanType.document,
+  type: ScanType.pdf,
   createdAt: when,
   modifiedAt: when,
   folderId: folderId,
@@ -140,6 +140,8 @@ void main() {
 
     testWidgets('new folder checks the name as you type', (tester) async {
       await openLibrary(tester);
+      await tester.ensureVisible(find.widgetWithText(ActionChip, 'New folder'));
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ActionChip, 'New folder'));
       await tester.pumpAndSettle();
       await tester.enterText(dialogField(), 'bills');

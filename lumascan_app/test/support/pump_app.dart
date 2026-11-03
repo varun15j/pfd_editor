@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumascan/data/export_state_store.dart';
 import 'package:lumascan/app/app.dart';
 import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
@@ -22,6 +23,7 @@ Future<void> pumpApp(
   UiPrefsStore? prefs,
   AppSettingsStore? settings,
   DocumentTextStore? textStore,
+  ExportStateStore? exports,
   LaunchActionSource launchActions = const NoLaunchActions(),
 }) async {
   tester.view.physicalSize = const Size(1080, 2340);
@@ -38,6 +40,7 @@ Future<void> pumpApp(
         appSettingsStoreProvider.overrideWithValue(settings ?? MemoryAppSettingsStore()),
         documentTextStoreProvider.overrideWithValue(textStore ?? MemoryDocumentTextStore()),
         launchActionSourceProvider.overrideWithValue(launchActions),
+        exportStateStoreProvider.overrideWithValue(exports ?? MemoryExportStateStore()),
         ...overrides,
       ],
       child: const LumaScanApp(),

@@ -23,7 +23,7 @@ SavedDocument doc(String id, String name, {int day = 7}) => SavedDocument(
   name: name,
   pdfPath: '/nowhere/exports/$name.pdf',
   pageCount: 3,
-  type: ScanType.document,
+  type: ScanType.pdf,
   createdAt: DateTime(2026, 3, day),
   modifiedAt: DateTime(2026, 3, day),
 );
@@ -170,12 +170,12 @@ void main() {
 
     testWidgets('deleted documents also leave Home', (tester) async {
       await pumpApp(tester, library: MemoryLibraryStore(threeDocs()));
-      expect(find.text('All docs(3)'), findsOneWidget);
+      expect(find.text('Docs(3)'), findsOneWidget);
       await openLibrary(tester);
       await menu(tester, 'Lease', 'Delete');
       await tester.pageBack();
       await tester.pumpAndSettle();
-      expect(find.text('All docs(2)'), findsOneWidget);
+      expect(find.text('Docs(2)'), findsOneWidget);
     });
 
     testWidgets('rename asks for a name and rejects an empty one', (tester) async {

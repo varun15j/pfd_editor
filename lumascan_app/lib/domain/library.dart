@@ -62,6 +62,11 @@ class SavedDocument {
   /// until the heart is taken off.
   final bool favorite;
 
+  /// A PDF exported from a scan (Export as PDF, ID copies), listed in the
+  /// Saved folder. Every other PDF (edited, merged, split, imported) has
+  /// type [ScanType.pdf] and is listed with the documents.
+  bool get isScanExport => type != ScanType.pdf;
+
   SavedDocument copyWith({
     String? name,
     String? pdfPath,

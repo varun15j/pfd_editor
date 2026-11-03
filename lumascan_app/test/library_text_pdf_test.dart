@@ -58,7 +58,7 @@ void main() {
       name: 'Lease',
       pdfPath: source.path,
       pageCount: 3,
-      type: ScanType.document,
+      type: ScanType.pdf,
       createdAt: DateTime(2026, 3, 9),
       modifiedAt: DateTime(2026, 3, 9),
     );

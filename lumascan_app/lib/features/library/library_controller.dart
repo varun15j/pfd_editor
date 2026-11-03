@@ -31,13 +31,23 @@ class LibraryController extends AsyncNotifier<LibraryIndex> {
 
   /// Registers a PDF exported from scanned [pages] and renders its thumbnail
   /// from the first page.
+  ///
+  /// [replaceId] is the entry of an earlier export of the same scan: the new
+  /// file takes its place, keeping its folder, tags and heart, and the old
+  /// file is deleted if it had another name.
   Future<SavedDocument> addScan(
     File pdf,
     List<ScanPage> pages, {
     ScanType type = ScanType.document,
     int? pageCount,
+    String? replaceId,
   }) async {
-    final id = await _idFor(pdf);
+    final previous = replaceId == null ? null : (await future).byId(replaceId);
+    final id = previous?.id ?? await _idFor(pdf);
+    if (previous != null && !path.equals(previous.pdfPath, pdf.path)) {
+      final old = File(previous.pdfPath);
+      if (old.existsSync()) await old.delete();
+    }
     final thumbnail = pages.isEmpty ? null : await ref.read(libraryStoreProvider).writeThumbnail(id, pages.first);
     return _add(id, pdf, pageCount: pageCount ?? pages.length, type: type, thumbnailPath: thumbnail);
   }

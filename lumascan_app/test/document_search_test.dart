@@ -25,7 +25,7 @@ SavedDocument doc(String id, String name, {int pages = 1, DateTime? modified}) =
   name: name,
   pdfPath: '/nowhere/$id.pdf',
   pageCount: pages,
-  type: ScanType.document,
+  type: ScanType.pdf,
   createdAt: modified ?? now.subtract(const Duration(days: 1)),
   modifiedAt: modified ?? now.subtract(const Duration(days: 1)),
 );

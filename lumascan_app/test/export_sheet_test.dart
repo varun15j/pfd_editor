@@ -9,6 +9,7 @@ import 'package:lumascan/app/app_info.dart';
 import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/app/theme.dart';
+import 'package:lumascan/data/export_state_store.dart';
 import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/data/smart_namer.dart';
 import 'package:lumascan/domain/models.dart';
@@ -18,6 +19,7 @@ import 'package:lumascan/export/ocr_pdf_builder.dart';
 import 'package:lumascan/export/pdf_exporter.dart';
 import 'package:lumascan/export/text_pdf_service.dart';
 import 'package:lumascan/features/export/export_sheet.dart';
+import 'package:lumascan/features/library/library_controller.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 
 import 'support/memory_stores.dart';
@@ -128,6 +130,7 @@ void main() {
         planProvider.overrideWith((ref) => plan),
         libraryStoreProvider.overrideWithValue(MemoryLibraryStore()),
         smartNamerProvider.overrideWithValue(namer),
+        exportStateStoreProvider.overrideWithValue(MemoryExportStateStore()),
       ],
     );
     await container.read(scanControllerProvider.notifier).scan(ScanSource.camera);
@@ -259,7 +262,7 @@ void main() {
         await tester.pump();
       }
 
-      expect(textPdf.names, ['Lease (text).pdf']);
+      expect(textPdf.names, ['Saved/Lease (text).pdf']);
       expect(exporter.calls, isEmpty);
       expect(find.text('Text PDF saved'), findsOneWidget);
       expect(find.textContaining('7 pages'), findsOneWidget);
@@ -282,7 +285,7 @@ void main() {
     await tapSave(tester);
 
     expect(exporter.calls, hasLength(1));
-    expect(exporter.calls.single.fileName, 'Lease_ 2026_10.pdf');
+    expect(exporter.calls.single.fileName, 'Saved/Lease_ 2026_10.pdf');
     expect(exporter.calls.single.quality, ExportQuality.small);
 
     // Still writing: no success yet, and the button cannot be pressed again.
@@ -340,13 +343,67 @@ void main() {
     });
   }
 
+  group('Saved folder', () {
+    /// Opens the sheet (pumping the app the first time), saves as "Lease"
+    /// and waits for the result.
+    Future<void> exportOnce(WidgetTester tester, {bool first = false}) async {
+      if (first) {
+        await pumpSheet(tester);
+      } else {
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+      }
+      await tester.enterText(find.byType(TextField), 'Lease');
+      await tapSave(tester);
+      // Planning, writing and filing each wait on the file system.
+      for (var i = 0; i < 10; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> done(WidgetTester tester) async {
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('an unchanged scan reuses its saved PDF; a changed one is made again', (tester) async {
+      exporter.finish();
+      await exportOnce(tester, first: true);
+      expect(exporter.calls, hasLength(1));
+      expect(exporter.calls.single.fileName, 'Saved/Lease.pdf');
+      expect(find.text('PDF saved'), findsOneWidget);
+      expect(find.text('Share'), findsOneWidget);
+      await done(tester);
+
+      await exportOnce(tester);
+      expect(exporter.calls, hasLength(1), reason: 'nothing changed, so nothing is made again');
+      expect(find.text('No changes since your last export'), findsOneWidget);
+      expect(find.text('Share'), findsOneWidget);
+      await done(tester);
+
+      final pages = container.read(scanControllerProvider).pages;
+      container.read(scanControllerProvider.notifier).rotate(pages.first.id);
+      await exportOnce(tester);
+      expect(exporter.calls, hasLength(2));
+      expect(exporter.calls.last.fileName, 'Saved/Lease.pdf', reason: 'the new file replaces the old one');
+      final docs = (await tester.runAsync(() => container.read(libraryProvider.future)))!.documents;
+      expect(docs, hasLength(1), reason: 'exporting again does not add a second entry');
+      expect(docs.single.isScanExport, isTrue);
+    });
+  });
+
   testWidgets('a name that is already taken is saved with a number', (tester) async {
     final store = container.read(pageStoreProvider);
-    await tester.runAsync(() => store.writeExportAtomically('Receipt.pdf', [1]));
+    await tester.runAsync(() async {
+      await store.savedDir;
+      await store.writeExportAtomically('Saved/Receipt.pdf', [1]);
+    });
     await pumpSheet(tester);
     await tester.enterText(find.byType(TextField), 'Receipt');
     await tapSave(tester);
-    expect(exporter.calls.single.fileName, 'Receipt (2).pdf');
+    expect(exporter.calls.single.fileName, 'Saved/Receipt (2).pdf');
   });
 
   testWidgets('the sheet cannot be dismissed while saving', (tester) async {

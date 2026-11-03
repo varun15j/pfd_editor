@@ -12,7 +12,7 @@ SavedDocument doc(String id, String name, {int day = 7, bool favorite = false}) 
   name: name,
   pdfPath: '/nowhere/exports/$name.pdf',
   pageCount: 3,
-  type: ScanType.document,
+  type: ScanType.pdf,
   createdAt: DateTime(2026, 3, day),
   modifiedAt: DateTime(2026, 3, day),
   favorite: favorite,

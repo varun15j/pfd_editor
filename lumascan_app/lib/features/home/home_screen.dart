@@ -5,10 +5,13 @@ import '../../app/app_info.dart';
 import '../../app/preferences.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
+import '../../domain/library_query.dart';
 import '../../domain/scanner_service.dart';
 import '../../domain/ui_prefs.dart';
 import '../capture/create_sheet.dart';
+import '../export/saved_exports.dart';
 import '../library/library_actions.dart';
+import '../library/library_query_controller.dart';
 import '../library/library_query_sheets.dart';
 import '../library/library_screen.dart';
 import '../settings/settings_screen.dart';
@@ -17,8 +20,10 @@ import 'home_documents.dart';
 import '../../ui/luma_icons.dart';
 
 /// Docs tab, laid out as Screen 1 of the UI/UX screenshots: the avatar
-/// (Settings), the app name and Search at the top, then "All docs(N)" with
-/// Create, Sort, Grid and Select, then every scan and PDF. Search, the
+/// (Settings), the app name and Search at the top, then "Docs(N)" with
+/// Create, Sort, Grid and Select, the Docs / Saved / All chips, then the
+/// documents. Docs (the default) are the scans and the PDFs worked on;
+/// Saved holds the PDF and Word files exported from scans. Search, the
 /// folder picker and Select open the Library, where those tools live.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -33,7 +38,11 @@ class HomeScreen extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     final busy = state.busy;
     // Every scan is kept as page images, so it is listed with the saved PDFs.
-    final docs = homeDocuments(state, ref.watch(visibleDocumentsProvider));
+    final scope = ref.watch(libraryQueryProvider.select((q) => q.scope));
+    final pdfs = ref.watch(visibleDocumentsProvider);
+    final words = ref.watch(savedWordFilesProvider);
+    int count(DocScope s) => homeDocuments(state, pdfs, scope: s, words: words).length;
+    final docs = homeDocuments(state, pdfs, scope: scope, words: words);
     final grid = ref.watch(uiPrefsProvider.select((p) => p.homeView)) == LibraryView.grid;
     final dismissed = ref.watch(uiPrefsProvider.select((p) => p.dismissedCards));
     final discovery = [
@@ -77,7 +86,7 @@ class HomeScreen extends ConsumerWidget {
                 child: Semantics(
                   header: true,
                   button: true,
-                  label: 'All docs, ${docs.length}. Open folders',
+                  label: '${scope.label}, ${docs.length}. Open folders',
                   excludeSemantics: true,
                   child: InkWell(
                     onTap: () => _openLibrary(context),
@@ -87,7 +96,7 @@ class HomeScreen extends ConsumerWidget {
                         children: [
                           Flexible(
                             child: Text(
-                              'All docs(${docs.length})',
+                              '${scope.label}(${docs.length})',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -127,6 +136,11 @@ class HomeScreen extends ConsumerWidget {
               ),
             ],
           ),
+          _ScopeChips(
+            scope: scope,
+            count: count,
+            onSelected: (s) => ref.read(libraryQueryProvider.notifier).showScope(s),
+          ),
           if (busy) ...[
             const SizedBox(height: Space.md),
             const LinearProgressIndicator(semanticsLabel: 'Adding pages'),
@@ -142,6 +156,23 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: Space.lg),
           if (docs.isNotEmpty)
             HomeDocumentsView(docs: docs, grid: grid)
+          else if (scope == DocScope.saved)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: Space.xxl),
+              child: Column(
+                children: [
+                  Icon(LumaIcons.save, size: 48, color: c.muted),
+                  const SizedBox(height: Space.md),
+                  Text('Nothing saved yet.', style: text.bodyLarge?.copyWith(color: c.muted)),
+                  const SizedBox(height: Space.xs),
+                  Text(
+                    'PDF and Word files you export from a scan are kept here.',
+                    textAlign: TextAlign.center,
+                    style: text.bodyMedium?.copyWith(color: c.muted),
+                  ),
+                ],
+              ),
+            )
           else
             Padding(
               padding: const EdgeInsets.symmetric(vertical: Space.xxl),
@@ -163,6 +194,35 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Docs, Saved and All, each with its count. Docs is picked at start.
+class _ScopeChips extends StatelessWidget {
+  const _ScopeChips({required this.scope, required this.count, required this.onSelected});
+
+  final DocScope scope;
+  final int Function(DocScope) count;
+  final ValueChanged<DocScope> onSelected;
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Row(
+      children: [
+        for (final s in DocScope.values) ...[
+          if (s != DocScope.docs) const SizedBox(width: Space.sm),
+          ChoiceChip(
+            // A selected chip draws its checkmark over the avatar, so the
+            // icon shows only while Saved is not picked.
+            avatar: s == DocScope.saved && s != scope ? const Icon(LumaIcons.save, size: 18) : null,
+            label: Text('${s.label} (${count(s)})'),
+            selected: s == scope,
+            onSelected: (_) => onSelected(s),
+          ),
+        ],
+      ],
+    ),
+  );
 }
 
 /// A dismissible tip on Home that points to a feature (B1 discovery cards).

@@ -4,6 +4,8 @@ import '../../app/preferences.dart';
 import '../../domain/document_text.dart';
 import '../../domain/library.dart';
 import '../../domain/plan.dart';
+import '../../domain/saved_export.dart';
+import '../export/saved_exports.dart';
 import 'document_text_controller.dart';
 import '../../domain/library_query.dart';
 import 'library_actions.dart';
@@ -39,8 +41,11 @@ class LibraryQueryController extends Notifier<LibraryQuery> {
 
   void clearTags() => state = state.copyWith(tags: const {});
 
-  /// Browses one folder, or every document when [folderId] is null.
+  /// Browses one folder, or the current scope when [folderId] is null.
   void openFolder(String? folderId) => state = state.copyWith(folderId: () => folderId);
+
+  /// Lists Docs, Saved or All, leaving any folder.
+  void showScope(DocScope scope) => state = state.copyWith(scope: scope, folderId: () => null);
 
   void clearDate() => state = state.copyWith(date: DateFilter.any, from: () => null, to: () => null);
 
@@ -68,4 +73,24 @@ final searchableTextsProvider = Provider<Map<String, DocumentText>>((ref) {
   final searching = ref.watch(libraryQueryProvider.select((q) => q.isSearching));
   if (!searching || !ref.watch(planIncludesProvider(PlanFeature.searchText))) return const {};
   return ref.watch(documentTextProvider.select((s) => s.texts));
+});
+
+/// Word files the Library shows below the PDFs: in Saved and All, outside
+/// folders, matching the search by name. Word files have no type, date or
+/// tag filters, so any of those hides them.
+final filteredWordFilesProvider = Provider<List<SavedExport>>((ref) {
+  final query = ref.watch(libraryQueryProvider);
+  if (query.scope == DocScope.docs || query.folderId != null || query.isFiltered) return const [];
+  final needle = query.text.trim().toLowerCase();
+  final words = [
+    for (final w in ref.watch(savedWordFilesProvider))
+      if (needle.isEmpty || w.name.toLowerCase().contains(needle)) w,
+  ];
+  int byName(SavedExport a, SavedExport b) => a.name.toLowerCase().compareTo(b.name.toLowerCase());
+  return words..sort(switch (query.sort) {
+    LibrarySort.newest => (a, b) => b.exportedAt.compareTo(a.exportedAt),
+    LibrarySort.oldest => (a, b) => a.exportedAt.compareTo(b.exportedAt),
+    LibrarySort.nameAz => byName,
+    LibrarySort.nameZa => (a, b) => byName(b, a),
+  });
 });
