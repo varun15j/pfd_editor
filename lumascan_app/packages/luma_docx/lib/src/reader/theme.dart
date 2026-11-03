@@ -100,7 +100,8 @@ class WordTheme {
         out = adjustLuminance(out, lumMod: lumMod, lumOff: lumOff, tint: tint, shade: shade);
       }
       final alpha = pct('alpha');
-      if (alpha != null) out = withAlpha(out, alpha);
+      // DrawingML alpha is opacity; Word 2010 text effects (w14) store transparency.
+      if (alpha != null) out = withAlpha(out, nsOf(c) == 'w14' ? 1 - alpha : alpha);
       return out;
     }
     return null;

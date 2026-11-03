@@ -422,6 +422,10 @@ class _Parser {
           suffix: next.level.suffix,
           align: next.level.align,
           level: ilvl,
+          listId: numId,
+          format: next.level.format,
+          pattern: next.level.text,
+          start: next.level.start,
         );
       }
     }
@@ -607,6 +611,11 @@ class _Parser {
 
     bool hiddenByField() => fields.isNotEmpty && !fields.last.inResult;
 
+    List<String> fieldCodes() => List.unmodifiable([
+      for (final f in fields)
+        if (f.inResult) f.code,
+    ]);
+
     String? fieldCode() {
       for (var i = fields.length - 1; i >= 0; i--) {
         if (fields[i].inResult) return fields[i].code;
@@ -636,6 +645,7 @@ class _Parser {
           revision: revision,
           commentIds: List.unmodifiable(story.activeComments),
           field: fieldCode(),
+          fields: fieldCodes(),
           contentControl: ic.control,
         ),
       );
@@ -665,7 +675,7 @@ class _Parser {
                 text(shown);
               } else if (!f.shownSomething && !hiddenByField() && RegExp(r'^(PAGE|NUMPAGES|SECTIONPAGES|SECTION)\b').hasMatch(f.code)) {
                 // Page fields saved without a value: the viewer fills them in.
-                out.add(WordText('1', style, field: f.code, link: ic.link, revision: revision));
+                out.add(WordText('1', style, field: f.code, fields: [...fieldCodes(), f.code], link: ic.link, revision: revision));
                 for (final o in fields) {
                   o.shownSomething = true;
                 }
@@ -884,6 +894,8 @@ class _Parser {
     final rel = pkg.rels(story.part)[blip?.attr('embed')];
     final bytes = rel == null || rel.external ? null : pkg.bytes(rel.target);
     if (bytes == null) return WordUnsupported(alt ?? 'Picture', width: width, height: height);
+    final svgBlip = blip?.descendantElements.where((e) => e.name.local == 'svgBlip').firstOrNull;
+    final svgRel = svgBlip == null ? null : pkg.rels(story.part)[svgBlip.attr('embed')];
     final ext = rel!.target.split('.').last.toLowerCase();
     if (ext == 'emf' || ext == 'wmf' || ext == 'tif' || ext == 'tiff') {
       return WordUnsupported(alt ?? 'Picture (${ext.toUpperCase()})', width: width, height: height);
@@ -906,7 +918,8 @@ class _Parser {
       grayscale: blip.el('a', 'grayscl') != null,
       opacity: alpha == null ? 1 : (double.tryParse(alpha) ?? 100000) / 100000,
       shape: geom == null || geom == 'rect' ? null : geom,
-      hasSvg: blip.descendantElements.any((e) => e.name.local == 'svgBlip'),
+      hasSvg: svgRel != null,
+      svg: svgRel == null || svgRel.external ? null : pkg.bytes(svgRel.target),
     );
   }
 
@@ -1215,7 +1228,8 @@ class _Parser {
       final total = twips(tblPr?.w('tblW')?.attr('w')) ?? 451;
       columns = List.filled(maxCols, total / (maxCols == 0 ? 1 : maxCols));
     }
-    final jc = tblPr?.wVal('jc');
+    // A floating table's side comes from its position.
+    final jc = tblPr?.w('tblpPr')?.attr('tblpXSpec') ?? tblPr?.wVal('jc');
     return WordTable(
       columns: columns,
       rows: rows,

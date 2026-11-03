@@ -389,7 +389,18 @@ class WordParagraphStyle {
 
 /// The number or bullet in front of a list paragraph.
 class WordListLabel {
-  const WordListLabel({required this.text, required this.style, this.picture, this.suffix = 'tab', this.align = WordAlign.left, this.level = 0});
+  const WordListLabel({
+    required this.text,
+    required this.style,
+    this.picture,
+    this.suffix = 'tab',
+    this.align = WordAlign.left,
+    this.level = 0,
+    this.listId,
+    this.format = 'decimal',
+    this.pattern,
+    this.start = 1,
+  });
 
   final String text;
   final WordRunStyle style;
@@ -401,6 +412,19 @@ class WordListLabel {
   final String suffix;
   final WordAlign align;
   final int level;
+
+  /// Which list the paragraph belongs to (Word's numId); paragraphs with
+  /// the same id count on together.
+  final String? listId;
+
+  /// Number format of this level: `decimal`, `lowerLetter`, `bullet`...
+  final String format;
+
+  /// Word's level text, e.g. `%1.%2.` or the bullet character.
+  final String? pattern;
+
+  /// The first number of this level.
+  final int start;
 }
 
 class WordDropCap {
@@ -707,6 +731,7 @@ class WordText extends WordInline {
     this.revision,
     this.commentIds = const [],
     this.field,
+    this.fields = const [],
     this.contentControl,
   });
 
@@ -720,6 +745,11 @@ class WordText extends WordInline {
 
   /// The field this text is the result of, such as `PAGE` or `SEQ Figure`.
   final String? field;
+
+  /// Every field this text is the result of, outermost first (a page
+  /// number inside a table of contents gives `[TOC..., PAGEREF...]`).
+  /// [field] is the last one.
+  final List<String> fields;
 
   /// The kind of content control the text sits in (`richText`, `dropDown`,
   /// `date`, `checkBox`, ...), or null.
@@ -831,6 +861,7 @@ class WordPicture extends WordInline {
     this.opacity = 1,
     this.shape,
     this.hasSvg = false,
+    this.svg,
   });
 
   final Uint8List bytes;
@@ -854,6 +885,10 @@ class WordPicture extends WordInline {
   /// Crop to shape: a preset name such as `ellipse` or `roundRect`.
   final String? shape;
   final bool hasSvg;
+
+  /// The SVG version of the picture when the file has one ([bytes] is then
+  /// its PNG fallback).
+  final Uint8List? svg;
 }
 
 /// A shape, text box or WordArt.

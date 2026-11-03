@@ -275,8 +275,9 @@ double _cosDeg(double d) => math.cos(d * math.pi / 180);
 double _sinDeg(double d) => math.sin(d * math.pi / 180);
 
 /// `w:color`: the RGB value, or the theme colour with its tint or shade.
-int? colorOf(XmlElement e, WordTheme theme) {
-  final rgb = hexColor(e.attr('val'));
+/// A colour from `w:color` (in `w:val`) or from a border (in `w:color`).
+int? colorOf(XmlElement e, WordTheme theme, {String attr = 'val'}) {
+  final rgb = hexColor(e.attr(attr));
   if (rgb != null) return rgb;
   final themed = theme.color(e.attr('themeColor'));
   if (themed == null) return null;
@@ -310,7 +311,7 @@ WordBorder? borderOf(XmlElement? e, WordTheme theme) {
   return WordBorder(
     style: style,
     width: sz / 8,
-    color: colorOf(e, theme) ?? 0xFF000000,
+    color: colorOf(e, theme, attr: 'color') ?? 0xFF000000,
     space: double.tryParse(e.attr('space') ?? '') ?? 0,
   );
 }
