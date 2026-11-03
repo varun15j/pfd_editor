@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:open_filex/open_filex.dart';
 
 import '../../app/motion.dart';
 import '../../app/shell.dart';
@@ -12,13 +11,12 @@ import '../../domain/library.dart';
 import '../../domain/library_query.dart';
 import '../../domain/models.dart';
 import '../../domain/saved_export.dart';
-import '../export/saved_exports.dart';
+import '../export/saved_word_tile.dart';
 import '../id_card/id_card_saved_screen.dart';
 import '../library/document_tile.dart';
 import '../library/library_actions.dart';
 import '../pages/page_image.dart';
 import '../pages/scan_controller.dart';
-import '../share/docx_sharer.dart';
 import '../../ui/luma_icons.dart';
 
 /// One document on Home: a scan kept as page images (the one on screen or an
@@ -296,7 +294,7 @@ class _HomeDocCard extends StatelessWidget {
                     ),
                     switch (d) {
                       ScanHomeDoc() => _ScanMenu(doc: d),
-                      WordHomeDoc() => _WordMenu(doc: d),
+                      WordHomeDoc() => SavedWordMenu(export: d.export),
                       _ => const SizedBox(width: Space.sm),
                     },
                   ],
@@ -366,7 +364,7 @@ class _HomeDocRow extends StatelessWidget {
               ),
               if (d is! WordHomeDoc) _HomeFavorite(doc: d),
               if (d is ScanHomeDoc) _ScanMenu(doc: d),
-              if (d is WordHomeDoc) _WordMenu(doc: d),
+              if (d is WordHomeDoc) SavedWordMenu(export: d.export),
             ],
           ),
         ),
@@ -413,83 +411,6 @@ Future<void> toggleHomeFavorite(BuildContext context, WidgetRef ref, HomeDoc doc
         ..showSnackBar(
           SnackBar(content: Text(!favorite ? '$name added to favorites' : '$name removed from favorites')),
         );
-  }
-}
-
-/// Opens a saved Word file in Word or another app that reads .docx.
-Future<void> openWordFile(BuildContext context, SavedExport export) async {
-  final messenger = ScaffoldMessenger.of(context);
-  final result = await OpenFilex.open(export.path, type: SharePlusDocxSharer.mimeType);
-  if (result.type == ResultType.done) return;
-  messenger.showSnackBar(
-    SnackBar(
-      content: Text(switch (result.type) {
-        ResultType.noAppToOpen => 'No app on this device can open Word files. Try Share instead.',
-        ResultType.fileNotFound => 'This Word file is no longer on this device.',
-        _ => 'Could not open the Word file. ${result.message}',
-      }),
-    ),
-  );
-}
-
-enum _WordAction { open, share, delete }
-
-/// Open, share or delete a Word file in the Saved folder.
-class _WordMenu extends ConsumerWidget {
-  const _WordMenu({required this.doc});
-
-  final WordHomeDoc doc;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => PopupMenuButton<_WordAction>(
-    tooltip: 'More for ${doc.name}',
-    onSelected: (a) => switch (a) {
-      _WordAction.open => openWordFile(context, doc.export),
-      _WordAction.share => _share(context, ref),
-      _WordAction.delete => _delete(context, ref),
-    },
-    itemBuilder: (_) => const [
-      PopupMenuItem(
-        value: _WordAction.open,
-        child: ListTile(leading: Icon(LumaIcons.openExternal), title: Text('Open in Word')),
-      ),
-      PopupMenuItem(
-        value: _WordAction.share,
-        child: ListTile(leading: Icon(LumaIcons.share), title: Text('Share')),
-      ),
-      PopupMenuItem(
-        value: _WordAction.delete,
-        child: ListTile(leading: Icon(LumaIcons.delete), title: Text('Delete')),
-      ),
-    ],
-  );
-
-  Future<void> _share(BuildContext context, WidgetRef ref) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final box = context.findRenderObject() as RenderBox?;
-    final origin = box == null ? null : box.localToGlobal(Offset.zero) & box.size;
-    try {
-      await ref.read(docxSharerProvider).send(doc.export.path, origin: origin);
-    } on Object catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not open the share sheet. $e')));
-    }
-  }
-
-  Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text('Delete ${doc.name}.docx?'),
-            content: const Text('The Word file is deleted from this phone. The scan is kept.'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-              FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
-            ],
-          ),
-        ) ==
-        true;
-    if (ok) await ref.read(savedExportsProvider.notifier).delete(doc.export);
   }
 }
 

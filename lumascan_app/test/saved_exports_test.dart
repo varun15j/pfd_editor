@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/app/providers.dart';
@@ -11,12 +12,14 @@ import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/saved_export.dart';
 import 'package:lumascan/domain/scan_document.dart';
 import 'package:lumascan/features/export/saved_exports.dart';
+import 'package:lumascan/features/export/saved_word_tile.dart';
 import 'package:lumascan/features/home/home_documents.dart';
 import 'package:lumascan/features/library/library_controller.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'support/memory_stores.dart';
+import 'support/pump_app.dart';
 import 'support/temp_dir.dart';
 
 const page = ScanPage(id: 'p1', originalPath: '/x/p1.jpg');
@@ -237,6 +240,76 @@ void main() {
       expect(second.id, first.id);
       expect(docs.single.favorite, isTrue);
       expect(File('$saved/Lease.pdf').existsSync(), isFalse);
+    });
+  });
+
+  group('Word files in the Library', () {
+    late Directory tmp;
+    late MemoryExportStateStore store;
+
+    setUp(() {
+      tmp = Directory.systemTemp.createTempSync('lumascan_library_words');
+      store = MemoryExportStateStore();
+      final file = File('${tmp.path}/Lease.docx')..writeAsBytesSync([1, 2, 3]);
+      store.rows.add(export(file.path, format: ExportFormat.word));
+      store.rows.add(export('${tmp.path}/Gone.docx', key: 'scan-2', format: ExportFormat.word));
+    });
+
+    tearDown(() => deleteTemp(tmp));
+
+    Future<void> openLibrary(WidgetTester tester) async {
+      await pumpApp(
+        tester,
+        library: MemoryLibraryStore(const LibraryIndex().copyWith(documents: [pdf('Tax form', ScanType.document)])),
+        exports: store,
+      );
+      await tester.tap(find.byTooltip('Search'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('are listed under the PDFs in Saved and All, not in Docs', (tester) async {
+      await openLibrary(tester);
+      expect(find.byType(SavedWordTile), findsNothing, reason: 'Docs is the default');
+
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Saved'));
+      await tester.pumpAndSettle();
+      expect(find.text('Word files'), findsOneWidget);
+      expect(find.byType(SavedWordTile), findsOneWidget, reason: 'a Word file no longer on the phone is left out');
+      expect(find.text('Lease.docx'), findsOneWidget);
+      expect(find.text('Tax form'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ChoiceChip, 'All'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SavedWordTile), findsOneWidget);
+    });
+
+    testWidgets('search by name hides Word files that do not match', (tester) async {
+      await openLibrary(tester);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Saved'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'lea');
+      await tester.pumpAndSettle();
+      expect(find.byType(SavedWordTile), findsOneWidget);
+      expect(find.text('Tax form'), findsNothing);
+      await tester.enterText(find.byType(TextField), 'zzz');
+      await tester.pumpAndSettle();
+      expect(find.byType(SavedWordTile), findsNothing);
+    });
+
+    testWidgets('delete asks first, then removes the file', (tester) async {
+      await openLibrary(tester);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Saved'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('More for Lease'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      expect(find.text('Delete Lease.docx?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+      expect(find.byType(SavedWordTile), findsNothing);
+      expect(File('${tmp.path}/Lease.docx').existsSync(), isFalse);
     });
   });
 }

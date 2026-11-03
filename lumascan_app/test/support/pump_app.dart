@@ -23,6 +23,7 @@ Future<void> pumpApp(
   UiPrefsStore? prefs,
   AppSettingsStore? settings,
   DocumentTextStore? textStore,
+  ExportStateStore? exports,
   LaunchActionSource launchActions = const NoLaunchActions(),
 }) async {
   tester.view.physicalSize = const Size(1080, 2340);
@@ -39,7 +40,7 @@ Future<void> pumpApp(
         appSettingsStoreProvider.overrideWithValue(settings ?? MemoryAppSettingsStore()),
         documentTextStoreProvider.overrideWithValue(textStore ?? MemoryDocumentTextStore()),
         launchActionSourceProvider.overrideWithValue(launchActions),
-        exportStateStoreProvider.overrideWithValue(MemoryExportStateStore()),
+        exportStateStoreProvider.overrideWithValue(exports ?? MemoryExportStateStore()),
         ...overrides,
       ],
       child: const LumaScanApp(),

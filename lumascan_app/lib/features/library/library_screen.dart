@@ -9,6 +9,9 @@ import '../../app/theme.dart';
 import '../../domain/document_text.dart';
 import '../../domain/library.dart';
 import '../../domain/library_query.dart';
+import '../../domain/saved_export.dart';
+import '../export/saved_exports.dart';
+import '../export/saved_word_tile.dart';
 import '../../domain/plan.dart';
 import '../../domain/scanner_service.dart';
 import '../../domain/ui_prefs.dart';
@@ -92,6 +95,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final library = ref.watch(libraryProvider);
     final all = ref.watch(visibleDocumentsProvider);
     final docs = ref.watch(filteredDocumentsProvider);
+    // Saved Word files, listed after the PDFs in Saved and All.
+    final words = ref.watch(filteredWordFilesProvider);
+    final anyWords = ref.watch(savedWordFilesProvider).isNotEmpty;
     final query = ref.watch(libraryQueryProvider);
     final folder = library.value?.folderById(query.folderId);
     final view = ref.watch(uiPrefsProvider.select((p) => p.libraryView));
@@ -108,7 +114,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         if (!didPop) _clearSelection();
       },
       child: Scaffold(
-        appBar: _selecting ? _selectionBar(docs) : _normalBar(view, enabled: all.isNotEmpty),
+        appBar: _selecting ? _selectionBar(docs) : _normalBar(view, enabled: all.isNotEmpty || anyWords),
         // Riverpod keeps retrying a failed load in the background, so an
         // error can arrive while the state still reads as loading.
         body: switch (library) {
@@ -117,7 +123,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             message: 'Your PDFs are still on this device.',
             onRetry: () => ref.invalidate(libraryProvider),
           ),
-          AsyncValue(hasValue: true) when all.isEmpty => EmptyState(
+          AsyncValue(hasValue: true) when all.isEmpty && !anyWords => EmptyState(
             icon: LumaIcons.folderOpen,
             title: 'No saved documents yet',
             message: 'PDFs you save will appear here, ready to find and share.',
@@ -148,9 +154,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         actionIcon: LumaIcons.allFolders,
                         onAction: () => ref.read(libraryQueryProvider.notifier).openFolder(null),
                       )
-                    : docs.isEmpty && folder == null && !query.isSearching && !query.isFiltered
+                    : docs.isEmpty && words.isEmpty && folder == null && !query.isSearching && !query.isFiltered
                     ? _scopeEmpty(query.scope)
-                    : docs.isEmpty
+                    : docs.isEmpty && words.isEmpty
                     ? EmptyState(
                         icon: LumaIcons.noResults,
                         title: 'No matches',
@@ -166,8 +172,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         onAction: _resetAll,
                       )
                     : view == LibraryView.grid
-                    ? _grid(docs)
-                    : _list(docs),
+                    ? _grid(docs, words)
+                    : _list(docs, words),
               ),
             ],
           ),
@@ -280,7 +286,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     DocScope.saved => EmptyState(
       icon: LumaIcons.save,
       title: 'Nothing saved yet',
-      message: 'PDFs you export from a scan are kept here, one per scan. Exporting again replaces it.',
+      message: 'PDF and Word files you export from a scan are kept here, one of each per scan. Exporting again replaces it.',
       actionLabel: 'Show all documents',
       actionIcon: LumaIcons.allFolders,
       onAction: () => ref.read(libraryQueryProvider.notifier).showScope(DocScope.all),
@@ -437,11 +443,26 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   // Bottom padding keeps the last item clear of the centre Scan button.
   static const _padding = EdgeInsets.fromLTRB(Space.page, Space.sm, Space.page, Space.xxl * 3);
 
-  Widget _list(List<SavedDocument> docs) => ListView.separated(
+  /// "Word files" over the saved Word files, below the PDFs.
+  Widget _wordHeader() => Padding(
+    padding: const EdgeInsets.only(top: Space.md),
+    child: Semantics(
+      header: true,
+      child: Text('Word files', style: Theme.of(context).textTheme.titleMedium),
+    ),
+  );
+
+  Widget _list(List<SavedDocument> docs, List<SavedExport> words) => ListView.separated(
     padding: _padding,
-    itemCount: docs.length,
+    itemCount: docs.length + (words.isEmpty ? 0 : words.length + 1),
     separatorBuilder: (_, _) => const SizedBox(height: Space.sm),
     itemBuilder: (_, i) {
+      if (i >= docs.length) {
+        final w = i - docs.length;
+        if (w == 0) return _wordHeader();
+        final word = words[w - 1];
+        return SavedWordTile(key: ValueKey('word-${word.path}'), export: word);
+      }
       final doc = docs[i];
       return DocumentRow(
         key: ValueKey(doc.id),
@@ -466,15 +487,17 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     return text == null ? null : searchSnippet(text, needle);
   }
 
-  Widget _grid(List<SavedDocument> docs) => LayoutBuilder(
+  Widget _grid(List<SavedDocument> docs, List<SavedExport> words) => LayoutBuilder(
     builder: (context, constraints) {
       final width = constraints.maxWidth - _padding.horizontal;
       final columns = math.max(2, (width / 180).floor());
       final tileWidth = (width - Space.md * (columns - 1)) / columns;
       // Thumbnail area is a page shape; the text area grows with font size.
       final textHeight = MediaQuery.textScalerOf(context).scale(DocumentGridCard.textHeight);
-      return GridView.builder(
-        padding: _padding,
+      final grid = GridView.builder(
+        padding: words.isEmpty ? _padding : _padding.copyWith(bottom: 0),
+        shrinkWrap: words.isNotEmpty,
+        physics: words.isEmpty ? null : const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: columns,
           crossAxisSpacing: Space.md,
@@ -496,6 +519,26 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             onFavorite: () => toggleFavorite(context, ref, doc),
           );
         },
+      );
+      if (words.isEmpty) return grid;
+      return ListView(
+        padding: EdgeInsets.only(bottom: _padding.bottom),
+        children: [
+          grid,
+          Padding(
+            padding: EdgeInsets.fromLTRB(_padding.left, 0, _padding.right, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _wordHeader(),
+                for (final word in words) ...[
+                  const SizedBox(height: Space.sm),
+                  SavedWordTile(key: ValueKey('word-${word.path}'), export: word),
+                ],
+              ],
+            ),
+          ),
+        ],
       );
     },
   );
