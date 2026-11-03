@@ -187,9 +187,16 @@ class _AnnotationLayerState extends State<AnnotationLayer> {
             Positioned.fill(
               child: IgnorePointer(
                 child: CustomPaint(
-                  painter: MaskPainter([...masksIn(annotations), ?_mask], outline: tool == EditorTool.mask),
+                  painter: MaskPainter(masksIn(annotations).toList(), outline: tool == EditorTool.mask),
                 ),
               ),
+            ),
+            // The area being dragged out is only outlined, so the page under
+            // it stays visible while choosing what to hide.
+            // Always in the tree, so the layer under the finger is not rebuilt
+            // in the middle of the drag.
+            Positioned.fill(
+              child: IgnorePointer(child: CustomPaint(painter: MaskSelectionPainter(_mask))),
             ),
             // Text boxes and signatures sit above the input layer, so in Text
             // mode a tap on existing text edits it instead of adding a box.
@@ -459,6 +466,58 @@ class MaskPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(MaskPainter old) => old.outline != outline || !listEquals(old.masks, masks);
+}
+
+/// The mask area while it is being dragged out: a dashed border, dark and
+/// light so it shows on any page, and nothing inside, so the number under
+/// it can still be seen. It becomes a real mask when the finger lifts.
+class MaskSelectionPainter extends CustomPainter {
+  MaskSelectionPainter(this.mask);
+
+  /// Null when nothing is being dragged.
+  final MaskAnnotation? mask;
+
+  static const dash = 6.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final mask = this.mask;
+    if (mask == null) return;
+    final rect = Rect.fromLTRB(
+      mask.left * size.width,
+      mask.top * size.height,
+      mask.right * size.width,
+      mask.bottom * size.height,
+    );
+    canvas.drawRect(rect, Paint()..color = const Color(0x14000000));
+    final light = Paint()
+      ..color = const Color(0xFFFFFFFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    final dark = Paint()
+      ..color = const Color(0xFF202124)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    // A solid light edge with dark dashes over it.
+    canvas.drawRect(rect, light);
+    for (final (a, b) in [
+      (rect.topLeft, rect.topRight),
+      (rect.topRight, rect.bottomRight),
+      (rect.bottomRight, rect.bottomLeft),
+      (rect.bottomLeft, rect.topLeft),
+    ]) {
+      final length = (b - a).distance;
+      if (length == 0) continue;
+      final step = (b - a) / length;
+      for (var d = 0.0; d < length; d += dash * 2) {
+        final end = d + dash < length ? d + dash : length;
+        canvas.drawLine(a + step * d, a + step * end, dark);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(MaskSelectionPainter old) => old.mask != mask;
 }
 
 /// The topmost mask that covers [p], or null.
