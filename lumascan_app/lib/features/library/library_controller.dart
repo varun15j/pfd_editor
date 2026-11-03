@@ -75,6 +75,7 @@ class LibraryController extends AsyncNotifier<LibraryIndex> {
         folderId: previous?.folderId,
         tags: previous?.tags ?? const [],
         sizeBytes: pdf.lengthSync(),
+        favorite: previous?.favorite ?? false,
       );
       return index.copyWith(documents: [saved, ...index.documents.where((d) => d.id != id)]);
     });
@@ -96,12 +97,27 @@ class LibraryController extends AsyncNotifier<LibraryIndex> {
     await _edit(id, (d) => d.copyWith(name: path.basenameWithoutExtension(target), pdfPath: target));
   }
 
-  /// Removes the document from the library and deletes its files.
+  /// Removes the document from the library and deletes its files. A
+  /// favorite is kept: its heart has to come off first.
   Future<void> delete(String id) async {
     final doc = state.value?.byId(id);
-    if (doc == null) return;
+    if (doc == null || doc.favorite) return;
     await _update((index) => index.copyWith(documents: [...index.documents.where((d) => d.id != id)]));
     await ref.read(libraryStoreProvider).deleteFiles(doc);
+  }
+
+  /// Adds the documents in [ids] to favorites, or takes them off. Like
+  /// organising, this is not a change to the document, so dates stay put.
+  Future<void> setFavorite(Iterable<String> ids, bool favorite) {
+    final set = ids.toSet();
+    return _update(
+      (index) => index.copyWith(
+        documents: [
+          for (final d in index.documents)
+            set.contains(d.id) && d.favorite != favorite ? d.copyWith(favorite: favorite) : d,
+        ],
+      ),
+    );
   }
 
   /// Moves a document into [folderId], or to the library root when null.

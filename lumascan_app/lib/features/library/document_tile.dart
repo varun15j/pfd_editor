@@ -87,6 +87,54 @@ String? documentLabels(SavedDocument doc, LibraryIndex index) {
   return parts.isEmpty ? null : parts.join(' · ');
 }
 
+/// The heart on a document: outline when not a favorite, filled when it
+/// is. Tapping it toggles. While selecting it only shows the state.
+class FavoriteButton extends StatelessWidget {
+  const FavoriteButton({
+    super.key,
+    required this.name,
+    required this.favorite,
+    required this.onPressed,
+    this.size = 22,
+  });
+
+  /// The document's name, for the tooltip.
+  final String name;
+  final bool favorite;
+
+  /// Null shows the state without a button, for favorites while selecting.
+  final VoidCallback? onPressed;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = LumaColors.of(context);
+    final on = favorite;
+    final icon = AnimatedSwitcher(
+      duration: Motion.of(context).duration(const Duration(milliseconds: 200)),
+      transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+      child: Icon(
+        on ? LumaIcons.favoriteFilled : LumaIcons.favorite,
+        key: ValueKey(on),
+        size: size,
+        color: on ? c.danger : c.muted,
+      ),
+    );
+    if (onPressed == null) {
+      return Padding(
+        padding: const EdgeInsets.all(Space.xs),
+        child: ExcludeSemantics(child: icon),
+      );
+    }
+    return IconButton(
+      tooltip: on ? 'Remove $name from favorites' : 'Add $name to favorites',
+      isSelected: on,
+      onPressed: onPressed,
+      icon: icon,
+    );
+  }
+}
+
 String pageCountLabel(int n) => '$n page${n == 1 ? '' : 's'}';
 
 /// Shared behaviour for a document in a list or grid: tap opens it (or
@@ -101,6 +149,7 @@ class _DocumentInteraction {
     required this.onTap,
     required this.onLongPress,
     required this.onMenu,
+    required this.onFavorite,
   });
 
   final SavedDocument document;
@@ -110,17 +159,38 @@ class _DocumentInteraction {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final ValueChanged<DocumentMenuAction> onMenu;
+  final VoidCallback onFavorite;
 
   String get semanticsLabel =>
-      '${document.name}, ${formatModified(document.modifiedAt, DateTime.now())}, '
+      '${document.name}${document.favorite ? ', favorite' : ''}, '
+      '${formatModified(document.modifiedAt, DateTime.now())}, '
       '${pageCountLabel(document.pageCount)}, on device${labels == null ? '' : ', $labels'}';
 
-  Widget trailing(BuildContext context) {
+  /// The heart (unless [heart] is false, for the grid where it sits on the
+  /// thumbnail) and the overflow menu; a checkbox while selecting.
+  Widget trailing(BuildContext context, {bool heart = true}) {
     if (selecting) {
-      return ExcludeSemantics(
-        child: Checkbox(value: selected, onChanged: (_) => onTap()),
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (heart && document.favorite)
+            FavoriteButton(name: document.name, favorite: true, onPressed: null, size: 18),
+          ExcludeSemantics(
+            child: Checkbox(value: selected, onChanged: (_) => onTap()),
+          ),
+        ],
       );
     }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (heart) FavoriteButton(name: document.name, favorite: document.favorite, onPressed: onFavorite),
+        _menu(context),
+      ],
+    );
+  }
+
+  Widget _menu(BuildContext context) {
     return PopupMenuButton<DocumentMenuAction>(
       tooltip: 'More for ${document.name}',
       onSelected: onMenu,
@@ -185,9 +255,16 @@ class _DocumentInteraction {
                 : const PremiumBadge(label: 'Pro'),
           ),
         ),
-        const PopupMenuItem(
+        // A favorite can't be deleted; the item stays, disabled, and says why.
+        PopupMenuItem(
           value: DocumentMenuAction.delete,
-          child: ListTile(leading: Icon(LumaIcons.delete), title: Text('Delete')),
+          enabled: !document.favorite,
+          child: ListTile(
+            enabled: !document.favorite,
+            leading: const Icon(LumaIcons.delete),
+            title: const Text('Delete'),
+            subtitle: document.favorite ? const Text('Remove from favorites to delete') : null,
+          ),
         ),
       ],
     );
@@ -228,6 +305,7 @@ class DocumentRow extends StatelessWidget {
     required this.onTap,
     required this.onLongPress,
     required this.onMenu,
+    required this.onFavorite,
     this.selecting = false,
     this.selected = false,
     this.labels,
@@ -248,6 +326,9 @@ class DocumentRow extends StatelessWidget {
   final VoidCallback onLongPress;
   final ValueChanged<DocumentMenuAction> onMenu;
 
+  /// The heart was tapped.
+  final VoidCallback onFavorite;
+
   @override
   Widget build(BuildContext context) {
     final i = _DocumentInteraction(
@@ -258,6 +339,7 @@ class DocumentRow extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       onMenu: onMenu,
+      onFavorite: onFavorite,
     );
     final text = Theme.of(context).textTheme;
     return i.wrap(
@@ -309,6 +391,7 @@ class DocumentGridCard extends StatelessWidget {
     required this.onTap,
     required this.onLongPress,
     required this.onMenu,
+    required this.onFavorite,
     this.selecting = false,
     this.selected = false,
     this.labels,
@@ -324,6 +407,9 @@ class DocumentGridCard extends StatelessWidget {
   final VoidCallback onLongPress;
   final ValueChanged<DocumentMenuAction> onMenu;
 
+  /// The heart was tapped.
+  final VoidCallback onFavorite;
+
   /// Height of the text area under the thumbnail at 100% text size.
   static const textHeight = 64.0;
 
@@ -337,6 +423,7 @@ class DocumentGridCard extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       onMenu: onMenu,
+      onFavorite: onFavorite,
     );
     final text = Theme.of(context).textTheme;
     return i.wrap(
@@ -344,7 +431,25 @@ class DocumentGridCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: DocumentThumbnail(document: document, iconSize: 40)),
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                DocumentThumbnail(document: document, iconSize: 40),
+                Positioned(
+                  top: Space.xs,
+                  right: Space.xs,
+                  child: FavoriteBadge(
+                    child: FavoriteButton(
+                      name: document.name,
+                      favorite: document.favorite,
+                      onPressed: selecting ? null : onFavorite,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(Space.md, Space.sm, 0, Space.sm),
             child: Row(
@@ -366,7 +471,7 @@ class DocumentGridCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                i.trailing(context),
+                i.trailing(context, heart: false),
               ],
             ),
           ),
@@ -374,6 +479,20 @@ class DocumentGridCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A round backing for a heart drawn over a page preview, so it stays
+/// visible on a white or a dark page.
+class FavoriteBadge extends StatelessWidget {
+  const FavoriteBadge({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(color: LumaColors.of(context).surface.withValues(alpha: 0.85), shape: BoxShape.circle),
+    child: child,
+  );
 }
 
 /// "Just now", "5 min ago", "Today 14:05", "Yesterday", or "3 Oct 2026".

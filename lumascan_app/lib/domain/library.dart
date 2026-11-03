@@ -37,6 +37,7 @@ class SavedDocument {
     this.folderId,
     this.tags = const [],
     this.sizeBytes = 0,
+    this.favorite = false,
   });
 
   final String id;
@@ -57,6 +58,10 @@ class SavedDocument {
   final List<String> tags;
   final int sizeBytes;
 
+  /// Marked with the heart. Favorites are listed first and can't be deleted
+  /// until the heart is taken off.
+  final bool favorite;
+
   SavedDocument copyWith({
     String? name,
     String? pdfPath,
@@ -67,6 +72,7 @@ class SavedDocument {
     String? Function()? folderId,
     List<String>? tags,
     int? sizeBytes,
+    bool? favorite,
   }) => SavedDocument(
     id: id,
     name: name ?? this.name,
@@ -79,6 +85,7 @@ class SavedDocument {
     folderId: folderId == null ? this.folderId : folderId(),
     tags: tags ?? this.tags,
     sizeBytes: sizeBytes ?? this.sizeBytes,
+    favorite: favorite ?? this.favorite,
   );
 
   Map<String, Object?> toJson(String root) => {
@@ -93,6 +100,7 @@ class SavedDocument {
     if (folderId != null) 'folderId': folderId,
     if (tags.isNotEmpty) 'tags': tags,
     'sizeBytes': sizeBytes,
+    if (favorite) 'favorite': true,
   };
 
   static SavedDocument fromJson(Map<String, Object?> json, String root) => SavedDocument(
@@ -107,6 +115,7 @@ class SavedDocument {
     folderId: json['folderId'] as String?,
     tags: [for (final t in (json['tags'] as List?) ?? const []) t as String],
     sizeBytes: (json['sizeBytes'] as num?)?.toInt() ?? 0,
+    favorite: json['favorite'] == true,
   );
 }
 
@@ -130,7 +139,7 @@ class LibraryIndex {
 
   static const version = 1;
 
-  /// Newest first by [SavedDocument.modifiedAt].
+  /// Favorites first, then newest first by [SavedDocument.modifiedAt].
   final List<SavedDocument> documents;
   final List<LibraryFolder> folders;
 
@@ -161,7 +170,8 @@ class LibraryIndex {
   }
 
   LibraryIndex copyWith({List<SavedDocument>? documents, List<LibraryFolder>? folders, List<String>? tags}) {
-    final docs = [...(documents ?? this.documents)]..sort((a, b) => b.modifiedAt.compareTo(a.modifiedAt));
+    final docs = [...(documents ?? this.documents)]
+      ..sort(favoritesFirst((a, b) => b.modifiedAt.compareTo(a.modifiedAt)));
     final sortedFolders = [...(folders ?? this.folders)]
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     return LibraryIndex(
@@ -186,6 +196,13 @@ class LibraryIndex {
     tags: [for (final t in (json['tags'] as List?) ?? const []) t as String],
   );
 }
+
+/// Wraps [order] so favorites come before every other document; inside
+/// each group [order] decides.
+Comparator<SavedDocument> favoritesFirst(Comparator<SavedDocument> order) => (a, b) {
+  if (a.favorite != b.favorite) return a.favorite ? -1 : 1;
+  return order(a, b);
+};
 
 /// Characters that file systems or share targets reject in names.
 const _badNameChars = r'/\:*?"<>|';

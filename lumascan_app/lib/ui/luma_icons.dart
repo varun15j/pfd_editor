@@ -59,6 +59,8 @@ abstract final class LumaIcons {
   static const IconData erase = IconData(0xe21e, fontFamily: _regular);
   static const IconData error = IconData(0xe4e2, fontFamily: _regular);
   static const IconData extract = IconData(0xe1cc, fontFamily: _regular);
+  static const IconData favorite = IconData(0xe2a8, fontFamily: _regular);
+  static const IconData favoriteFilled = IconData(0xe2a8, fontFamily: _fill);
   static const IconData file = IconData(0xe230, fontFamily: _regular);
   static const IconData filter = IconData(0xe268, fontFamily: _regular);
   static const IconData fitSize = IconData(0xe232, fontFamily: _regular);

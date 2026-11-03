@@ -25,6 +25,9 @@ sealed class HomeDoc {
   DateTime get time;
   int get pageCount;
   String get key;
+
+  /// Marked with the heart; listed first and can't be deleted.
+  bool get favorite;
 }
 
 /// A scan, saved as page images from its first page. [parkedId] is null for
@@ -37,6 +40,7 @@ class ScanHomeDoc extends HomeDoc {
     required this.cover,
     required this.exported,
     this.parkedId,
+    this.favorite = false,
   });
 
   factory ScanHomeDoc.parked(ParkedDraft d) => ScanHomeDoc(
@@ -46,6 +50,7 @@ class ScanHomeDoc extends HomeDoc {
     cover: d.cover,
     exported: d.exported,
     parkedId: d.id,
+    favorite: d.favorite,
   );
 
   @override
@@ -59,6 +64,8 @@ class ScanHomeDoc extends HomeDoc {
   /// Also exported as a PDF and not changed since.
   final bool exported;
   final String? parkedId;
+  @override
+  final bool favorite;
 
   @override
   String get key => 'scan-${parkedId ?? 'current'}';
@@ -77,10 +84,13 @@ class PdfHomeDoc extends HomeDoc {
   int get pageCount => document.pageCount;
   @override
   String get key => 'pdf-${document.id}';
+  @override
+  bool get favorite => document.favorite;
 }
 
-/// Home's documents, newest first: the scan last on screen, earlier scans
-/// and recent PDFs.
+/// Home's documents: favorites first (scans and PDFs alike), then the
+/// rest. In each group the scan last on screen leads, then the others
+/// newest first.
 List<HomeDoc> homeDocuments(ScanState scan, List<SavedDocument> pdfs) {
   final current = scan.pages.isEmpty
       ? null
@@ -90,11 +100,18 @@ List<HomeDoc> homeDocuments(ScanState scan, List<SavedDocument> pdfs) {
           pageCount: scan.pages.length,
           cover: scan.pages.first,
           exported: scan.exported,
+          favorite: scan.info?.favorite ?? false,
         );
-  final rest = <HomeDoc>[for (final d in scan.parked) ScanHomeDoc.parked(d), for (final d in pdfs) PdfHomeDoc(d)]
+  final others = <HomeDoc>[for (final d in scan.parked) ScanHomeDoc.parked(d), for (final d in pdfs) PdfHomeDoc(d)]
     ..sort((a, b) => b.time.compareTo(a.time));
-  // The one last worked on stays first, whatever its date.
-  return [?current, ...rest];
+  // The one last worked on stays first in its group, whatever its date.
+  final all = [?current, ...others];
+  return [
+    for (final d in all)
+      if (d.favorite) d,
+    for (final d in all)
+      if (!d.favorite) d,
+  ];
 }
 
 /// The documents as a gallery of page previews or as a list. Sized to its
@@ -152,6 +169,9 @@ class HomeDocumentsView extends ConsumerWidget {
   }
 }
 
+String _semantics(HomeDoc d) =>
+    '${d.name}${d is PdfHomeDoc && d.document.favorite ? ', favorite' : ''}, ${_details(d)}';
+
 String _details(HomeDoc d) {
   final kind = switch (d) {
     ScanHomeDoc(:final exported) => exported ? 'Images, PDF made' : 'Images',
@@ -191,7 +211,7 @@ class _HomeDocCard extends StatelessWidget {
     final d = doc;
     return Semantics(
       button: true,
-      label: '${d.name}, ${_details(d)}',
+      label: _semantics(d),
       onTap: onTap,
       child: Card(
         clipBehavior: Clip.antiAlias,
@@ -201,10 +221,18 @@ class _HomeDocCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ExcludeSemantics(
-                child: AspectRatio(
-                  aspectRatio: 1 / 1.15,
-                  child: _Preview(doc: d),
+              AspectRatio(
+                aspectRatio: 1 / 1.15,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ExcludeSemantics(child: _Preview(doc: d)),
+                    Positioned(
+                      top: Space.xs,
+                      right: Space.xs,
+                      child: FavoriteBadge(child: _HomeFavorite(doc: d)),
+                    ),
+                  ],
                 ),
               ),
               Padding(
@@ -249,7 +277,7 @@ class _HomeDocRow extends StatelessWidget {
     final d = doc;
     return Semantics(
       button: true,
-      label: '${d.name}, ${_details(d)}',
+      label: _semantics(d),
       onTap: onTap,
       child: InkWell(
         onTap: onTap,
@@ -288,7 +316,8 @@ class _HomeDocRow extends StatelessWidget {
                   ),
                 ),
               ),
-              if (d is ScanHomeDoc) _ScanMenu(doc: d) else const SizedBox(width: Space.md),
+              _HomeFavorite(doc: d),
+              if (d is ScanHomeDoc) _ScanMenu(doc: d),
             ],
           ),
         ),
@@ -301,6 +330,39 @@ class _HomeDocRow extends StatelessWidget {
 String _dateTime(DateTime t) {
   String two(int n) => n.toString().padLeft(2, '0');
   return '${two(t.day)}/${two(t.month)}/${t.year} ${two(t.hour)}:${two(t.minute)}';
+}
+
+/// The heart on a document on Home, scan or PDF. Favorites are listed
+/// first and can't be deleted until the heart is taken off.
+class _HomeFavorite extends ConsumerWidget {
+  const _HomeFavorite({required this.doc});
+
+  final HomeDoc doc;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      FavoriteButton(name: doc.name, favorite: doc.favorite, onPressed: () => toggleHomeFavorite(context, ref, doc));
+}
+
+/// Adds a Home document to favorites or takes it off, and says so.
+Future<void> toggleHomeFavorite(BuildContext context, WidgetRef ref, HomeDoc doc) async {
+  switch (doc) {
+    case PdfHomeDoc(:final document):
+      await toggleFavorite(context, ref, document);
+    case ScanHomeDoc(:final parkedId, :final favorite, :final name):
+      final messenger = ScaffoldMessenger.of(context);
+      final controller = ref.read(scanControllerProvider.notifier);
+      if (parkedId == null) {
+        controller.setFavorite(!favorite);
+      } else {
+        await controller.setParkedFavorite(parkedId, !favorite);
+      }
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text(!favorite ? '$name added to favorites' : '$name removed from favorites')),
+        );
+  }
 }
 
 enum _ScanAction { rename, delete }
@@ -319,14 +381,21 @@ class _ScanMenu extends ConsumerWidget {
         _ScanAction.rename => _rename(context, ref),
         _ScanAction.delete => _delete(context, ref),
       },
-      itemBuilder: (_) => const [
-        PopupMenuItem(
+      itemBuilder: (_) => [
+        const PopupMenuItem(
           value: _ScanAction.rename,
           child: ListTile(leading: Icon(LumaIcons.rename), title: Text('Rename')),
         ),
+        // A favorite can't be deleted; the item stays, disabled, and says why.
         PopupMenuItem(
           value: _ScanAction.delete,
-          child: ListTile(leading: Icon(LumaIcons.delete), title: Text('Delete')),
+          enabled: !doc.favorite,
+          child: ListTile(
+            enabled: !doc.favorite,
+            leading: const Icon(LumaIcons.delete),
+            title: const Text('Delete'),
+            subtitle: doc.favorite ? const Text('Remove from favorites to delete') : null,
+          ),
         ),
       ],
     );
@@ -345,6 +414,7 @@ class _ScanMenu extends ConsumerWidget {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    if (doc.favorite) return;
     if (!await confirmScanDelete(context, doc.name)) return;
     final controller = ref.read(scanControllerProvider.notifier);
     final id = doc.parkedId;
