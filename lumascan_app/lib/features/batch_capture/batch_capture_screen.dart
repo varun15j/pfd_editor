@@ -336,7 +336,9 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     if (!_watchesPages && _mode != CameraMode.qr) return;
     final now = DateTime.now();
     final low = ref.read(motionProfileProvider) == MotionProfile.low;
-    final gap = _mode == CameraMode.qr ? (low ? _lowQrFrameGap : _qrFrameGap) : (low ? _lowPageFrameGap : _pageFrameGap);
+    final gap = _mode == CameraMode.qr
+        ? (low ? _lowQrFrameGap : _qrFrameGap)
+        : (low ? _lowPageFrameGap : _pageFrameGap);
     if (now.difference(_lastAnalysis) < gap) return;
     _lastAnalysis = now;
     _analysing = true;
@@ -968,23 +970,58 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
                     _preview(),
                     if (ready) IgnorePointer(child: _CaptureFlash(serial: _flashSerial)),
                     if (_reading) const Center(child: CircularProgressIndicator(color: Colors.white)),
+                    // A soft fade behind the top controls, so bare icons stay
+                    // readable on a bright page without boxing in the preview.
+                    const Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 120,
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Color(0x99000000), Color(0x00000000)],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                     SafeArea(
                       bottom: false,
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        padding: const EdgeInsets.fromLTRB(8, 2, 8, 0),
                         child: Column(
                           children: [
+                            // One slim row of icon-only controls, so the page
+                            // gets nearly the whole screen.
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
+                                _TopIcon(
+                                  icon: _torch ? LumaIcons.flash : LumaIcons.flashOff,
+                                  title: 'Flash',
+                                  on: _torch,
+                                  onChanged: ready && _camera.hasTorch ? (on) => _setOption(_Option.flash, on) : null,
+                                ),
+                                _TopIcon(
+                                  icon: LumaIcons.batch,
+                                  title: 'Batch',
+                                  on: _batch,
+                                  onChanged: (on) => _setOption(_Option.batch, on),
+                                ),
+                                _TopIcon(
+                                  icon: LumaIcons.autoCapture,
+                                  title: 'Auto',
+                                  on: _autoCapture,
+                                  onChanged: (on) => _setOption(_Option.auto, on),
+                                ),
                                 _RoundButton(
                                   tooltip: 'Filter: ${_filter.label}',
                                   icon: LumaIcons.blackAndWhite,
                                   onPressed: _chooseFilter,
-                                ),
-                                Expanded(
-                                  child: Center(
-                                    child: _retakeId != null ? const SizedBox.shrink() : _Chip(text: _guidance),
-                                  ),
                                 ),
                                 _RoundButton(
                                   tooltip: 'Camera settings',
@@ -993,39 +1030,9 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _QuickToggle(
-                                    icon: LumaIcons.batch,
-                                    title: 'Batch',
-                                    on: _batch,
-                                    onChanged: (on) => _setOption(_Option.batch, on),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _QuickToggle(
-                                    icon: _torch ? LumaIcons.flash : LumaIcons.flashOff,
-                                    title: 'Flash',
-                                    on: _torch,
-                                    onChanged: ready && _camera.hasTorch ? (on) => _setOption(_Option.flash, on) : null,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _QuickToggle(
-                                    icon: LumaIcons.autoCapture,
-                                    title: 'Auto',
-                                    on: _autoCapture,
-                                    onChanged: (on) => _setOption(_Option.auto, on),
-                                  ),
-                                ),
-                              ],
-                            ),
+                            if (_retakeId == null) ...[const SizedBox(height: 4), _Chip(text: _guidance)],
                             if (_retakeId != null) ...[
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 6),
                               _Banner(
                                 icon: LumaIcons.replay,
                                 text: 'Retaking page $retakeNumber. Take the new photo.',
@@ -1055,7 +1062,6 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
               ),
               _ControlPanel(
                 count: pages.length,
-                showCount: _batch && _mode.addsPages,
                 lastPage: last,
                 recentPages: recent,
                 // A new document offers import until its first photo is taken.
@@ -1133,6 +1139,7 @@ class _PhotosChoice {
   final String? retakeId;
 }
 
+/// The short hint for the mode, kept small so it does not cover the page.
 class _Chip extends StatelessWidget {
   const _Chip({required this.text});
 
@@ -1141,16 +1148,18 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.72), borderRadius: BorderRadius.circular(20)),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(16)),
       child: Text(
         text,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
       ),
     );
   }
 }
 
+/// A bare icon in the top row: no fill, just the glyph, so the row stays
+/// light over the preview.
 class _RoundButton extends StatelessWidget {
   const _RoundButton({required this.tooltip, required this.icon, required this.onPressed});
 
@@ -1163,20 +1172,17 @@ class _RoundButton extends StatelessWidget {
     return IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
-      style: IconButton.styleFrom(
-        backgroundColor: Colors.black.withValues(alpha: 0.72),
-        foregroundColor: Colors.white,
-        fixedSize: const Size(48, 48),
-      ),
-      icon: Icon(icon),
+      style: IconButton.styleFrom(foregroundColor: Colors.white, fixedSize: const Size(minTapTarget, minTapTarget)),
+      icon: Icon(icon, size: 22),
     );
   }
 }
 
-/// One of the Batch, Flash and Auto crop chips over the preview. They stay
-/// in step with the same switches in Camera settings.
-class _QuickToggle extends StatelessWidget {
-  const _QuickToggle({required this.icon, required this.title, required this.on, required this.onChanged});
+/// Flash, Batch or Auto capture in the top row. An icon only: tinted with
+/// the accent and marked with a dot when on, dimmed when not available.
+/// They stay in step with the same switches in Camera settings.
+class _TopIcon extends StatelessWidget {
+  const _TopIcon({required this.icon, required this.title, required this.on, required this.onChanged});
 
   final IconData icon;
   final String title;
@@ -1190,99 +1196,41 @@ class _QuickToggle extends StatelessWidget {
     final colors = LumaColors.dark;
     final enabled = onChanged != null;
     final state = !enabled ? 'Not available' : (on ? 'On' : 'Off');
+    final lit = on && enabled;
+    final tint = !enabled ? Colors.white38 : (lit ? colors.accent : Colors.white);
     return Semantics(
       button: true,
       toggled: on,
       enabled: enabled,
       label: '$title $state',
       excludeSemantics: true,
-      child: Material(
-        color: on && enabled ? colors.accent.withValues(alpha: 0.85) : Colors.black.withValues(alpha: 0.62),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: on && enabled ? colors.accent : Colors.white24),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
+      child: Tooltip(
+        message: '$title: $state',
+        child: InkResponse(
           onTap: enabled ? () => onChanged!(!on) : null,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            child: Row(
+          radius: minTapTarget / 2,
+          child: SizedBox.square(
+            dimension: minTapTarget,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 20, color: enabled ? Colors.white : Colors.white38),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: enabled ? Colors.white : Colors.white38,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                        ),
-                      ),
-                      Text(
-                        enabled ? state : 'N/A',
-                        style: TextStyle(color: enabled ? Colors.white70 : Colors.white38, fontSize: 11),
-                      ),
-                    ],
+                AnimatedSwitcher(
+                  duration: Motion.of(context).duration(const Duration(milliseconds: 150)),
+                  child: Icon(icon, key: ValueKey('$icon-$lit-$enabled'), size: 22, color: tint),
+                ),
+                const SizedBox(height: 3),
+                AnimatedOpacity(
+                  opacity: lit ? 1 : 0,
+                  duration: Motion.of(context).duration(const Duration(milliseconds: 150)),
+                  child: Container(
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(color: colors.accent, shape: BoxShape.circle),
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CountPill extends StatelessWidget {
-  const _CountPill({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = LumaColors.dark;
-    return Semantics(
-      liveRegion: true,
-      label: '$count page${count == 1 ? '' : 's'} captured',
-      excludeSemantics: true,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
-        decoration: BoxDecoration(color: const Color(0xFF3C4648), borderRadius: BorderRadius.circular(12)),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedSwitcher(
-              duration: Motion.of(context).duration(const Duration(milliseconds: 180)),
-              transitionBuilder: (child, a) => ScaleTransition(scale: a, child: child),
-              child: Container(
-                key: ValueKey(count),
-                constraints: const BoxConstraints(minWidth: 26),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                decoration: BoxDecoration(color: colors.accent, borderRadius: BorderRadius.circular(8)),
-                child: Text(
-                  '$count',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: colors.onAccent, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Flexible(
-              child: Text(
-                'pages captured',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -1580,7 +1528,6 @@ class _CameraMessage extends StatelessWidget {
 class _ControlPanel extends StatelessWidget {
   const _ControlPanel({
     required this.count,
-    required this.showCount,
     required this.lastPage,
     this.recentPages = const [],
     required this.showImport,
@@ -1600,7 +1547,6 @@ class _ControlPanel extends StatelessWidget {
   });
 
   final int count;
-  final bool showCount;
   final ScanPage? lastPage;
 
   /// The last few shots, oldest first, ending with [lastPage].
@@ -1626,28 +1572,20 @@ class _ControlPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = LumaColors.of(context);
     final motion = Motion.of(context);
+    // Plain black under the preview, as tight as the controls allow, so the
+    // preview keeps most of the screen.
     return Material(
-      color: colors.surface,
+      color: Colors.black,
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Align(
-                alignment: Alignment.centerRight,
-                child: AnimatedOpacity(
-                  opacity: showCount ? 1 : 0,
-                  duration: motion.duration(const Duration(milliseconds: 150)),
-                  child: _CountPill(count: count),
-                ),
-              ),
-              const SizedBox(height: 10),
               _ModeStrip(mode: mode, onMode: onMode),
-              const SizedBox(height: 14),
+              const SizedBox(height: 4),
               Row(
                 children: [
                   Expanded(
@@ -1668,6 +1606,7 @@ class _ControlPanel extends StatelessWidget {
                             : Semantics(
                                 key: const ValueKey('thumbnail'),
                                 button: true,
+                                liveRegion: true,
                                 label: count == 0
                                     ? 'No captured photos yet'
                                     : 'Open preview of $count captured photo${count == 1 ? '' : 's'}',
@@ -1706,15 +1645,13 @@ class _ControlPanel extends StatelessWidget {
                         excludeSemantics: true,
                         child: IconButton(
                           onPressed: onDiscard,
-                          // Kept small and outlined so it never competes
-                          // with the shutter; it still asks before discarding.
+                          // A bare icon so it never competes with the
+                          // shutter; it still asks before discarding.
                           style: IconButton.styleFrom(
-                            backgroundColor: Colors.black26,
                             foregroundColor: Colors.white70,
-                            side: const BorderSide(color: Colors.white24),
                             fixedSize: const Size(minTapTarget, minTapTarget),
                           ),
-                          icon: const Icon(LumaIcons.close, size: 20),
+                          icon: const Icon(LumaIcons.close, size: 22),
                         ),
                       ),
                     ),
@@ -1875,10 +1812,10 @@ class _ModeStripState extends State<_ModeStrip> {
         ),
       ),
     );
-    return Container(
+    // No box around the strip: plain labels on black, the picked one in an
+    // accent pill.
+    return SizedBox(
       width: double.infinity,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: const Color(0xFF3C4648), borderRadius: BorderRadius.circular(20)),
       // Always wrapped, so the scroll position survives the fade toggling.
       child: ShaderMask(
         blendMode: BlendMode.dstIn,
@@ -1906,18 +1843,17 @@ class _ModeStripState extends State<_ModeStrip> {
             constraints: const BoxConstraints(minHeight: minTapTarget),
             child: AnimatedContainer(
               duration: Motion.of(context).duration(const Duration(milliseconds: 150)),
-              margin: const EdgeInsets.symmetric(vertical: 6),
-              constraints: const BoxConstraints(minHeight: ControlMetrics.visualHeight),
+              margin: const EdgeInsets.symmetric(vertical: 10),
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: m == mode ? Colors.white : Colors.transparent,
+                color: m == mode ? LumaColors.dark.accent : Colors.transparent,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Text(
                 m.label,
                 style: TextStyle(
-                  color: m == mode ? Colors.black : Colors.white,
+                  color: m == mode ? LumaColors.dark.onAccent : Colors.white70,
                   fontWeight: m == mode ? FontWeight.w700 : FontWeight.w500,
                   fontSize: 13,
                 ),
@@ -1960,13 +1896,13 @@ class _Shutter extends StatelessWidget {
       child: GestureDetector(
         onTap: canShoot ? onShoot : null,
         child: SizedBox.square(
-          dimension: 86,
+          dimension: 76,
           child: Stack(
             alignment: Alignment.center,
             children: [
               if (progress != null)
                 SizedBox.square(
-                  dimension: 86,
+                  dimension: 76,
                   child: CircularProgressIndicator(
                     value: progress,
                     strokeWidth: 3,
@@ -1978,9 +1914,9 @@ class _Shutter extends StatelessWidget {
                 scale: shooting ? 0.86 : 1,
                 duration: const Duration(milliseconds: 90),
                 child: Container(
-                  width: 74,
-                  height: 74,
-                  padding: const EdgeInsets.all(5),
+                  width: 66,
+                  height: 66,
+                  padding: const EdgeInsets.all(4),
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white,
