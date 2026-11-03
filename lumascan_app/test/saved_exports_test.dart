@@ -16,6 +16,7 @@ import 'package:lumascan/features/export/saved_word_tile.dart';
 import 'package:lumascan/features/home/home_documents.dart';
 import 'package:lumascan/features/library/library_controller.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
+import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'support/memory_stores.dart';
@@ -114,9 +115,12 @@ void main() {
 
     test('keeps one export per scan and kind, and survives reopening', () async {
       final saved = (await files.savedDir).path;
-      await store.put(export('$saved/Lease.pdf'));
-      await store.put(export('$saved/Lease.pdf', fp: 'b'));
-      await store.put(export('$saved/Lease.docx', format: ExportFormat.word));
+      // Read back with the platform separator, so built with it too.
+      final pdf = p.join(saved, 'Lease.pdf');
+      final docx = p.join(saved, 'Lease.docx');
+      await store.put(export(pdf));
+      await store.put(export(pdf, fp: 'b'));
+      await store.put(export(docx, format: ExportFormat.word));
       expect((await store.find('scan-1', ExportFormat.pdf))!.fingerprint, 'b');
       expect(await store.all(), hasLength(2));
       await store.close();
@@ -126,8 +130,8 @@ void main() {
         factory: databaseFactoryFfi,
         path: () async => '${tmp.path}/state.db',
       );
-      expect(await reopened.find('scan-1', ExportFormat.pdf), export('$saved/Lease.pdf', fp: 'b'));
-      await reopened.removePath('$saved/Lease.docx');
+      expect(await reopened.find('scan-1', ExportFormat.pdf), export(pdf, fp: 'b'));
+      await reopened.removePath(docx);
       expect(await reopened.find('scan-1', ExportFormat.word), isNull);
       await reopened.close();
     });

@@ -44,7 +44,7 @@ class LibraryController extends AsyncNotifier<LibraryIndex> {
   }) async {
     final previous = replaceId == null ? null : (await future).byId(replaceId);
     final id = previous?.id ?? await _idFor(pdf);
-    if (previous != null && previous.pdfPath != pdf.path) {
+    if (previous != null && !path.equals(previous.pdfPath, pdf.path)) {
       final old = File(previous.pdfPath);
       if (old.existsSync()) await old.delete();
     }

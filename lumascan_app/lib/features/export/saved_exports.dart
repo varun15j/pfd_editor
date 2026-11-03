@@ -74,19 +74,20 @@ class SavedExportsController extends AsyncNotifier<List<SavedExport>> {
     var candidate = fileName;
     bool taken(String name) {
       final full = p.join(saved, name);
-      return full != previous?.path && File(full).existsSync();
+      return !(previous != null && p.equals(full, previous.path)) && File(full).existsSync();
     }
 
     for (var n = 2; taken(candidate); n++) {
       candidate = '$stem ($n)$ext';
     }
-    return ExportNew(p.join(PageStore.savedFolder, candidate), previous: previous);
+    // Always "Saved/<name>", also where the platform separator is "\".
+    return ExportNew(p.posix.join(PageStore.savedFolder, candidate), previous: previous);
   }
 
   /// Notes that [export] was written. The file of the export it replaces
   /// is deleted when it had another name.
   Future<void> record(SavedExport export, {SavedExport? previous}) async {
-    if (previous != null && previous.path != export.path) {
+    if (previous != null && !p.equals(previous.path, export.path)) {
       final old = File(previous.path);
       if (old.existsSync()) await old.delete();
     }
