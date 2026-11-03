@@ -2,18 +2,23 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:open_filex/open_filex.dart';
 
 import '../../app/motion.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../data/library_store.dart';
 import '../../domain/library.dart';
+import '../../domain/library_query.dart';
 import '../../domain/models.dart';
+import '../../domain/saved_export.dart';
+import '../export/saved_exports.dart';
 import '../id_card/id_card_saved_screen.dart';
 import '../library/document_tile.dart';
 import '../library/library_actions.dart';
 import '../pages/page_image.dart';
 import '../pages/scan_controller.dart';
+import '../share/docx_sharer.dart';
 import '../../ui/luma_icons.dart';
 
 /// One document on Home: a scan kept as page images (the one on screen or an
@@ -88,11 +93,36 @@ class PdfHomeDoc extends HomeDoc {
   bool get favorite => document.favorite;
 }
 
-/// Home's documents: favorites first (scans and PDFs alike), then the
-/// rest. In each group the scan last on screen leads, then the others
-/// newest first.
-List<HomeDoc> homeDocuments(ScanState scan, List<SavedDocument> pdfs) {
-  final current = scan.pages.isEmpty
+/// A Word file exported from a scan, in the Saved folder.
+class WordHomeDoc extends HomeDoc {
+  const WordHomeDoc(this.export);
+
+  final SavedExport export;
+
+  @override
+  String get name => export.name;
+  @override
+  DateTime get time => export.exportedAt;
+  @override
+  int get pageCount => export.pageCount;
+  @override
+  String get key => 'word-${export.path}';
+  @override
+  bool get favorite => false;
+}
+
+/// Home's documents in [scope]: Docs are the scans and the PDFs worked on,
+/// Saved the files exported from scans (PDFs and [words]), All both.
+/// Favorites come first, then the rest. In each group the scan last on
+/// screen leads, then the others newest first.
+List<HomeDoc> homeDocuments(
+  ScanState scan,
+  List<SavedDocument> pdfs, {
+  DocScope scope = DocScope.all,
+  List<SavedExport> words = const [],
+}) {
+  final showScans = scope != DocScope.saved;
+  final current = !showScans || scan.pages.isEmpty
       ? null
       : ScanHomeDoc(
           name: scan.info?.name ?? 'Scan',
@@ -102,8 +132,14 @@ List<HomeDoc> homeDocuments(ScanState scan, List<SavedDocument> pdfs) {
           exported: scan.exported,
           favorite: scan.info?.favorite ?? false,
         );
-  final others = <HomeDoc>[for (final d in scan.parked) ScanHomeDoc.parked(d), for (final d in pdfs) PdfHomeDoc(d)]
-    ..sort((a, b) => b.time.compareTo(a.time));
+  final others = <HomeDoc>[
+    if (showScans)
+      for (final d in scan.parked) ScanHomeDoc.parked(d),
+    for (final d in pdfs)
+      if (scope.includes(d)) PdfHomeDoc(d),
+    if (scope != DocScope.docs)
+      for (final w in words) WordHomeDoc(w),
+  ]..sort((a, b) => b.time.compareTo(a.time));
   // The one last worked on stays first in its group, whatever its date.
   final all = [?current, ...others];
   return [
@@ -155,6 +191,8 @@ class HomeDocumentsView extends ConsumerWidget {
     switch (doc) {
       case PdfHomeDoc(:final document):
         await openDocument(context, ref, document);
+      case WordHomeDoc(:final export):
+        await openWordFile(context, export);
       case ScanHomeDoc(:final parkedId):
         if (parkedId != null) await ref.read(scanControllerProvider.notifier).openParked(parkedId);
         if (!context.mounted) return;
@@ -175,7 +213,8 @@ String _semantics(HomeDoc d) =>
 String _details(HomeDoc d) {
   final kind = switch (d) {
     ScanHomeDoc(:final exported) => exported ? 'Images, PDF made' : 'Images',
-    PdfHomeDoc() => 'PDF',
+    PdfHomeDoc(:final document) => document.isScanExport ? 'Saved PDF' : 'PDF',
+    WordHomeDoc() => 'Saved Word file',
   };
   return '${formatModified(d.time, DateTime.now())} · ${pageCountLabel(d.pageCount)} · $kind';
 }
@@ -196,6 +235,10 @@ class _Preview extends StatelessWidget {
           : Center(child: Icon(LumaIcons.document, size: 36, color: LumaColors.of(context).muted)),
     ),
     PdfHomeDoc(:final document) => DocumentThumbnail(document: document, iconSize: 36),
+    WordHomeDoc() => ColoredBox(
+      color: LumaColors.of(context).canvas,
+      child: Center(child: Icon(LumaIcons.article, size: 36, color: LumaColors.of(context).muted)),
+    ),
   };
 }
 
@@ -227,11 +270,12 @@ class _HomeDocCard extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     ExcludeSemantics(child: _Preview(doc: d)),
-                    Positioned(
-                      top: Space.xs,
-                      right: Space.xs,
-                      child: FavoriteBadge(child: _HomeFavorite(doc: d)),
-                    ),
+                    if (d is! WordHomeDoc)
+                      Positioned(
+                        top: Space.xs,
+                        right: Space.xs,
+                        child: FavoriteBadge(child: _HomeFavorite(doc: d)),
+                      ),
                   ],
                 ),
               ),
@@ -250,7 +294,11 @@ class _HomeDocCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (d is ScanHomeDoc) _ScanMenu(doc: d) else const SizedBox(width: Space.sm),
+                    switch (d) {
+                      ScanHomeDoc() => _ScanMenu(doc: d),
+                      WordHomeDoc() => _WordMenu(doc: d),
+                      _ => const SizedBox(width: Space.sm),
+                    },
                   ],
                 ),
               ),
@@ -316,8 +364,9 @@ class _HomeDocRow extends StatelessWidget {
                   ),
                 ),
               ),
-              _HomeFavorite(doc: d),
+              if (d is! WordHomeDoc) _HomeFavorite(doc: d),
               if (d is ScanHomeDoc) _ScanMenu(doc: d),
+              if (d is WordHomeDoc) _WordMenu(doc: d),
             ],
           ),
         ),
@@ -347,6 +396,8 @@ class _HomeFavorite extends ConsumerWidget {
 /// Adds a Home document to favorites or takes it off, and says so.
 Future<void> toggleHomeFavorite(BuildContext context, WidgetRef ref, HomeDoc doc) async {
   switch (doc) {
+    case WordHomeDoc():
+      return;
     case PdfHomeDoc(:final document):
       await toggleFavorite(context, ref, document);
     case ScanHomeDoc(:final parkedId, :final favorite, :final name):
@@ -362,6 +413,83 @@ Future<void> toggleHomeFavorite(BuildContext context, WidgetRef ref, HomeDoc doc
         ..showSnackBar(
           SnackBar(content: Text(!favorite ? '$name added to favorites' : '$name removed from favorites')),
         );
+  }
+}
+
+/// Opens a saved Word file in Word or another app that reads .docx.
+Future<void> openWordFile(BuildContext context, SavedExport export) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final result = await OpenFilex.open(export.path, type: SharePlusDocxSharer.mimeType);
+  if (result.type == ResultType.done) return;
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(switch (result.type) {
+        ResultType.noAppToOpen => 'No app on this device can open Word files. Try Share instead.',
+        ResultType.fileNotFound => 'This Word file is no longer on this device.',
+        _ => 'Could not open the Word file. ${result.message}',
+      }),
+    ),
+  );
+}
+
+enum _WordAction { open, share, delete }
+
+/// Open, share or delete a Word file in the Saved folder.
+class _WordMenu extends ConsumerWidget {
+  const _WordMenu({required this.doc});
+
+  final WordHomeDoc doc;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => PopupMenuButton<_WordAction>(
+    tooltip: 'More for ${doc.name}',
+    onSelected: (a) => switch (a) {
+      _WordAction.open => openWordFile(context, doc.export),
+      _WordAction.share => _share(context, ref),
+      _WordAction.delete => _delete(context, ref),
+    },
+    itemBuilder: (_) => const [
+      PopupMenuItem(
+        value: _WordAction.open,
+        child: ListTile(leading: Icon(LumaIcons.openExternal), title: Text('Open in Word')),
+      ),
+      PopupMenuItem(
+        value: _WordAction.share,
+        child: ListTile(leading: Icon(LumaIcons.share), title: Text('Share')),
+      ),
+      PopupMenuItem(
+        value: _WordAction.delete,
+        child: ListTile(leading: Icon(LumaIcons.delete), title: Text('Delete')),
+      ),
+    ],
+  );
+
+  Future<void> _share(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box == null ? null : box.localToGlobal(Offset.zero) & box.size;
+    try {
+      await ref.read(docxSharerProvider).send(doc.export.path, origin: origin);
+    } on Object catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Could not open the share sheet. $e')));
+    }
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final ok =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Delete ${doc.name}.docx?'),
+            content: const Text('The Word file is deleted from this phone. The scan is kept.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+              FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+            ],
+          ),
+        ) ==
+        true;
+    if (ok) await ref.read(savedExportsProvider.notifier).delete(doc.export);
   }
 }
 

@@ -9,6 +9,7 @@ import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../domain/models.dart';
 import '../../domain/plan.dart';
+import '../../domain/saved_export.dart';
 import '../../export/pdf_exporter.dart';
 import '../../pdf_edit/pdf_saver.dart';
 import '../../export/text_pdf_service.dart';
@@ -17,6 +18,7 @@ import '../../ui/upgrade_dialog.dart';
 import '../library/library_controller.dart';
 import '../pages/scan_controller.dart';
 import '../share/send_pdf_sheet.dart';
+import 'saved_exports.dart';
 import '../../ui/luma_icons.dart';
 
 export '../../ui/file_size.dart';
@@ -54,6 +56,9 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
   File? _result;
   String? _error;
   bool _inLibrary = false;
+
+  /// Nothing changed since the last export, so its file was reused.
+  bool _reused = false;
   bool _originalsRemoved = false;
 
   /// Page count of the saved PDF; the draft may be emptied right after saving.
@@ -112,21 +117,57 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
     final fileName = textPdf ? TextPdfService.textName(_name.text) : PdfEditSaver.safeFileName(_name.text);
     final draft = ref.read(scanControllerProvider.notifier);
     final keepOriginals = ref.read(appSettingsProvider).keepOriginals;
+    final info = ref.read(scanControllerProvider).info;
+    final savedExports = ref.read(savedExportsProvider.notifier);
+    final keepLayout = ref.read(planIncludesProvider(PlanFeature.smartScan));
+    final language = ref.read(ocrLanguageProvider);
+    final format = textPdf ? ExportFormat.textPdf : ExportFormat.pdf;
+    // Everything that changes the file; the same again reuses the saved one.
+    final fingerprint = exportFingerprint(
+      pages,
+      fileName: fileName,
+      options: textPdf
+          ? {'keepLayout': keepLayout, 'language': language}
+          : {'size': _size.name, 'quality': _quality.name, 'watermark': watermark, 'pageNumbers': pageNumbers},
+    );
+    final docKey = info == null ? null : scanDocKey(info);
     _savedPages = pages.length;
     setState(() {
       _progress = 0;
       _error = null;
     });
     try {
+      final plan = docKey == null
+          ? null
+          : await savedExports.plan(docKey: docKey, format: format, fingerprint: fingerprint, fileName: fileName);
+      if (plan is ExportReuse) {
+        _savedPages = plan.saved.pageCount;
+        if (mounted) {
+          setState(() {
+            _result = File(plan.saved.path);
+            _reused = true;
+            _inLibrary = true;
+          });
+        }
+        draft.markExported();
+        if (!keepOriginals) {
+          await draft.clear();
+          if (mounted) setState(() => _originalsRemoved = true);
+        }
+        return;
+      }
+      final previous = plan is ExportNew ? plan.previous : null;
+      // Exporting again replaces the scan's earlier file; a name another
+      // file already has gets a number, never replaces it.
+      final target = plan is ExportNew ? plan.fileName : await store.freeExportName(fileName);
       final File file;
       var savedPages = pages.length;
       if (textPdf) {
-        final keepLayout = ref.read(planIncludesProvider(PlanFeature.smartScan));
         final made = await textService.fromPages(
           pages,
-          fileName: await store.freeExportName(fileName),
+          fileName: target,
           keepLayout: keepLayout,
-          languageCode: ref.read(ocrLanguageProvider),
+          languageCode: language,
           onProgress: (f) {
             if (mounted) setState(() => _progress = f);
           },
@@ -140,7 +181,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
           ExportOptions(
             pageSize: _size,
             quality: _quality,
-            fileName: await store.freeExportName(fileName),
+            fileName: target,
             watermark: watermark,
             pageNumbers: pageNumbers,
           ),
@@ -154,8 +195,24 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
       draft.markExported();
       // The PDF is already safe on disk; a failed index write only means it
       // is missing from the Library list, so it is reported, not thrown.
-      await library.addScan(file, pages, pageCount: savedPages);
+      final saved = await library.addScan(file, pages, pageCount: savedPages, replaceId: previous?.libraryId);
       if (mounted) setState(() => _inLibrary = true);
+      if (docKey != null) {
+        await savedExports.record(
+          SavedExport(
+            docKey: docKey,
+            format: format,
+            path: file.path,
+            fingerprint: fingerprint,
+            name: info!.name,
+            pageCount: savedPages,
+            sizeBytes: file.lengthSync(),
+            exportedAt: DateTime.now(),
+            libraryId: saved.id,
+          ),
+          previous: previous,
+        );
+      }
       if (!keepOriginals) {
         // Settings: do not keep page images once the PDF is saved. Only after
         // the PDF is safely in the Library, so a failed save loses nothing.
@@ -238,15 +295,21 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (result != null) ...[
-                Text(_textPdf ? 'Text PDF saved' : 'PDF saved', style: textTheme.headlineSmall),
+                Text(
+                  _reused ? 'No changes since your last export' : (_textPdf ? 'Text PDF saved' : 'PDF saved'),
+                  style: textTheme.headlineSmall,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   '${p.basename(result.path)} · $pageCount page${pageCount == 1 ? '' : 's'} · '
                   '${formatFileSize(result.lengthSync())}',
                 ),
-                if (_inLibrary) ...[
+                if (_reused) ...[
                   const SizedBox(height: 4),
-                  Text('Saved to your Library', style: textTheme.bodySmall),
+                  Text('Your saved file is used, so nothing was made again.', style: textTheme.bodySmall),
+                ] else if (_inLibrary) ...[
+                  const SizedBox(height: 4),
+                  Text('Saved in the Saved folder. Exporting this scan again replaces it.', style: textTheme.bodySmall),
                 ],
                 if (_originalsRemoved) ...[
                   const SizedBox(height: 4),
@@ -260,7 +323,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
                   Text(_error!, style: TextStyle(color: scheme.error)),
                 ],
                 const SizedBox(height: 16),
-                FilledButton.icon(onPressed: _send, icon: const Icon(LumaIcons.share), label: const Text('Send')),
+                FilledButton.icon(onPressed: _send, icon: const Icon(LumaIcons.share), label: const Text('Share')),
                 const SizedBox(height: 8),
                 TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
               ] else ...[

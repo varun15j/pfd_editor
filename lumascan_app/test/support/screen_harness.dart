@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:lumascan/data/export_state_store.dart';
 import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/app/theme.dart';
@@ -58,6 +59,7 @@ class ScreenHarness {
         renderServiceProvider.overrideWithValue(_NoRender(store)),
         libraryStoreProvider.overrideWithValue(MemoryLibraryStore()),
         appSettingsStoreProvider.overrideWithValue(plainPagesSettings()),
+        exportStateStoreProvider.overrideWithValue(MemoryExportStateStore()),
         ...overrides,
       ],
     );

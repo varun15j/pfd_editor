@@ -39,8 +39,11 @@ class LibraryQueryController extends Notifier<LibraryQuery> {
 
   void clearTags() => state = state.copyWith(tags: const {});
 
-  /// Browses one folder, or every document when [folderId] is null.
+  /// Browses one folder, or the current scope when [folderId] is null.
   void openFolder(String? folderId) => state = state.copyWith(folderId: () => folderId);
+
+  /// Lists Docs, Saved or All, leaving any folder.
+  void showScope(DocScope scope) => state = state.copyWith(scope: scope, folderId: () => null);
 
   void clearDate() => state = state.copyWith(date: DateFilter.any, from: () => null, to: () => null);
 

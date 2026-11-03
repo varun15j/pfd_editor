@@ -9,6 +9,7 @@ import '../data/platform_launch_actions.dart';
 import '../data/smart_namer.dart';
 import '../data/document_text_reader.dart';
 import '../data/document_text_store.dart';
+import '../data/export_state_store.dart';
 import '../data/tesseract_ocr.dart';
 import '../data/page_store.dart';
 import '../data/photo_import_services.dart';
@@ -74,6 +75,12 @@ final wordServiceProvider = Provider<WordService>(
 final pdfTextReaderProvider = Provider<PdfTextReader>((ref) => PdfrxTextReader());
 
 final libraryStoreProvider = Provider<LibraryStore>((ref) => LibraryStore(ref.watch(pageStoreProvider)));
+
+/// What was exported from each scan (SQLite), so unchanged scans reuse
+/// their saved file.
+final exportStateStoreProvider = Provider<ExportStateStore>(
+  (ref) => SqliteExportStateStore(ref.watch(pageStoreProvider)),
+);
 
 final draftStoreProvider = Provider<DraftStore>((ref) => DraftStore(ref.watch(pageStoreProvider)));
 

@@ -6,6 +6,7 @@ import 'package:lumascan/features/library/document_tile.dart';
 
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
+
 import 'package:lumascan/ui/luma_icons.dart';
 
 final now = DateTime.now();
@@ -34,6 +35,9 @@ Future<void> openLibrary(WidgetTester tester) async {
   await pumpApp(tester, library: MemoryLibraryStore(const LibraryIndex().copyWith(documents: docs)));
   await tester.tap(find.byTooltip('Search'));
   await tester.pumpAndSettle();
+  // These are a mix of exported scans and other PDFs: list them all.
+  await tester.tap(find.widgetWithText(ChoiceChip, 'All'));
+  await tester.pumpAndSettle();
 }
 
 List<String> shownNames(WidgetTester tester) => [
@@ -43,12 +47,15 @@ List<String> shownNames(WidgetTester tester) => [
 void main() {
   group('query rules', () {
     test('search matches any part of the name, ignoring case and spaces around it', () {
-      expect(names(const LibraryQuery(text: '  LEASE ').apply(docs, now)), ['Lease agreement', 'Signed lease']);
-      expect(const LibraryQuery(text: 'zzz').apply(docs, now), isEmpty);
+      expect(names(const LibraryQuery(scope: DocScope.all, text: '  LEASE ').apply(docs, now)), [
+        'Lease agreement',
+        'Signed lease',
+      ]);
+      expect(const LibraryQuery(scope: DocScope.all, text: 'zzz').apply(docs, now), isEmpty);
     });
 
     test('sorts by date or name in either direction', () {
-      List<String> sorted(LibrarySort s) => names(LibraryQuery(sort: s).apply(docs, now));
+      List<String> sorted(LibrarySort s) => names(LibraryQuery(scope: DocScope.all, sort: s).apply(docs, now));
       expect(sorted(LibrarySort.newest), ['Lease agreement', 'electricity bill', 'Signed lease', 'Passport']);
       expect(sorted(LibrarySort.oldest), ['Passport', 'Signed lease', 'electricity bill', 'Lease agreement']);
       expect(sorted(LibrarySort.nameAz), ['electricity bill', 'Lease agreement', 'Passport', 'Signed lease']);
@@ -56,20 +63,24 @@ void main() {
     });
 
     test('filters by type and by relative date', () {
-      expect(names(const LibraryQuery(types: {ScanType.pdf, ScanType.idCard}).apply(docs, now)), [
+      expect(names(const LibraryQuery(scope: DocScope.all, types: {ScanType.pdf, ScanType.idCard}).apply(docs, now)), [
         'Signed lease',
         'Passport',
       ]);
-      expect(names(const LibraryQuery(date: DateFilter.last7Days).apply(docs, now)), [
+      expect(names(const LibraryQuery(scope: DocScope.all, date: DateFilter.last7Days).apply(docs, now)), [
         'Lease agreement',
         'electricity bill',
       ]);
-      expect(names(const LibraryQuery(date: DateFilter.last30Days).apply(docs, now)), hasLength(3));
+      expect(
+        names(const LibraryQuery(scope: DocScope.all, date: DateFilter.last30Days).apply(docs, now)),
+        hasLength(3),
+      );
     });
 
     test('custom range includes both end days', () {
       final day = daysAgo(12);
       final q = LibraryQuery(
+        scope: DocScope.all,
         date: DateFilter.custom,
         from: DateTime(day.year, day.month, day.day),
         to: DateTime(day.year, day.month, day.day),
@@ -84,7 +95,7 @@ void main() {
     });
 
     test('reset keeps the search text', () {
-      const q = LibraryQuery(text: 'bill', sort: LibrarySort.nameAz, types: {ScanType.pdf});
+      const q = LibraryQuery(scope: DocScope.all, text: 'bill', sort: LibrarySort.nameAz, types: {ScanType.pdf});
       expect(q.resetSortAndFilters().text, 'bill');
       expect(q.resetSortAndFilters().isSorted || q.resetSortAndFilters().isFiltered, isFalse);
     });

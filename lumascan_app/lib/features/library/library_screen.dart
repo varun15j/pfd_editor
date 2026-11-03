@@ -148,6 +148,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         actionIcon: LumaIcons.allFolders,
                         onAction: () => ref.read(libraryQueryProvider.notifier).openFolder(null),
                       )
+                    : docs.isEmpty && folder == null && !query.isSearching && !query.isFiltered
+                    ? _scopeEmpty(query.scope)
                     : docs.isEmpty
                     ? EmptyState(
                         icon: LumaIcons.noResults,
@@ -270,8 +272,28 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     ref.read(libraryQueryProvider.notifier)
       ..search('')
       ..resetSortAndFilters()
-      ..openFolder(null);
+      ..showScope(DocScope.all);
   }
+
+  /// Nothing in Docs or Saved: says where the files are instead.
+  Widget _scopeEmpty(DocScope scope) => switch (scope) {
+    DocScope.saved => EmptyState(
+      icon: LumaIcons.save,
+      title: 'Nothing saved yet',
+      message: 'PDFs you export from a scan are kept here, one per scan. Exporting again replaces it.',
+      actionLabel: 'Show all documents',
+      actionIcon: LumaIcons.allFolders,
+      onAction: () => ref.read(libraryQueryProvider.notifier).showScope(DocScope.all),
+    ),
+    _ => EmptyState(
+      icon: LumaIcons.folderOpen,
+      title: 'No documents here',
+      message: 'PDFs exported from your scans are in Saved.',
+      actionLabel: 'Open Saved',
+      actionIcon: LumaIcons.save,
+      onAction: () => ref.read(libraryQueryProvider.notifier).showScope(DocScope.saved),
+    ),
+  };
 
   Widget _searchBar(LibraryQuery query) {
     final searchText = ref.watch(planIncludesProvider(PlanFeature.searchText));
@@ -316,7 +338,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     );
   }
 
-  /// "All" plus one chip per folder; picking one browses that folder.
+  /// Docs, Saved and All, then one chip per folder; picking one browses
+  /// that folder.
   Widget _folderBar(LibraryQuery query) {
     final index = ref.watch(libraryProvider).value ?? const LibraryIndex();
     final current = index.folderById(query.folderId)?.id;
@@ -326,7 +349,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       padding: const EdgeInsets.symmetric(horizontal: Space.page),
       child: Row(
         children: [
-          ChoiceChip(label: const Text('All'), selected: current == null, onSelected: (_) => q.openFolder(null)),
+          for (final scope in DocScope.values) ...[
+            if (scope != DocScope.docs) const SizedBox(width: Space.sm),
+            ChoiceChip(
+              avatar: scope == DocScope.saved ? const Icon(LumaIcons.save, size: 18) : null,
+              label: Text(scope.label),
+              selected: current == null && query.scope == scope,
+              onSelected: (_) => q.showScope(scope),
+            ),
+          ],
           for (final f in index.folders) ...[
             const SizedBox(width: Space.sm),
             ChoiceChip(

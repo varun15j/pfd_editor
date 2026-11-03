@@ -14,17 +14,22 @@ import '../../ui/luma_icons.dart';
 /// Asks what to do with a Word file once it is made: open it in Word or
 /// another app, share it, or save it to the Documents folder. The Word file
 /// stays in the app's exports folder either way; the Library holds PDFs.
-Future<void> showWordSavedSheet(BuildContext context, WordFile word) => showModalBottomSheet<void>(
-  context: context,
-  isScrollControlled: true,
-  showDragHandle: true,
-  builder: (_) => WordSavedSheet(word: word),
-);
+///
+/// [reused] says the scan had no changes since this file was made, so it
+/// was not made again.
+Future<void> showWordSavedSheet(BuildContext context, WordFile word, {bool reused = false}) =>
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => WordSavedSheet(word: word, reused: reused),
+    );
 
 class WordSavedSheet extends ConsumerWidget {
-  const WordSavedSheet({super.key, required this.word});
+  const WordSavedSheet({super.key, required this.word, this.reused = false});
 
   final WordFile word;
+  final bool reused;
 
   /// "2 pages of editable text, 1 picture page".
   static String summary(WordFile word) {
@@ -46,11 +51,15 @@ class WordSavedSheet extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Word file saved', style: textTheme.headlineSmall),
+            Text(reused ? 'No changes since your last export' : 'Word file saved', style: textTheme.headlineSmall),
             const SizedBox(height: 4),
             Text(p.basename(path), style: textTheme.bodyMedium),
             const SizedBox(height: 2),
             Text(summary(word), style: textTheme.bodySmall),
+            if (reused) ...[
+              const SizedBox(height: 4),
+              Text('Your saved Word file is used, so nothing was made again.', style: textTheme.bodySmall),
+            ],
             if (word.textPages == 0) ...[
               const SizedBox(height: 4),
               Text(

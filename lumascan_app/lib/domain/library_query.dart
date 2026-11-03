@@ -23,6 +23,24 @@ enum DateFilter {
   final String label;
 }
 
+/// Which documents are listed: the scans and PDFs worked on (the default),
+/// the Saved folder of files exported from scans, or both.
+enum DocScope {
+  docs('Docs'),
+  saved('Saved'),
+  all('All');
+
+  const DocScope(this.label);
+  final String label;
+
+  /// Whether a saved PDF is listed in this scope.
+  bool includes(SavedDocument d) => switch (this) {
+    DocScope.docs => !d.isScanExport,
+    DocScope.saved => d.isScanExport,
+    DocScope.all => true,
+  };
+}
+
 /// Search, sort and filter for the Library (US-02.2, US-02.4). Search
 /// matches names, and on Pro the text inside documents too.
 @immutable
@@ -36,7 +54,13 @@ class LibraryQuery {
     this.to,
     this.folderId,
     this.tags = const {},
+    this.scope = DocScope.docs,
   });
+
+  /// Docs, Saved or All. Not "All" by default, so exported files don't
+  /// sit next to the scans they were made from. A folder lists everything
+  /// in it, whatever the scope.
+  final DocScope scope;
 
   final String text;
   final LibrarySort sort;
@@ -71,6 +95,7 @@ class LibraryQuery {
     DateTime? Function()? to,
     String? Function()? folderId,
     Set<String>? tags,
+    DocScope? scope,
   }) => LibraryQuery(
     text: text ?? this.text,
     sort: sort ?? this.sort,
@@ -80,10 +105,11 @@ class LibraryQuery {
     to: to == null ? this.to : to(),
     folderId: folderId == null ? this.folderId : folderId(),
     tags: tags ?? this.tags,
+    scope: scope ?? this.scope,
   );
 
-  /// Clears sort and filters but keeps the search text and folder.
-  LibraryQuery resetSortAndFilters() => LibraryQuery(text: text, folderId: folderId);
+  /// Clears sort and filters but keeps the search text, folder and scope.
+  LibraryQuery resetSortAndFilters() => LibraryQuery(text: text, folderId: folderId, scope: scope);
 
   /// Null when the custom range is usable, otherwise what is wrong with it.
   static String? rangeError(DateTime? from, DateTime? to) {
@@ -120,7 +146,7 @@ class LibraryQuery {
       for (final d in docs)
         if (matches(d) &&
             (types.isEmpty || types.contains(d.type)) &&
-            (folderId == null || d.folderId == folderId) &&
+            (folderId == null ? scope.includes(d) : d.folderId == folderId) &&
             (tags.isEmpty || tags.every((t) => d.tags.any((dt) => dt.toLowerCase() == t))) &&
             (start == null || !d.modifiedAt.isBefore(start)) &&
             (end == null || d.modifiedAt.isBefore(end)))

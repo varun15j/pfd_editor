@@ -120,9 +120,14 @@ class WordService {
   /// Converts the pages of a scan to a Word file named after [name]. A page
   /// already read with OCR becomes its text; any other page becomes a
   /// picture with its crop, rotation and filter.
+  ///
+  /// [fileName] (relative to the exports folder) is used as is, replacing a
+  /// file of that name; by default the file is "name.docx", numbered when
+  /// that name is taken.
   Future<WordFile> pagesToWord(
     List<ScanPage> scanPages, {
     required String name,
+    String? fileName,
     void Function(double fraction)? onProgress,
   }) async {
     if (scanPages.isEmpty) throw ArgumentError('No pages to convert');
@@ -131,7 +136,7 @@ class WordService {
       final pages = <DocxPage>[];
       for (final (i, page) in scanPages.indexed) {
         final text = page.text ?? '';
-        if (text.replaceAll(RegExp(r'\s'), '').length >= WordTextLayout.minCharacters) {
+        if (isTextPage(page)) {
           pages.add(
             DocxPage.text(
               paragraphs: WordTextLayout.fromPlainText(text),
@@ -162,11 +167,18 @@ class WordService {
         }
         onProgress?.call((i + 1) / scanPages.length * 0.9);
       }
-      return await _write(pages, name, onProgress);
+      return await _write(pages, name, onProgress, fileName: fileName);
     } finally {
       await temp.delete(recursive: true);
     }
   }
+
+  /// Whether [page] has enough OCR text to go into Word as text.
+  static bool isTextPage(ScanPage page) =>
+      (page.text ?? '').replaceAll(RegExp(r'\s'), '').length >= WordTextLayout.minCharacters;
+
+  /// "Lease.docx" for "Lease": the name [pagesToWord] gives the file.
+  static String wordFileName(String name) => _wordName(name);
 
   Future<List<PdfPageLines>> _readText(String pdfPath, int pageCount, String? password) async {
     final reader = _textReader;
@@ -179,11 +191,16 @@ class WordService {
     }
   }
 
-  Future<WordFile> _write(List<DocxPage> pages, String name, void Function(double fraction)? onProgress) async {
+  Future<WordFile> _write(
+    List<DocxPage> pages,
+    String name,
+    void Function(double fraction)? onProgress, {
+    String? fileName,
+  }) async {
     if (pages.isEmpty) throw StateError('No page could be read.');
     final bytes = await Isolate.run(() => DocxWriter.build(pages));
     onProgress?.call(0.95);
-    final file = await _store.writeExportAtomically(await _store.freeExportName(_wordName(name)), bytes);
+    final file = await _store.writeExportAtomically(fileName ?? await _store.freeExportName(_wordName(name)), bytes);
     onProgress?.call(1);
     final textPages = pages.where((p) => p.isText).length;
     return WordFile(file, textPages: textPages, picturePages: pages.length - textPages);

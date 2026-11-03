@@ -59,7 +59,7 @@ void main() {
     testWidgets('Docs has the avatar, title, Search, the docs row and the camera button', (tester) async {
       await pumpApp(tester);
       expect(find.text('LumaScan'), findsOneWidget);
-      expect(find.text('All docs(0)'), findsOneWidget);
+      expect(find.text('Docs(0)'), findsOneWidget);
       for (final tip in ['Settings', 'Search', 'Create', 'Sort', 'Select', 'Scan']) {
         expect(find.byTooltip(tip), findsOneWidget, reason: tip);
       }
@@ -158,7 +158,7 @@ void main() {
       name: 'Rental agreement',
       pdfPath: '/nowhere/exports/Rental agreement.pdf',
       pageCount: 3,
-      type: ScanType.document,
+      type: ScanType.pdf,
       createdAt: DateTime(2026, 3, 7),
       modifiedAt: DateTime(2026, 3, 7),
     );

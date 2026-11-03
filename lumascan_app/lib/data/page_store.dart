@@ -40,6 +40,13 @@ class PageStore {
   Future<Directory> get originalsDir => _dir('pages');
   Future<Directory> get renderDir => _dir('renders');
   Future<Directory> get exportsDir => _dir('exports');
+
+  /// The Saved folder: files exported from scans (PDF, text PDF, Word).
+  /// Inside [exportsDir], so names for it are given as `Saved/<name>`.
+  Future<Directory> get savedDir => _dir(p.join('exports', savedFolder));
+
+  static const savedFolder = 'Saved';
+
   Future<Directory> get thumbnailsDir => _dir('thumbnails');
 
   /// Smaller copies made for sending. Throwaway: the saved PDF stays in

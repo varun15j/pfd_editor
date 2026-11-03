@@ -11,8 +11,10 @@ import '../../app/providers.dart';
 import '../../domain/library.dart';
 import '../../domain/models.dart';
 import '../../domain/plan.dart';
+import '../../domain/saved_export.dart';
 import '../../ui/upgrade_dialog.dart';
 import '../../export/word/word_service.dart';
+import '../export/saved_exports.dart';
 import '../library/library_controller.dart';
 import '../merge/pdf_inspector.dart';
 import '../merge/pdf_picker.dart';
@@ -132,16 +134,69 @@ Future<void> pickPdfToWord(BuildContext context, WidgetRef ref) async {
 }
 
 /// Export > Word from the pages screen: the scan's pages become a Word
-/// file. A page already read with OCR becomes its text; the others are
-/// pictures. Nothing is read again here.
-Future<void> exportScanAsWord(BuildContext context, WidgetRef ref, List<ScanPage> pages, {required String name}) async {
+/// file in the Saved folder. A page already read with OCR becomes its text;
+/// the others are pictures. Nothing is read again here. When the scan
+/// ([docKey]) is unchanged since its last Word export, that file is reused;
+/// otherwise the new file replaces it.
+Future<void> exportScanAsWord(
+  BuildContext context,
+  WidgetRef ref,
+  List<ScanPage> pages, {
+  required String name,
+  String? docKey,
+}) async {
   if (!await _ensureWordPlan(context, ref) || !context.mounted || pages.isEmpty) return;
   final service = ref.read(wordServiceProvider);
+  final savedExports = ref.read(savedExportsProvider.notifier);
+  final fileName = WordService.wordFileName(name);
+  final fingerprint = exportFingerprint(pages, fileName: fileName);
+  final plan = docKey == null
+      ? null
+      : await savedExports.plan(
+          docKey: docKey,
+          format: ExportFormat.word,
+          fingerprint: fingerprint,
+          fileName: fileName,
+        );
+  if (!context.mounted) return;
+  if (plan is ExportReuse) {
+    final text = pages.where(WordService.isTextPage).length;
+    await showWordSavedSheet(
+      context,
+      WordFile(File(plan.saved.path), textPages: text, picturePages: pages.length - text),
+      reused: true,
+    );
+    return;
+  }
+  final previous = plan is ExportNew ? plan.previous : null;
   await _convert(
     context,
     title: 'Saving as Word',
     name: name,
-    run: (onProgress) => service.pagesToWord(pages, name: name, onProgress: onProgress),
+    run: (onProgress) async {
+      final word = await service.pagesToWord(
+        pages,
+        name: name,
+        fileName: plan is ExportNew ? plan.fileName : null,
+        onProgress: onProgress,
+      );
+      if (docKey != null) {
+        await savedExports.record(
+          SavedExport(
+            docKey: docKey,
+            format: ExportFormat.word,
+            path: word.file.path,
+            fingerprint: fingerprint,
+            name: name,
+            pageCount: pages.length,
+            sizeBytes: word.file.lengthSync(),
+            exportedAt: DateTime.now(),
+          ),
+          previous: previous,
+        );
+      }
+      return word;
+    },
   );
 }
 

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../domain/plan.dart';
+import '../../domain/saved_export.dart';
 import '../../ui/state_views.dart';
 import '../pages/scan_controller.dart';
 import '../share/image_sharer.dart';
@@ -23,7 +24,14 @@ Future<void> showExportChoice(BuildContext context, WidgetRef ref) async {
       await showExportSheet(context);
     case _ExportKind.word:
       final scan = ref.read(scanControllerProvider);
-      await exportScanAsWord(context, ref, scan.pages, name: scan.info?.name ?? 'Scan');
+      final info = scan.info;
+      await exportScanAsWord(
+        context,
+        ref,
+        scan.pages,
+        name: info?.name ?? 'Scan',
+        docKey: info == null ? null : scanDocKey(info),
+      );
     case _ExportKind.jpg:
       await showModalBottomSheet<void>(
         context: context,
@@ -54,7 +62,7 @@ class _ExportChoiceSheet extends StatelessWidget {
           ListTile(
             leading: const Icon(LumaIcons.pdf),
             title: const Text('Export as PDF'),
-            subtitle: const Text('All pages in one file, saved to your Library'),
+            subtitle: const Text('All pages in one file, kept in Saved'),
             onTap: () => Navigator.pop(context, _ExportKind.pdf),
           ),
           ListTile(
@@ -64,7 +72,7 @@ class _ExportChoiceSheet extends StatelessWidget {
             trailing: ProviderScope.containerOf(context).read(planIncludesProvider(PlanFeature.word))
                 ? null
                 : const PremiumBadge(label: 'Pro'),
-            subtitle: const Text('A .docx file. Pages read with OCR become text you can edit'),
+            subtitle: const Text('A .docx file, kept in Saved. Pages read with OCR become text you can edit'),
             onTap: () => Navigator.pop(context, _ExportKind.word),
           ),
           ListTile(
