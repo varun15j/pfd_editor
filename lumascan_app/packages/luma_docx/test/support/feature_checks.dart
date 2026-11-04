@@ -354,6 +354,16 @@ void featureChecks(Uint8List Function() load) {
       final controls = texts.map((t) => t.contentControl).whereType<String>().toSet();
       expect(controls, containsAll(['richText', 'plainText', 'dropDown', 'comboBox', 'date', 'checkBox', 'buildingBlock']));
       expect(doc.plainText, anyOf(contains('☒'), contains('☐')));
+      final forms = texts.map((t) => t.formField).whereType<WordFormField>().toList();
+      final text = forms.firstWhere((f) => f.kind == WordFormFieldKind.text);
+      expect(text.name, 'Text1');
+      expect(text.defaultText, 'Type your name');
+      expect(text.maxLength, 40);
+      final box = forms.firstWhere((f) => f.kind == WordFormFieldKind.checkBox);
+      expect(box.name, 'Check1');
+      expect(box.isChecked, isTrue);
+      final list = forms.firstWhere((f) => f.kind == WordFormFieldKind.dropDown);
+      expect(list.entries, ['Red', 'Green', 'Blue']);
       expect(doc.plainText, contains('▾'));
     });
 

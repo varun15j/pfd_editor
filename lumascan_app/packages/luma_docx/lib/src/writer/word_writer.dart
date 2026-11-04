@@ -7,6 +7,7 @@ import 'package:archive/archive.dart';
 
 import '../model.dart';
 import '../reader/xml_util.dart' show highlightColors;
+import 'xlsx.dart';
 
 /// Saves a [WordDocument] as a .docx file.
 ///
@@ -86,7 +87,8 @@ class WordWriter {
       '<Default Extension="gif" ContentType="image/gif"/>'
       '<Default Extension="bmp" ContentType="image/bmp"/>'
       '<Default Extension="tiff" ContentType="image/tiff"/>'
-      '<Default Extension="svg" ContentType="image/svg+xml"/>',
+      '<Default Extension="svg" ContentType="image/svg+xml"/>'
+      '<Default Extension="xlsx" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"/>',
     );
     for (final e in _overrides.entries) {
       types.write('<Override PartName="/${e.key}" ContentType="${e.value}"/>');
@@ -185,9 +187,22 @@ class WordWriter {
       switch (inline) {
         case WordText():
           _syncFields(o, inline.fields);
-          c.sync(o, sdt: inline.contentControl, link: inline.link, revision: _wrapping(inline.revision), part: part);
+          c.sync(o, sdt: inline.contentControl, link: inline.link, revision: _wrapping(inline.revision), part: part, text: inline.text);
           _syncComments(o, inline.commentIds);
-          _openNewFields(o, inline.fields);
+          final form = inline.formField;
+          if (form != null && form.kind != WordFormFieldKind.text) {
+            // Word draws check boxes and drop-downs itself from their settings.
+            _openNewFields(o, inline.fields);
+            final code = form.kind == WordFormFieldKind.checkBox ? 'FORMCHECKBOX' : 'FORMDROPDOWN';
+            final rPr = _rPr(inline.style);
+            o.write(
+              '<w:r>$rPr<w:fldChar w:fldCharType="begin">${_ffData(form)}</w:fldChar></w:r>'
+              '<w:r>$rPr<w:instrText xml:space="preserve"> $code </w:instrText></w:r>'
+              '<w:r>$rPr<w:fldChar w:fldCharType="end"/></w:r>',
+            );
+            continue;
+          }
+          _openNewFields(o, inline.fields, form: form);
           o.write(_run(inline.style, _textXml(inline.text, deleted: inline.revision?.removes == true), change: inline.revision));
         case WordBreak():
           final br = switch (inline.kind) {
@@ -263,10 +278,11 @@ class WordWriter {
     }
   }
 
-  void _openNewFields(StringBuffer o, List<String> fields) {
+  void _openNewFields(StringBuffer o, List<String> fields, {WordFormField? form}) {
     for (var i = _openFields.length; i < fields.length; i++) {
+      final ff = form != null && fields[i].startsWith('FORMTEXT') ? _ffData(form) : null;
       o.write(
-        '<w:r><w:fldChar w:fldCharType="begin"/></w:r>'
+        '<w:r>${ff == null ? '<w:fldChar w:fldCharType="begin"/>' : '<w:fldChar w:fldCharType="begin">$ff</w:fldChar>'}</w:r>'
         '<w:r><w:instrText xml:space="preserve"> ${_esc(fields[i])} </w:instrText></w:r>'
         '<w:r><w:fldChar w:fldCharType="separate"/></w:r>',
       );
@@ -292,6 +308,43 @@ class WordWriter {
   }
 
   final _endedComments = <String>{};
+
+  /// A legacy form field's settings, in Word's order.
+  String _ffData(WordFormField f) {
+    final b = StringBuffer('<w:ffData>');
+    if (f.name != null) b.write('<w:name w:val="${_esc(f.name!)}"/>');
+    if (f.enabled) b.write('<w:enabled/>');
+    b.write('<w:calcOnExit w:val="${f.calcOnExit ? 1 : 0}"/>');
+    if (f.entryMacro != null) b.write('<w:entryMacro w:val="${_esc(f.entryMacro!)}"/>');
+    if (f.exitMacro != null) b.write('<w:exitMacro w:val="${_esc(f.exitMacro!)}"/>');
+    if (f.helpText != null) b.write('<w:helpText w:type="text" w:val="${_esc(f.helpText!)}"/>');
+    if (f.statusText != null) b.write('<w:statusText w:type="text" w:val="${_esc(f.statusText!)}"/>');
+    switch (f.kind) {
+      case WordFormFieldKind.checkBox:
+        b.write('<w:checkBox>');
+        b.write(f.boxSize == null ? '<w:sizeAuto/>' : '<w:size w:val="${(f.boxSize! * 2).round()}"/>');
+        b.write('<w:default w:val="${f.defaultChecked ? 1 : 0}"/>');
+        if (f.checked != null) b.write('<w:checked w:val="${f.checked! ? 1 : 0}"/>');
+        b.write('</w:checkBox>');
+      case WordFormFieldKind.dropDown:
+        b.write('<w:ddList>');
+        if (f.selected != null) b.write('<w:result w:val="${f.selected}"/>');
+        if (f.defaultSelected != 0) b.write('<w:default w:val="${f.defaultSelected}"/>');
+        for (final e in f.entries) {
+          b.write('<w:listEntry w:val="${_esc(e)}"/>');
+        }
+        b.write('</w:ddList>');
+      case WordFormFieldKind.text:
+        b.write('<w:textInput>');
+        if (f.textType != 'regular') b.write('<w:type w:val="${f.textType}"/>');
+        if (f.defaultText != null) b.write('<w:default w:val="${_esc(f.defaultText!)}"/>');
+        if (f.maxLength != null) b.write('<w:maxLength w:val="${f.maxLength}"/>');
+        if (f.format != null) b.write('<w:format w:val="${_esc(f.format!)}"/>');
+        b.write('</w:textInput>');
+    }
+    b.write('</w:ffData>');
+    return b.toString();
+  }
 
   String _pPr(WordParagraph p, String? sectPr) {
     final s = p.style;
@@ -849,6 +902,14 @@ class WordWriter {
 
   String _chartDrawing(WordChart c, _Part part) {
     final n = ++_chartCount;
+    // The chart's numbers also go into an embedded workbook, so Word's
+    // Edit Data opens them in Excel.
+    final workbook = 'embeddings/Microsoft_Excel_Worksheet$n.xlsx';
+    _files['word/$workbook'] = chartWorkbook(c);
+    _files['word/charts/_rels/chart$n.xml.rels'] = utf8.encode(
+      '$_xmlHead<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+      '<Relationship Id="rId1" Type="$_relBase/package" Target="../$workbook"/></Relationships>',
+    );
     _files['word/charts/chart$n.xml'] = utf8.encode(_chartXml(c));
     _overrides['word/charts/chart$n.xml'] = 'application/vnd.openxmlformats-officedocument.drawingml.chart+xml';
     final target = part.path.startsWith('word/') && !part.path.substring(5).contains('/') ? 'charts/chart$n.xml' : '../charts/chart$n.xml';
@@ -860,7 +921,7 @@ class WordWriter {
   String _chartXml(WordChart c) {
     final pie = c.kind == WordChartKind.pie || c.kind == WordChartKind.doughnut;
     // The numbers are stored as the chart's cache (no data workbook).
-    String col(int i) => String.fromCharCode(0x41 + i % 26);
+    String col(int i) => columnName(i);
     String strRef(String f, List<String> v) =>
         '<c:strRef><c:f>$f</c:f><c:strCache><c:ptCount val="${v.length}"/>${[for (var i = 0; i < v.length; i++) '<c:pt idx="$i"><c:v>${_esc(v[i])}</c:v></c:pt>'].join()}</c:strCache></c:strRef>';
     String numRef(String f, List<double> v) =>
@@ -914,7 +975,8 @@ class WordWriter {
     return '$_xmlHead<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" '
         'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="$_relBase">'
         '<c:roundedCorners val="0"/><c:chart>$title<c:plotArea><c:layout/>$plot$axisXml</c:plotArea>'
-        '<c:legend><c:legendPos val="${pie ? 'r' : 'b'}"/><c:overlay val="0"/></c:legend><c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart></c:chartSpace>';
+        '<c:legend><c:legendPos val="${pie ? 'r' : 'b'}"/><c:overlay val="0"/></c:legend><c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart>'
+        '<c:externalData r:id="rId1"><c:autoUpdate val="0"/></c:externalData></c:chartSpace>';
   }
 
   // ------------------------------------------------------------ math
@@ -1173,7 +1235,7 @@ class _Containers {
   static bool _sameLink(WordLink? a, WordLink? b) => identical(a, b) || (a != null && b != null && a.url == b.url && a.anchor == b.anchor && a.tooltip == b.tooltip);
   static bool _sameRev(WordRevision? a, WordRevision? b) => identical(a, b) || (a != null && b != null && a.kind == b.kind && a.author == b.author && a.date == b.date);
 
-  void sync(StringBuffer o, {String? sdt, WordLink? link, WordRevision? revision, required _Part part}) {
+  void sync(StringBuffer o, {String? sdt, WordLink? link, WordRevision? revision, required _Part part, String text = ''}) {
     // Find the outermost wrapper that changes, close it and everything inside.
     var level = 3;
     if (_rev != null || revision != null) {
@@ -1184,7 +1246,7 @@ class _Containers {
     if (level == 3) return;
     _closeFrom(o, level);
     if (level <= 0 && sdt != null) {
-      o.write('<w:sdt><w:sdtPr>${_sdtType(sdt)}</w:sdtPr><w:sdtContent>');
+      o.write('<w:sdt><w:sdtPr>${_sdtType(sdt, checked: text.contains('\u2612'))}</w:sdtPr><w:sdtContent>');
       _closers.add('</w:sdtContent></w:sdt>');
       _levels.add(0);
     }
@@ -1229,12 +1291,12 @@ class _Containers {
 
   void close(StringBuffer o) => _closeFrom(o, 0);
 
-  static String _sdtType(String kind) => switch (kind) {
+  static String _sdtType(String kind, {bool checked = false}) => switch (kind) {
     'plainText' || 'text' => '<w:text/>',
     'dropDown' || 'dropDownList' => '<w:dropDownList/>',
     'comboBox' => '<w:comboBox/>',
     'date' => '<w:date><w:dateFormat w:val="dd/MM/yyyy"/><w:lid w:val="en-US"/><w:storeMappedDataAs w:val="dateTime"/><w:calendar w:val="gregorian"/></w:date>',
-    'checkBox' || 'checkbox' => '<w14:checkbox><w14:checked w14:val="0"/><w14:checkedState w14:val="2612" w14:font="MS Gothic"/><w14:uncheckedState w14:val="2610" w14:font="MS Gothic"/></w14:checkbox>',
+    'checkBox' || 'checkbox' => '<w14:checkbox><w14:checked w14:val="${checked ? 1 : 0}"/><w14:checkedState w14:val="2612" w14:font="MS Gothic"/><w14:uncheckedState w14:val="2610" w14:font="MS Gothic"/></w14:checkbox>',
     'buildingBlock' => '<w:docPartObj><w:docPartGallery w:val="Quick Parts"/></w:docPartObj>',
     'picture' => '<w:picture/>',
     _ => '',

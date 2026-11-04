@@ -34,8 +34,8 @@ Tests: `flutter test`. Screenshots of every page for a visual check:
 ## Writer limits
 
 `WordWriter` writes everything the reader keeps. Formatting goes on each paragraph
-and run; styles keep their names and heading levels only. Not kept: a chart's
-data workbook (the chart keeps its numbers), legacy form field settings (the
-fields keep their shown text), SmartArt and embedded objects (they were
-placeholders already), and exact positions of floating tables (kept: left,
+and run; styles keep their names and heading levels only. Charts get a new
+embedded workbook with their numbers (Edit Data works in Word); legacy form
+fields keep all their settings. Not kept: SmartArt and embedded objects (they
+were placeholders already) and exact positions of floating tables (kept: left,
 center or right).

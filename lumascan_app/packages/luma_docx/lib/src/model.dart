@@ -710,6 +710,69 @@ class WordTextEffects {
   final String? numberSpacing;
 }
 
+enum WordFormFieldKind { text, checkBox, dropDown }
+
+/// The settings of a legacy form field (Developer > Legacy Tools): a text
+/// box, check box or drop-down that a protected form lets people fill in.
+class WordFormField {
+  const WordFormField({
+    required this.kind,
+    this.name,
+    this.enabled = true,
+    this.calcOnExit = false,
+    this.helpText,
+    this.statusText,
+    this.entryMacro,
+    this.exitMacro,
+    this.checked,
+    this.defaultChecked = false,
+    this.boxSize,
+    this.entries = const [],
+    this.selected,
+    this.defaultSelected = 0,
+    this.textType = 'regular',
+    this.defaultText,
+    this.maxLength,
+    this.format,
+  });
+
+  final WordFormFieldKind kind;
+
+  /// The bookmark name Word gives the field, such as `Check1`.
+  final String? name;
+  final bool enabled;
+  final bool calcOnExit;
+
+  /// Help shown with F1 and in the status bar.
+  final String? helpText;
+  final String? statusText;
+  final String? entryMacro;
+  final String? exitMacro;
+
+  /// Check box: its current state (null means it shows [defaultChecked]).
+  final bool? checked;
+  final bool defaultChecked;
+
+  /// Check box size in points; null for automatic size.
+  final double? boxSize;
+
+  /// Drop-down: its entries and the chosen one (null means [defaultSelected]).
+  final List<String> entries;
+  final int? selected;
+  final int defaultSelected;
+
+  /// Text box: `regular`, `number`, `date`, `currentDate`, `currentTime` or `calculated`.
+  final String textType;
+  final String? defaultText;
+  final int? maxLength;
+
+  /// Number or date format, such as `0.00` or `dd/MM/yyyy`, or a case
+  /// format such as `UPPERCASE`.
+  final String? format;
+
+  bool get isChecked => checked ?? defaultChecked;
+}
+
 class WordLink {
   const WordLink({this.url, this.anchor, this.tooltip});
 
@@ -733,6 +796,7 @@ class WordText extends WordInline {
     this.field,
     this.fields = const [],
     this.contentControl,
+    this.formField,
   });
 
   final String text;
@@ -754,6 +818,10 @@ class WordText extends WordInline {
   /// The kind of content control the text sits in (`richText`, `dropDown`,
   /// `date`, `checkBox`, ...), or null.
   final String? contentControl;
+
+  /// The legacy form field this text belongs to: the typed text of a text
+  /// field, or the box or chosen entry drawn for a check box or drop-down.
+  final WordFormField? formField;
 
   @override
   void writePlainText(StringBuffer out) {

@@ -1,6 +1,7 @@
 // Saves the Word feature test file with WordWriter, reads the result back
 // and runs the same feature checks as the reader test, then compares the
 // two documents.
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -38,6 +39,41 @@ void main() {
     expect(copy.bookmarks.keys.toSet(), original.bookmarks.keys.toSet());
     expect(copy.properties.title, original.properties.title);
     expect(copy.pageColor, original.pageColor);
+  });
+
+  test('each chart carries a workbook with its data', () {
+    final zip = ZipDecoder().decodeBytes(written);
+    final charts = <WordChart>[];
+    void walk(List<WordBlock> blocks) {
+      for (final b in blocks) {
+        if (b is WordParagraph) charts.addAll(b.inlines.whereType<WordChart>());
+        if (b is WordTable) {
+          for (final r in b.rows) {
+            for (final c in r.cells) {
+              walk(c.blocks);
+            }
+          }
+        }
+      }
+    }
+
+    for (final s in original.sections) {
+      walk(s.blocks);
+    }
+    expect(charts, isNotEmpty);
+    for (var i = 0; i < charts.length; i++) {
+      final n = i + 1;
+      final rels = String.fromCharCodes(zip.findFile('word/charts/_rels/chart$n.xml.rels')!.content);
+      expect(rels, contains('embeddings/Microsoft_Excel_Worksheet$n.xlsx'));
+      expect(String.fromCharCodes(zip.findFile('word/charts/chart$n.xml')!.content), contains('<c:externalData r:id="rId1">'));
+      final book = ZipDecoder().decodeBytes(zip.findFile('word/embeddings/Microsoft_Excel_Worksheet$n.xlsx')!.content);
+      final sheet = XmlDocument.parse(utf8.decode(book.findFile('xl/worksheets/sheet1.xml')!.content));
+      final cells = {for (final c in sheet.findAllElements('c')) c.getAttribute('r'): c.innerText};
+      final chart = charts[i];
+      expect(cells['B1'], chart.series.first.name);
+      expect(cells['A2'], chart.categories.first);
+      expect(double.parse(cells['B2']!), chart.series.first.values.first);
+    }
   });
 
   group('written file', () => featureChecks(() => written));
