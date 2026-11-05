@@ -87,7 +87,7 @@ The colour book pages that still fail (04, 06, 17, 18, 22, page turns 03 and 16)
 
 ## Corner model in the camera preview (October 2026)
 
-The hand-made detector had stopped improving on colour pages (see above), so the camera preview now asks a small open-source neural network first: DocAligner's LCNet heatmap model (DocsaidLab, Apache-2.0, 4.8 MB, `assets/models/`). It reads a 256 x 256 colour copy of the frame and gives one heatmap per corner. Its outline is used only when every corner's peak is at least 0.8 (`minCornerConfidence`); otherwise the hand-made detector decides, as before. It runs with ONNX Runtime (`onnxruntime_v2`, FFI, two threads) in one long-lived isolate that loads the model once (`CornerWorker`, `lib/imaging/corner_worker.dart`). Pro and Gold only, like the rest of smart scanning; if the model cannot load, the preview falls back to the hand-made detector.
+The hand-made detector had stopped improving on colour pages (see above), so the camera preview now asks a small open-source neural network first: DocAligner's LCNet heatmap model (DocsaidLab, Apache-2.0, 4.8 MB, `assets/models/`). It reads a 256 x 256 colour copy of the frame and gives one heatmap per corner. Its outline is used only when every corner's peak is at least 0.8 (`minCornerConfidence`); otherwise the hand-made detector decides, as before. It runs with ONNX Runtime (`onnxruntime_v2`, FFI, two threads) in one long-lived isolate that loads the model once (`CornerWorker`, `lib/imaging/corner_worker.dart`). Pro and Gold only at first, like the rest of smart scanning (every plan since November 2026, see below); if the model cannot load, the preview falls back to the hand-made detector.
 
 **Every scan path (2026-11-02, Varun).** The same worker, and the same model-first rule, now serve every place a page outline is found, not just the preview: the photo just taken (Docs and OCR auto crop, one-photo retake), ID card sides (DocAligner was trained largely on ID card photos, so it suits cards well; the result must still fit the card guide), gallery and share-sheet imports, Auto crop in Batch Review, the crop screen's auto detect, and Book mode's spread before it is split at the spine. Each is a `CornerJob` (`PhotoCornerJob`, `FrameCornerJob`, `SpreadCornerJob`); if the model throws on one, that job is run again on the hand-made detector. The system scanner (ML Kit document scanner) keeps its own edge detection.
 
@@ -108,4 +108,27 @@ The hand-made detector had stopped improving on colour pages (see above), so the
 
 The made test pages are cleaner than real photos and close to what such models are trained on, so the gain there is likely larger than on real pages. The model takes about 30 ms per frame on the cloud test machine (onnxruntime, CPU); on the phone it is not yet measured. The FastViT-T8 variant was also tried and was sure of fewer pages.
 
-**Tests:** `test/corner_model_test.dart` (heatmaps to corners, the model input, and that the preview uses the model only when it is sure and only with smart scanning). The model itself does not run in `flutter test` (no native library there).
+**Tests:** `test/corner_model_test.dart` (heatmaps to corners, the model input, and that the preview uses the model only when it is sure, on every plan). The model itself does not run in `flutter test` (no native library there).
+
+## Corner model trained on our own pages (November 2026)
+
+**Why.** Book edges were poor: the stock model was never sure (all four corners at 0.8) on an open book or a page running off the frame, so the hand-made detector did nearly every book crop. Varun asked (2026-11-05) for the model to be trained on the app's own page types (books, single pages, colour pages, handwritten notebooks) and for every crop, from the camera or the gallery, to go through it.
+
+**What changed.**
+- `assets/models/lcnet100_256_lumascan_v1.onnx` replaces the stock DocAligner model: the same network, fine-tuned on the 66 hand-marked photos in the repo, plus made ID cards and empty frames. Training runs on a CPU; scripts and steps are in `tool/corner_model_training/`.
+- A corner off the frame is now put on the frame edge, so open books and close-ups get an outline instead of nothing.
+- `minCornerConfidence` 0.8 → 0.5: every held-back page photo scored above 0.5, and plain surfaces, gradients and noise stayed below 0.05.
+- **Every plan uses the model** (Varun, 2026-11-05). Basic asks it first too, in the preview, the photo just taken, imports, Auto crop, the crop screen's auto detect and Book mode. Smart scanning (Pro, Gold) now only picks which hand-made detector steps in when the model is not sure, and keeps its other extras (outline hold, repeat check, Crop choice). Corners can still be dragged by hand on the crop screen.
+
+**Result** (overlap with the hand-marked page, whole crop at 640 px, scored in Python with the model and the hand-made detector's outlines):
+
+| Photos | Before, Pro | Before, Basic | After, Pro | After, Basic |
+| --- | --- | --- | --- | --- |
+| 16 held back (model trained on the other 50) | 0.85 | 0.68 | 0.89 | 0.88 |
+| 6 odds book photos (never trained on) | 0.82 | 0.70 | 0.85 | 0.85 |
+| All 66 (final model, seen in training) | 0.88 | 0.66 | 0.95 | 0.93 |
+
+The model alone on held-back photos went from 0.34 to 0.88 (books 0.33 → 0.81, colour books 0 → 0.89, notebook 0 → 0.79, made pages 0.76 → 0.97). In a 200 px preview frame it was sure on 15 of 16 held-back photos, mean 0.88. The made ID cards still score 0.98.
+
+**Limits.** 66 photos is a small set and only 5 are handwritten notebook pages, so more real photos (20 or more notebook pages, more open books) are the best next step. Open books remain the weakest set (held back 0.84). Speed on the phone is the same network as before, so it should match the stock model, but it is not yet measured.
+
