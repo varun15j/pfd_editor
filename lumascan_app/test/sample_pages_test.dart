@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/debug/sample_pages.dart';
 import 'package:lumascan/imaging/page_detector.dart';
 import 'package:lumascan/imaging/rgb_image.dart';
+
 import 'support/temp_dir.dart';
 
 void main() {
@@ -44,7 +45,7 @@ void main() {
 
   test('the 20 book photos are bundled at 1080 x 1920 and copy for import', () async {
     expect(bookSamples.assets, hasLength(20));
-    expect(sampleSets, [mathSamples, bookSamples, oddsBookSamples, edgeSamples, colourBookSamples]);
+    expect(sampleSets, [mathSamples, bookSamples, oddsBookSamples, edgeSamples, colourBookSamples, wordPageSamples]);
     for (final asset in bookSamples.assets) {
       final photo = RgbImage.decode((await rootBundle.load(asset)).buffer.asUint8List());
       expect((photo.width, photo.height), (1080, 1920), reason: asset);
@@ -67,6 +68,17 @@ void main() {
       final photo = RgbImage.decode((await rootBundle.load(asset)).buffer.asUint8List());
       expect((photo.width, photo.height), (1080, 1920), reason: asset);
       expect(fixtures, contains('"$asset"'), reason: asset);
+    }
+  });
+
+  test('the 35 Word test pages are bundled as flat A4 images, not auto-cropped', () async {
+    expect(wordPageSamples.assets, hasLength(35));
+    expect(wordPageSamples.autoCrop, isFalse);
+    for (final asset in wordPageSamples.assets) {
+      final photo = RgbImage.decode((await rootBundle.load(asset)).buffer.asUint8List());
+      // A4 at 150 dpi; pages 32 and 33 are the document's landscape section.
+      final wide = asset.endsWith('32.jpg') || asset.endsWith('33.jpg');
+      expect((photo.width, photo.height), wide ? (1754, 1241) : (1241, 1754), reason: asset);
     }
   });
 

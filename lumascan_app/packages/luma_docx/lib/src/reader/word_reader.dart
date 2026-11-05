@@ -422,6 +422,10 @@ class _Parser {
           suffix: next.level.suffix,
           align: next.level.align,
           level: ilvl,
+          listId: numId,
+          format: next.level.format,
+          pattern: next.level.text,
+          start: next.level.start,
         );
       }
     }
@@ -607,6 +611,11 @@ class _Parser {
 
     bool hiddenByField() => fields.isNotEmpty && !fields.last.inResult;
 
+    List<String> fieldCodes() => List.unmodifiable([
+      for (final f in fields)
+        if (f.inResult) f.code,
+    ]);
+
     String? fieldCode() {
       for (var i = fields.length - 1; i >= 0; i--) {
         if (fields[i].inResult) return fields[i].code;
@@ -623,7 +632,14 @@ class _Parser {
       return null;
     }
 
-    void text(String t) {
+    WordFormField? openForm() {
+      for (var i = fields.length - 1; i >= 0; i--) {
+        if (fields[i].inResult && fields[i].ffData != null) return _formField(fields[i].ffData!);
+      }
+      return null;
+    }
+
+    void text(String t, {WordFormField? form}) {
       if (t.isEmpty || hiddenByField()) return;
       for (final f in fields) {
         f.shownSomething = true;
@@ -636,7 +652,9 @@ class _Parser {
           revision: revision,
           commentIds: List.unmodifiable(story.activeComments),
           field: fieldCode(),
+          fields: fieldCodes(),
           contentControl: ic.control,
+          formField: form ?? openForm(),
         ),
       );
     }
@@ -662,10 +680,10 @@ class _Parser {
               final f = fields.removeLast();
               final shown = _formFieldText(f);
               if (shown != null) {
-                text(shown);
+                text(shown, form: _formField(f.ffData!));
               } else if (!f.shownSomething && !hiddenByField() && RegExp(r'^(PAGE|NUMPAGES|SECTIONPAGES|SECTION)\b').hasMatch(f.code)) {
                 // Page fields saved without a value: the viewer fills them in.
-                out.add(WordText('1', style, field: f.code, link: ic.link, revision: revision));
+                out.add(WordText('1', style, field: f.code, fields: [...fieldCodes(), f.code], link: ic.link, revision: revision));
                 for (final o in fields) {
                   o.shownSomething = true;
                 }
@@ -756,6 +774,37 @@ class _Parser {
 
   /// Legacy form fields keep their state in ffData: a check box draws a box,
   /// a drop-down shows its chosen entry.
+  WordFormField _formField(XmlElement ff) {
+    final box = ff.w('checkBox');
+    final dd = ff.w('ddList');
+    final input = ff.w('textInput');
+    int? intVal(XmlElement? e, String local) => int.tryParse(e?.wVal(local) ?? '');
+    return WordFormField(
+      kind: box != null
+          ? WordFormFieldKind.checkBox
+          : dd != null
+          ? WordFormFieldKind.dropDown
+          : WordFormFieldKind.text,
+      name: ff.wVal('name'),
+      enabled: onOff(ff.w('enabled')) ?? false,
+      calcOnExit: onOff(ff.w('calcOnExit')) ?? false,
+      helpText: ff.w('helpText')?.attr('val'),
+      statusText: ff.w('statusText')?.attr('val'),
+      entryMacro: ff.wVal('entryMacro'),
+      exitMacro: ff.wVal('exitMacro'),
+      checked: onOff(box?.w('checked')),
+      defaultChecked: onOff(box?.w('default')) ?? false,
+      boxSize: box?.w('size') == null ? null : halfPoints(box!.wVal('size')),
+      entries: [for (final e in dd?.els('w', 'listEntry') ?? const <XmlElement>[]) e.attr('val') ?? ''],
+      selected: intVal(dd, 'result'),
+      defaultSelected: intVal(dd, 'default') ?? 0,
+      textType: input?.wVal('type') ?? 'regular',
+      defaultText: input?.wVal('default'),
+      maxLength: intVal(input, 'maxLength'),
+      format: input?.wVal('format'),
+    );
+  }
+
   String? _formFieldText(_Field f) {
     final ff = f.ffData;
     if (ff == null || f.shownSomething) return null;
@@ -884,6 +933,8 @@ class _Parser {
     final rel = pkg.rels(story.part)[blip?.attr('embed')];
     final bytes = rel == null || rel.external ? null : pkg.bytes(rel.target);
     if (bytes == null) return WordUnsupported(alt ?? 'Picture', width: width, height: height);
+    final svgBlip = blip?.descendantElements.where((e) => e.name.local == 'svgBlip').firstOrNull;
+    final svgRel = svgBlip == null ? null : pkg.rels(story.part)[svgBlip.attr('embed')];
     final ext = rel!.target.split('.').last.toLowerCase();
     if (ext == 'emf' || ext == 'wmf' || ext == 'tif' || ext == 'tiff') {
       return WordUnsupported(alt ?? 'Picture (${ext.toUpperCase()})', width: width, height: height);
@@ -906,7 +957,8 @@ class _Parser {
       grayscale: blip.el('a', 'grayscl') != null,
       opacity: alpha == null ? 1 : (double.tryParse(alpha) ?? 100000) / 100000,
       shape: geom == null || geom == 'rect' ? null : geom,
-      hasSvg: blip.descendantElements.any((e) => e.name.local == 'svgBlip'),
+      hasSvg: svgRel != null,
+      svg: svgRel == null || svgRel.external ? null : pkg.bytes(svgRel.target),
     );
   }
 
@@ -1215,7 +1267,8 @@ class _Parser {
       final total = twips(tblPr?.w('tblW')?.attr('w')) ?? 451;
       columns = List.filled(maxCols, total / (maxCols == 0 ? 1 : maxCols));
     }
-    final jc = tblPr?.wVal('jc');
+    // A floating table's side comes from its position.
+    final jc = tblPr?.w('tblpPr')?.attr('tblpXSpec') ?? tblPr?.wVal('jc');
     return WordTable(
       columns: columns,
       rows: rows,

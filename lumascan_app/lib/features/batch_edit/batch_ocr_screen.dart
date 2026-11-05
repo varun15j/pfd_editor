@@ -13,6 +13,7 @@ import '../pages/scan_controller.dart';
 import 'batch_ocr_job.dart';
 import '../../app/preferences.dart';
 import '../../ui/luma_icons.dart';
+import '../ocr_word/create_ocr_word.dart';
 
 /// Batch OCR (BE-07): checks that text recognition can run, then reads the
 /// selected pages one by one with progress and Cancel, and ends with which
@@ -58,6 +59,7 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
   }
 
   bool _building = false;
+  bool _buildingWord = false;
 
   /// Builds a text PDF of the pages that were read, then asks what to do with it.
   Future<void> _createPdf(BatchOcrJob job, int? Function(String) numberOf) async {
@@ -97,6 +99,24 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
     );
   }
 
+  /// Builds an editable Word file from the pages that were read (Pro and Gold).
+  Future<void> _createWord(BatchOcrJob job, int? Function(String) numberOf) async {
+    final read = [
+      for (final r in job.results)
+        if (r.status == OcrPageStatus.done || r.status == OcrPageStatus.empty) r,
+    ]..sort((a, b) => (numberOf(a.pageId) ?? 0).compareTo(numberOf(b.pageId) ?? 0));
+    final state = ref.read(scanControllerProvider);
+    setState(() => _buildingWord = true);
+    try {
+      await createOcrWordFile(context, ref, [
+        for (final r in read)
+          if (state.pageById(r.pageId) case final page?) (page: page, text: r.text ?? '', layout: r.layout),
+      ], info: state.info);
+    } finally {
+      if (mounted) setState(() => _buildingWord = false);
+    }
+  }
+
   void _start() {
     final state = ref.read(scanControllerProvider);
     final job = BatchOcrJob(
@@ -133,7 +153,9 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
                 job: job,
                 numberOf: numberOf,
                 building: _building,
+                buildingWord: _buildingWord,
                 onCreatePdf: () => _createPdf(job, numberOf),
+                onCreateWord: () => _createWord(job, numberOf),
               ),
             );
           }
@@ -220,12 +242,23 @@ class _Intro extends StatelessWidget {
 }
 
 class _JobView extends StatelessWidget {
-  const _JobView({required this.job, required this.numberOf, required this.building, required this.onCreatePdf});
+  const _JobView({
+    required this.job,
+    required this.numberOf,
+    required this.building,
+    required this.buildingWord,
+    required this.onCreatePdf,
+    required this.onCreateWord,
+  });
 
   final BatchOcrJob job;
   final int? Function(String pageId) numberOf;
   final bool building;
   final VoidCallback onCreatePdf;
+  final VoidCallback onCreateWord;
+
+  /// The Word file is being made; its own button shows the progress.
+  final bool buildingWord;
 
   @override
   Widget build(BuildContext context) {
@@ -259,11 +292,20 @@ class _JobView extends StatelessWidget {
           if (job.withStatus(OcrPageStatus.done).isNotEmpty || job.withStatus(OcrPageStatus.empty).isNotEmpty) ...[
             FilledButton.icon(
               style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-              onPressed: building ? null : onCreatePdf,
+              onPressed: building || buildingWord ? null : onCreatePdf,
               icon: building
                   ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(LumaIcons.pdf),
               label: const Text('Create text PDF'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+              onPressed: building || buildingWord ? null : onCreateWord,
+              icon: buildingWord
+                  ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(LumaIcons.article),
+              label: const Text('Create Word file'),
             ),
             const SizedBox(height: 8),
           ],

@@ -7,11 +7,14 @@ import '../domain/photo_import.dart';
 
 /// A set of bundled phone photos to add as pages in a debug build.
 class SampleSet {
-  const SampleSet({required this.title, required this.subtitle, required this.assets});
+  const SampleSet({required this.title, required this.subtitle, required this.assets, this.autoCrop = true});
 
   final String title;
   final String subtitle;
   final List<String> assets;
+
+  /// False for flat page images that are already the whole page.
+  final bool autoCrop;
 }
 
 /// The phone photos of math revision pages in `sample_photos/`, bundled so
@@ -141,8 +144,56 @@ const colourBookSamples = SampleSet(
   ],
 );
 
+/// OCR test images: the 35 pages of the Word feature test document
+/// (test_docs/Word_Feature_Test.docx) as flat page images, in
+/// `sample_photos/word_pages/`, made by `tool/make_word_page_images.py`.
+/// Their text and line positions are in `expected.json` there. For trying
+/// Recognize text and Create Word file (OCR to Word).
+const wordPageSamples = SampleSet(
+  title: 'Add Word test pages',
+  subtitle: '35 pages of the Word feature test document, for testing OCR to Word',
+  assets: [
+    'sample_photos/word_pages/page_01.jpg',
+    'sample_photos/word_pages/page_02.jpg',
+    'sample_photos/word_pages/page_03.jpg',
+    'sample_photos/word_pages/page_04.jpg',
+    'sample_photos/word_pages/page_05.jpg',
+    'sample_photos/word_pages/page_06.jpg',
+    'sample_photos/word_pages/page_07.jpg',
+    'sample_photos/word_pages/page_08.jpg',
+    'sample_photos/word_pages/page_09.jpg',
+    'sample_photos/word_pages/page_10.jpg',
+    'sample_photos/word_pages/page_11.jpg',
+    'sample_photos/word_pages/page_12.jpg',
+    'sample_photos/word_pages/page_13.jpg',
+    'sample_photos/word_pages/page_14.jpg',
+    'sample_photos/word_pages/page_15.jpg',
+    'sample_photos/word_pages/page_16.jpg',
+    'sample_photos/word_pages/page_17.jpg',
+    'sample_photos/word_pages/page_18.jpg',
+    'sample_photos/word_pages/page_19.jpg',
+    'sample_photos/word_pages/page_20.jpg',
+    'sample_photos/word_pages/page_21.jpg',
+    'sample_photos/word_pages/page_22.jpg',
+    'sample_photos/word_pages/page_23.jpg',
+    'sample_photos/word_pages/page_24.jpg',
+    'sample_photos/word_pages/page_25.jpg',
+    'sample_photos/word_pages/page_26.jpg',
+    'sample_photos/word_pages/page_27.jpg',
+    'sample_photos/word_pages/page_28.jpg',
+    'sample_photos/word_pages/page_29.jpg',
+    'sample_photos/word_pages/page_30.jpg',
+    'sample_photos/word_pages/page_31.jpg',
+    'sample_photos/word_pages/page_32.jpg',
+    'sample_photos/word_pages/page_33.jpg',
+    'sample_photos/word_pages/page_34.jpg',
+    'sample_photos/word_pages/page_35.jpg',
+  ],
+  autoCrop: false,
+);
+
 /// Every bundled set, in the order they are offered.
-const sampleSets = [mathSamples, bookSamples, oddsBookSamples, edgeSamples, colourBookSamples];
+const sampleSets = [mathSamples, bookSamples, oddsBookSamples, edgeSamples, colourBookSamples, wordPageSamples];
 
 /// The math revision photos (the first set).
 final samplePageAssets = mathSamples.assets;

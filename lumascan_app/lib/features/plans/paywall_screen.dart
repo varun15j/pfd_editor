@@ -219,6 +219,7 @@ class _PlanCard extends StatelessWidget {
     PlanFeature.searchText => 'Search the text inside your documents',
     PlanFeature.bookFix => 'Book mode: flat pages, fingers removed',
     PlanFeature.wordReader => 'Open and read Word files with their full formatting',
+    PlanFeature.ocrToWord => 'Turn recognized text into an editable Word file',
   };
 }
 
