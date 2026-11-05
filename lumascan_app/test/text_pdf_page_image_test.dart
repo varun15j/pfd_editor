@@ -10,6 +10,7 @@ import 'package:lumascan/export/ocr_pdf_builder.dart';
 import 'package:lumascan/features/ocr_word/ocr_word_figure.dart';
 import 'package:lumascan/imaging/page_renderer.dart';
 
+import 'support/pdf_content.dart';
 import 'support/temp_dir.dart';
 import 'support/word_pages.dart';
 
@@ -25,27 +26,6 @@ RenderedImage _ocrImage(ScanPage page, Directory dir) {
 /// [page] with a photo that is not there: building from it fails if the
 /// photo is read again.
 ScanPage _withoutPhoto(ScanPage page) => ScanPage(id: page.id, originalPath: '/no/such/photo_${page.id}.jpg');
-
-/// The page content streams of [pdf], inflated.
-String _contentText(Uint8List pdf) {
-  final out = StringBuffer();
-  final latin = String.fromCharCodes(pdf);
-  var at = 0;
-  while (true) {
-    final start = latin.indexOf('stream\n', at);
-    if (start < 0) break;
-    final end = latin.indexOf('endstream', start);
-    if (end < 0) break;
-    final data = pdf.sublist(start + 'stream\n'.length, end);
-    try {
-      out.write(String.fromCharCodes(zlib.decode(data)));
-    } on FormatException {
-      // An image or a stream that is not deflated.
-    }
-    at = end;
-  }
-  return out.toString();
-}
 
 bool _contains(Uint8List haystack, Uint8List needle) {
   outer:
@@ -85,7 +65,7 @@ void main() {
           keepLayout: true,
           fileName: 'x.pdf',
         );
-    final content = _contentText(out.file.readAsBytesSync());
+    final content = pdfContentText(out.file.readAsBytesSync());
     expect(content, contains('3 Tr'));
     // Every line of the page is in the text layer.
     final firstLine = layout.blocks.first.lines.first.text;
