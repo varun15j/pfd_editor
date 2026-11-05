@@ -51,7 +51,17 @@ enum OpenUnit { pages, bytes }
 /// cancelled. Time spent waiting for the user (a password dialog) does not
 /// count towards the "taking too long" prompt.
 class OpenProgress {
+  OpenProgress({String name = ''}) : name = ValueNotifier(name);
+
   final status = ValueNotifier<OpenStatus>(const OpenStatus('Opening'));
+
+  /// The document's name in the dialog. A picked file's name is known only
+  /// once the picker has finished copying it.
+  final ValueNotifier<String> name;
+
+  /// True while the task waits for the user; the dialog hides meanwhile so
+  /// a password dialog is not drawn on top of it.
+  final waiting = ValueNotifier<bool>(false);
   bool _cancelled = false;
   int _waiting = 0;
 
@@ -65,6 +75,10 @@ class OpenProgress {
     status.value = OpenStatus(stage, done: done, total: total, unit: unit);
   }
 
+  void rename(String newName) {
+    if (!_cancelled) name.value = newName;
+  }
+
   void throwIfCancelled() {
     if (_cancelled) throw const OpenCancelled();
   }
@@ -72,10 +86,12 @@ class OpenProgress {
   /// Runs [ask], such as a password dialog, with the clock stopped.
   Future<R> waitForUser<R>(Future<R> Function() ask) async {
     _waiting++;
+    waiting.value = true;
     try {
       return await ask();
     } finally {
       _waiting--;
+      waiting.value = _waiting > 0;
     }
   }
 
@@ -112,7 +128,7 @@ Future<T?> runOpenWithProgress<T>(
 }) async {
   if (_opening) return null;
   _opening = true;
-  final progress = OpenProgress();
+  final progress = OpenProgress(name: name);
   final outcome = Completer<_Outcome<T>>();
 
   // The task starts at once; the dialog only watches it.
@@ -294,112 +310,119 @@ class _OpenProgressDialogState extends State<OpenProgressDialog> {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _cancel();
       },
-      child: Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 8, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Icon(_slow ? LumaIcons.hourglass : LumaIcons.file, color: _slow ? colors.warning : colors.accent),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      _slow ? 'Taking too long' : 'Opening document',
-                      style: text.titleMedium,
-                      semanticsLabel: _slow ? 'Opening is taking too long' : 'Opening document',
-                    ),
-                  ),
-                  IconButton(
-                    key: const ValueKey('open-progress-close'),
-                    tooltip: 'Cancel opening',
-                    icon: const Icon(LumaIcons.close),
-                    onPressed: _cancel,
-                  ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: ValueListenableBuilder<bool>(
+        valueListenable: widget.progress.waiting,
+        builder: (context, waiting, dialog) => Offstage(offstage: waiting, child: dialog),
+        child: Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 8, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
                   children: [
-                    Text(
-                      widget.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.bodyMedium?.copyWith(color: colors.muted),
+                    Icon(_slow ? LumaIcons.hourglass : LumaIcons.file, color: _slow ? colors.warning : colors.accent),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _slow ? 'Taking too long' : 'Opening document',
+                        style: text.titleMedium,
+                        semanticsLabel: _slow ? 'Opening is taking too long' : 'Opening document',
+                      ),
                     ),
-                    AnimatedSize(
-                      duration: motion.duration(const Duration(milliseconds: 200)),
-                      child: _slow
-                          ? Padding(
-                              padding: const EdgeInsets.only(top: 12),
-                              child: Text(
-                                'This document is taking too long to open. It may be very large or damaged. '
-                                'You can wait or cancel.',
-                                style: text.bodyMedium,
-                              ),
-                            )
-                          : const SizedBox(width: double.infinity),
-                    ),
-                    const SizedBox(height: 16),
-                    ValueListenableBuilder<OpenStatus>(
-                      valueListenable: widget.progress.status,
-                      builder: (context, status, _) {
-                        final fraction = status.fraction;
-                        final detail = status.detail;
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value: fraction ?? (motion.animates ? null : 0),
-                                minHeight: 6,
-                                semanticsLabel: 'Opening progress',
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(child: Text(status.stage, style: text.bodySmall)),
-                                if (detail != null) Text(detail, style: text.bodySmall),
-                                if (fraction != null) ...[
-                                  const SizedBox(width: 8),
-                                  Text('${(fraction * 100).round()}%', style: text.bodySmall),
-                                ],
-                              ],
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          key: const ValueKey('open-progress-cancel'),
-                          onPressed: _cancel,
-                          child: const Text('Cancel'),
-                        ),
-                        if (_slow) ...[
-                          const SizedBox(width: 8),
-                          FilledButton(
-                            key: const ValueKey('open-progress-wait'),
-                            onPressed: _wait,
-                            child: const Text('Wait'),
-                          ),
-                        ],
-                      ],
+                    IconButton(
+                      key: const ValueKey('open-progress-close'),
+                      tooltip: 'Cancel opening',
+                      icon: const Icon(LumaIcons.close),
+                      onPressed: _cancel,
                     ),
                   ],
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ValueListenableBuilder<String>(
+                        valueListenable: widget.progress.name,
+                        builder: (context, name, _) => Text(
+                          name.isEmpty ? widget.name : name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.bodyMedium?.copyWith(color: colors.muted),
+                        ),
+                      ),
+                      AnimatedSize(
+                        duration: motion.duration(const Duration(milliseconds: 200)),
+                        child: _slow
+                            ? Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: Text(
+                                  'This document is taking too long to open. It may be very large or damaged. '
+                                  'You can wait or cancel.',
+                                  style: text.bodyMedium,
+                                ),
+                              )
+                            : const SizedBox(width: double.infinity),
+                      ),
+                      const SizedBox(height: 16),
+                      ValueListenableBuilder<OpenStatus>(
+                        valueListenable: widget.progress.status,
+                        builder: (context, status, _) {
+                          final fraction = status.fraction;
+                          final detail = status.detail;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: LinearProgressIndicator(
+                                  value: fraction ?? (motion.animates ? null : 0),
+                                  minHeight: 6,
+                                  semanticsLabel: 'Opening progress',
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(child: Text(status.stage, style: text.bodySmall)),
+                                  if (detail != null) Text(detail, style: text.bodySmall),
+                                  if (fraction != null) ...[
+                                    const SizedBox(width: 8),
+                                    Text('${(fraction * 100).round()}%', style: text.bodySmall),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            key: const ValueKey('open-progress-cancel'),
+                            onPressed: _cancel,
+                            child: const Text('Cancel'),
+                          ),
+                          if (_slow) ...[
+                            const SizedBox(width: 8),
+                            FilledButton(
+                              key: const ValueKey('open-progress-wait'),
+                              onPressed: _wait,
+                              child: const Text('Wait'),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

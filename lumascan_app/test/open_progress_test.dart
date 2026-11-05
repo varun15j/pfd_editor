@@ -176,9 +176,14 @@ void main() {
     await tester.tap(find.text('Open'));
     await showDialogUp(tester);
     expect(progress.waitingForUser, isTrue);
+    await tester.pump();
+    // Hidden so the password dialog is not drawn over it.
+    expect(find.text('Opening document'), findsNothing);
     await tester.pump(const Duration(seconds: 30));
     expect(slowText, findsNothing);
     password.complete();
+    await tester.pump();
+    expect(find.text('Opening document'), findsOneWidget);
     await tester.pump(const Duration(seconds: 11));
     await tester.pump();
     expect(slowText, findsOneWidget);

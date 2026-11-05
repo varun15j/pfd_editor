@@ -57,13 +57,21 @@ enum OpenFailure {
 
 /// What the quick check found in the first and last bytes of a file.
 class PdfFileFacts {
-  const PdfFileFacts({required this.size, required this.endsWithEof});
+  const PdfFileFacts({required this.size, required this.endsWithEof, this.hasObjects = true});
 
   final int size;
 
   /// `%%EOF` was found near the end. A PDF without it was very likely cut
   /// short, though PDFium can sometimes still read it.
   final bool endsWithEof;
+
+  /// The first bytes hold a PDF object (`1 0 obj`). A real PDF cut short
+  /// still starts with objects; one that is junk after the header does not.
+  final bool hasObjects;
+
+  /// Looks like a real PDF that was cut short, rather than one damaged
+  /// throughout.
+  bool get looksTruncated => !endsWithEof && hasObjects;
 }
 
 /// How many bytes are read from each end of the file. The PDF spec allows
@@ -115,11 +123,16 @@ PdfFileFacts inspectPdfBytes({required Uint8List head, required Uint8List tail, 
   if (!_contains(head, _pdfMagic)) {
     throw DocumentOpenException(OpenFailure.wrongFormat, detail: describeFormat(head));
   }
-  return PdfFileFacts(size: size, endsWithEof: _contains(tail, _eofMarker));
+  return PdfFileFacts(
+    size: size,
+    endsWithEof: _contains(tail, _eofMarker),
+    hasObjects: _objHeader.hasMatch(latin1.decode(head)),
+  );
 }
 
 final _pdfMagic = ascii.encode('%PDF-');
 final _eofMarker = ascii.encode('%%EOF');
+final _objHeader = RegExp(r'\d+\s+\d+\s+obj\b');
 
 /// Names a common format from its first bytes, as words for a sentence
 /// ("a JPEG image"), or null when it is not one we know.
@@ -180,7 +193,7 @@ DocumentOpenException pdfiumFailure(int? errorCode, {PdfFileFacts? facts}) => sw
   pdfiumErrFile => const DocumentOpenException(OpenFailure.unreadable),
   pdfiumErrSecurity => const DocumentOpenException(OpenFailure.unsupportedSecurity),
   pdfiumErrPage => const DocumentOpenException(OpenFailure.damagedPage),
-  _ when facts != null && !facts.endsWithEof => const DocumentOpenException(OpenFailure.truncated),
+  _ when facts != null && facts.looksTruncated => const DocumentOpenException(OpenFailure.truncated),
   _ => const DocumentOpenException(OpenFailure.corrupted),
 };
 

@@ -62,6 +62,14 @@ void main() {
     expect(pdfiumFailure(pdfiumErrFormat, facts: facts).kind, OpenFailure.truncated);
   });
 
+  test('junk after the header is damaged, not incomplete', () async {
+    final noise = [...latin1.encode('%PDF-1.7\n'), ...List.generate(5000, (i) => (i * 131 + 7) % 256)];
+    final facts = await checkPdfFile(await write('garbage.pdf', noise));
+    expect(facts.endsWithEof, isFalse);
+    expect(facts.looksTruncated, isFalse);
+    expect(pdfiumFailure(pdfiumErrFormat, facts: facts).kind, OpenFailure.corrupted);
+  });
+
   test('missing, empty and random files fail with their reason', () async {
     expect(await failure('${dir.path}/nope.pdf'), OpenFailure.missing);
     expect(await failure(await write('empty.pdf', const [])), OpenFailure.empty);
