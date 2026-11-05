@@ -111,12 +111,12 @@ class OcrPdfBuilder {
     }
     final drafts = await runPageJobs(
       [for (final (i, p) in pages.indexed) (p, images[i])],
-      ((OcrPdfPage, RenderedImage?) job) => pageDraft(job.$1, keepLayout: keepLayout, image: job.$2),
+      _draftJob(keepLayout),
       onProgress: (done, _) => onProgress?.call(done, pages.length + 1),
       isCancelled: isCancelled,
     );
     final built = [for (final (i, p) in pages.indexed) (p.number, drafts[i])];
-    final (bytes, pageCount) = await Isolate.run(() => _document(built, keepLayout: keepLayout));
+    final (bytes, pageCount) = await _documentInIsolate(built, keepLayout);
     if (isCancelled?.call() ?? false) throw const PageJobsCancelled();
     onProgress?.call(pages.length + 1, pages.length + 1);
     final now = DateTime.now();
@@ -135,6 +135,17 @@ class OcrPdfBuilder {
     }
   }
 }
+
+/// The page job for [runPageJobs]. Made here, at the top level, so the
+/// closure sent to each isolate holds only [keepLayout]; one written inside
+/// [OcrPdfBuilder.build] would also carry the screen's progress and Cancel
+/// callbacks, which cannot be sent.
+PageDraft Function((OcrPdfPage, RenderedImage?) job) _draftJob(bool keepLayout) =>
+    (job) => pageDraft(job.$1, keepLayout: keepLayout, image: job.$2);
+
+/// Builds the document on its own isolate, sending only the drafts.
+Future<(Uint8List, int)> _documentInIsolate(List<(int, PageDraft)> pages, bool keepLayout) =>
+    Isolate.run(() => _document(pages, keepLayout: keepLayout));
 
 /// What goes on one page, with each piece's place. Public for tests.
 ///

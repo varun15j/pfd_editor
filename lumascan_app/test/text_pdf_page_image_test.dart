@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -8,6 +9,7 @@ import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/ocr.dart';
 import 'package:lumascan/export/ocr_pdf_builder.dart';
 import 'package:lumascan/features/ocr_word/ocr_word_figure.dart';
+import 'package:lumascan/imaging/page_jobs.dart';
 import 'package:lumascan/imaging/page_renderer.dart';
 
 import 'support/pdf_content.dart';
@@ -140,5 +142,51 @@ void main() {
     expect(figures, hasLength(1));
     expect(figures.single.jpeg, File(ocrImage.path).readAsBytesSync());
     expect((figures.single.pixelWidth, figures.single.pixelHeight), (ocrImage.width, ocrImage.height));
+  });
+
+  group('the screen\'s progress and Cancel checks stay on the main isolate', () {
+    // On the device the Cancel check and progress closures hold the
+    // screen's State, which holds Futures, and an isolate cannot be sent a
+    // Future. These stand in for them: if a page job's closure captures
+    // them, Isolate.run fails with "object is unsendable".
+    late Future<void> unsendable;
+    setUp(() {
+      unsendable = Completer<void>().future;
+    });
+    bool cancelled() {
+      unsendable.ignore();
+      return false;
+    }
+
+    void progress(int done, int total) => unsendable.ignore();
+
+    test('Create text PDF', () async {
+      final (page, layout) = wordTestPage(1);
+      for (final keepLayout in [true, false]) {
+        final out =
+            await OcrPdfBuilder(
+              PageStore(rootDir: () async => tmp),
+              pageImage: (_) async => _ocrImage(page, tmp),
+            ).build(
+              [OcrPdfPage(page: page, number: 1, text: layout.text, layout: layout)],
+              keepLayout: keepLayout,
+              fileName: 'x$keepLayout.pdf',
+              onProgress: progress,
+              isCancelled: cancelled,
+            );
+        expect(out.pageCount, greaterThanOrEqualTo(1));
+      }
+    });
+
+    test('Create Word file', () async {
+      final (page, layout) = wordTestPage(21);
+      final figures = await runPageJobs(
+        [(page: page, text: layout.text, layout: layout, image: _ocrImage(page, tmp))],
+        ocrWordFiguresOf,
+        onProgress: progress,
+        isCancelled: cancelled,
+      );
+      expect(figures.single, isNotEmpty);
+    });
   });
 }

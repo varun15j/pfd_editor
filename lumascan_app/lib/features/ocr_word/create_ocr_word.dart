@@ -86,10 +86,11 @@ Future<void> createOcrWordFile(
             if (progress.cancelled) throw const PageJobsCancelled();
             images.add(await pageImage(p.page).then<RenderedImage?>((r) => r, onError: (Object _) => null));
           }
+          // ocrWordFiguresOf is top-level: the isolates get the pages and
+          // nothing of this screen.
           return runPageJobs(
-            [for (final (i, p) in pages.indexed) (p, images[i])],
-            ((OcrWordInput, RenderedImage?) job) =>
-                ocrWordFigures(job.$1.page, text: job.$1.text, layout: job.$1.layout, image: job.$2),
+            [for (final (i, p) in pages.indexed) (page: p.page, text: p.text, layout: p.layout, image: images[i])],
+            ocrWordFiguresOf,
             onProgress: progress.report,
             isCancelled: () => progress.cancelled,
           );

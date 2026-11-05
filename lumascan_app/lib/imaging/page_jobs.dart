@@ -15,6 +15,12 @@ class PageJobsCancelled implements Exception {
 /// (at most two, so two decoded pages are in memory at once), and returns
 /// the results in the same order. [onProgress] is told after each one;
 /// [isCancelled] is checked before each one starts.
+///
+/// [job] and the items are sent to the isolates, so [job] must be a
+/// top-level function, or a closure made in a top-level function from plain
+/// values. A closure written inside a method or a widget can carry that
+/// scope's other variables along (the screen's State, a Future), which an
+/// isolate cannot take.
 Future<List<R>> runPageJobs<T, R>(
   List<T> items,
   R Function(T item) job, {
@@ -30,7 +36,7 @@ Future<List<R>> runPageJobs<T, R>(
       final i = next++;
       if (i >= items.length) return;
       final item = items[i];
-      results[i] = await Isolate.run(() => job(item));
+      results[i] = await _inIsolate(job, item);
       finished++;
       onProgress?.call(finished, items.length);
     }
@@ -41,3 +47,8 @@ Future<List<R>> runPageJobs<T, R>(
   if (isCancelled?.call() ?? false) throw const PageJobsCancelled();
   return results.cast<R>();
 }
+
+/// Runs [job] on [item] in a new isolate. Top-level, so the closure sent
+/// holds only these two, never [runPageJobs]'s [isCancelled] or
+/// [onProgress], which belong to the screen.
+Future<R> _inIsolate<T, R>(R Function(T item) job, T item) => Isolate.run(() => job(item));

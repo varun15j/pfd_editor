@@ -86,6 +86,15 @@ List<OcrWordFigure> ocrWordFigures(ScanPage page, {required String text, OcrLayo
   ];
 }
 
+/// One page's figure job: everything [ocrWordFigures] needs, as plain data
+/// that can go to another isolate.
+typedef OcrWordFigureJob = ({ScanPage page, String text, OcrLayout? layout, RenderedImage? image});
+
+/// [ocrWordFigures] for one job. A top-level function, so passing it to an
+/// isolate sends nothing else along with it.
+List<OcrWordFigure> ocrWordFiguresOf(OcrWordFigureJob job) =>
+    ocrWordFigures(job.page, text: job.text, layout: job.layout, image: job.image);
+
 Uint8List? _bytesOf(String path) {
   try {
     final bytes = File(path).readAsBytesSync();

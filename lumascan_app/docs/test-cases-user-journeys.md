@@ -15,7 +15,7 @@ The automated run swaps only the parts an emulator cannot do well for real photo
 | Replaced | By |
 |---|---|
 | Camera shots | The five maths revision phone photos in `sample_photos/` (fingers, torn edges, desk backgrounds) |
-| Platform document scanner (Retake on the Pages screen) | Real book photos from `sample_photos/book/` |
+| Platform document scanner | Real book photos from `sample_photos/book/` |
 | Gallery picker | Real book photos from `sample_photos/book/` |
 | ID card photos | A drawn card with a 12-digit number in the Aadhaar layout. No real ID card belongs in the repository |
 
@@ -40,7 +40,7 @@ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:
 | 3 | Crop: drag the top-left corner in, Apply crop | Page 1's crop changes |
 | 4 | Filters: B&W, Apply, Apply to this page | Page 1 is black and white; pages 2 and 3 keep their filter |
 | 5 | Markup: draw a pen stroke, Done | The stroke is kept on page 1 |
-| 6 | Next page, Retake | "Page 2 retaken"; the new photo is page 2, still 3 pages |
+| 6 | Next page, Retake, take 1 photo | The camera opens for one photo and closes; "Page 2 retaken"; the new photo is page 2, still 3 pages |
 | 7 | Filters on the new page 2: Grayscale, this page | Page 2 is grayscale |
 | 8 | Export > Export as PDF > Save PDF | "PDF saved"; the Library has one 3-page document |
 | 9 | Add pages > Scan with camera, take 1 photo, Review document | 4 pages, same document name |
@@ -93,9 +93,9 @@ Automated in `integration_test/ocr_journeys_test.dart`. The pages are the 35 Wor
 
 ## Known limits
 
-- The Google ML Kit document scanner cannot be opened on most emulators (its module download fails), so Retake on
-  the Pages screen is only covered with the replaced scanner. Retake inside the camera (Captured photos > Retake page
-  N) uses the app's own camera and works on the emulator.
+- The Google ML Kit document scanner cannot be opened on most emulators (its module download fails), so it is only
+  covered with the replaced scanner. Retake on the Pages screen (since 1.32.0) and inside the camera both use the
+  app's own camera and work on the emulator.
 - The emulator camera shows a virtual room, so live edge detection and the QR, Text and OCR camera modes need a real
   phone.
 
