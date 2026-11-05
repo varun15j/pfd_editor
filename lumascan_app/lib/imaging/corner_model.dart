@@ -8,11 +8,12 @@ import 'rgb_image.dart';
 /// try before the hand-made detector ([detectPageQuad]).
 ///
 /// The model is DocAligner's LCNet heatmap model (DocsaidLab/DocAligner,
-/// Apache-2.0, `assets/models/`): a 256 x 256 RGB photo in, one 128 x 128
-/// heatmap per corner out. It is sure of itself on a whole page in view,
-/// whatever its colour or the surface under it, and finds nothing when a
-/// corner is out of the frame, as with an open book filling the frame. So
-/// its answer is used only when every corner stands out
+/// Apache-2.0, `assets/models/`), fine-tuned on LumaScan's own marked
+/// photos (books, colour books, made pages, handwritten notebook pages,
+/// `tool/corner_model_training/`): a 256 x 256 RGB photo in, one 128 x 128
+/// heatmap per corner out, TL, TR, BR, BL. A corner out of the frame is
+/// put on the frame edge, as with an open book filling the frame. Its
+/// answer is used only when every corner stands out
 /// ([minCornerConfidence]); otherwise the hand-made detector decides.
 abstract class CornerModel {
   /// The page in [image], or null when the model is not sure of all four
@@ -24,10 +25,10 @@ abstract class CornerModel {
 const cornerModelInputSize = 256;
 
 /// Lowest heatmap peak, for every corner, at which the model's outline is
-/// used. Measured on LumaScan's marked photos (2026-10-27): at 0.8 and above
-/// the outline overlapped the true page by 0.84 to 0.99; below it, the model
-/// is often wrong or has a corner off the frame.
-const minCornerConfidence = 0.8;
+/// used. Measured on the fine-tuned model (2026-11-05): every held-back
+/// photo of a page scored above 0.5, and plain surfaces, gradients and
+/// noise with no page stayed below 0.05. (The stock model needed 0.8.)
+const minCornerConfidence = 0.5;
 
 /// Heatmap values below this are background, as in DocAligner's own
 /// post-processing.

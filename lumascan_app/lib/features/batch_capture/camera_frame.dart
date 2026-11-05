@@ -150,15 +150,16 @@ class FrameAnalysis {
   bool get tooDark => brightness < 45;
 }
 
-/// Pure Dart apart from [model], so it can run in an isolate. With [smart]
-/// on and a [model], the model's outline is tried first, and the hand-made
-/// detector is asked only when the model is not sure of every corner.
+/// Pure Dart apart from [model], so it can run in an isolate. With a
+/// [model] (every plan), the model's outline is tried first, and the
+/// hand-made detector ([smart] picks the Pro one) is asked only when the
+/// model is not sure of every corner.
 FrameAnalysis analyzeFrame(CameraFrame frame, {bool smart = true, CornerModel? model}) {
   final gray = frame.uprightGray();
   // Outlines are found in colour where the frame has it: a coloured page on
   // a surface of the same brightness only stands out by its colour.
   final picture = frame.hasColour ? frame.uprightColour() : gray;
-  final fromModel = smart ? model?.find(picture) : null;
+  final fromModel = model?.find(picture);
   final quad = fromModel ?? detectPageQuad(picture, workSize: 160, minArea: 0.2, smart: smart);
   return FrameAnalysis(
     quad: quad,
@@ -172,26 +173,28 @@ typedef FrameAnalyzer = Future<FrameAnalysis> Function(CameraFrame frame);
 
 /// One preview frame for the [CornerWorker].
 class FrameCornerJob extends CornerJob<FrameAnalysis> {
-  const FrameCornerJob(this.frame);
+  const FrameCornerJob(this.frame, {this.smart = true});
 
   final CameraFrame frame;
 
+  /// Which hand-made detector steps in when the model is not sure.
+  final bool smart;
+
   @override
-  FrameAnalysis run(CornerModel? model) => analyzeFrame(frame, model: model);
+  FrameAnalysis run(CornerModel? model) => analyzeFrame(frame, smart: smart, model: model);
 }
 
 /// Analyses preview frames off the UI thread. Tests swap in a direct call.
-/// With smart scanning (Pro), frames go to the [CornerWorker], which holds
-/// the corner model; without it, or if the model cannot run, each frame
-/// runs in a fresh isolate on the hand-made detector alone.
+/// On every plan, frames go to the [CornerWorker], which holds the corner
+/// model; if the model cannot run, each frame runs in a fresh isolate on
+/// the hand-made detector alone (the smarter one with smart scanning).
 final frameAnalyzerProvider = Provider<FrameAnalyzer>((ref) {
   final smart = ref.watch(planIncludesProvider(PlanFeature.smartScan));
   FrameAnalysis plain(CameraFrame frame) => analyzeFrame(frame, smart: smart);
-  if (!smart) return (frame) => Isolate.run(() => plain(frame));
   final worker = ref.watch(cornerWorkerProvider);
   return (frame) async {
     final w = await worker();
-    return w == null ? Isolate.run(() => plain(frame)) : w.run(FrameCornerJob(frame));
+    return w == null ? Isolate.run(() => plain(frame)) : w.run(FrameCornerJob(frame, smart: smart));
   };
 });
 
@@ -199,26 +202,28 @@ typedef SpreadSplitter = Future<(CropQuad, CropQuad)> Function(String photoPath)
 
 /// A book spread photo for the [CornerWorker].
 class SpreadCornerJob extends CornerJob<(CropQuad, CropQuad)> {
-  const SpreadCornerJob(this.path);
+  const SpreadCornerJob(this.path, {this.smart = true});
 
   final String path;
 
+  /// Which hand-made detector steps in when the model is not sure.
+  final bool smart;
+
   @override
   (CropQuad, CropQuad) run(CornerModel? model) =>
-      splitSpread(RgbImage.decode(File(path).readAsBytesSync(), maxDimension: 640), model: model);
+      splitSpread(RgbImage.decode(File(path).readAsBytesSync(), maxDimension: 640), smart: smart, model: model);
 }
 
 /// Finds the left and right page in a photo of an open book, off the UI
-/// thread (Book mode). With smart scanning the corner model looks for the
-/// spread first.
+/// thread (Book mode). On every plan the corner model looks for the spread
+/// first.
 final spreadSplitterProvider = Provider<SpreadSplitter>((ref) {
   final smart = ref.watch(planIncludesProvider(PlanFeature.smartScan));
   Future<(CropQuad, CropQuad)> plain(String path) =>
       Isolate.run(() => splitSpread(RgbImage.decode(File(path).readAsBytesSync(), maxDimension: 640), smart: smart));
-  if (!smart) return plain;
   final worker = ref.watch(cornerWorkerProvider);
   return (path) async {
     final w = await worker();
-    return w == null ? plain(path) : w.run(SpreadCornerJob(path));
+    return w == null ? plain(path) : w.run(SpreadCornerJob(path, smart: smart));
   };
 });
