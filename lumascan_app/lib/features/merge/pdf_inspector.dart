@@ -27,7 +27,11 @@ class PdfrxInspector implements PdfInspector {
   Future<PdfInfo> inspect(String path) async {
     try {
       await pdfrxFlutterInitialize();
-      final document = await PdfDocument.openFile(path, passwordProvider: () async => null);
+      final document = await PdfDocument.openFile(
+        path,
+        passwordProvider: () async => null,
+        useProgressiveLoading: true,
+      );
       try {
         final count = document.pages.length;
         return count == 0 ? const PdfInfo.problem(PdfProblem.unreadable) : PdfInfo.ok(count);
