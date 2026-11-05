@@ -6,10 +6,16 @@ import 'rgb_image.dart';
 /// a drawing, a table the reader could not make out. [top] is where it sat
 /// on the page (0 to 1), for placing it among the text.
 class OcrFigure {
-  const OcrFigure({required this.top, required this.image});
+  const OcrFigure({required this.top, required this.image, this.left = 0, this.right = 1, double? bottom})
+    : bottom = bottom ?? top;
 
   final double top;
   final RgbImage image;
+
+  /// The rest of its box on the page (0 to 1), for placing it where it sat.
+  final double left;
+  final double right;
+  final double bottom;
 }
 
 /// Finds the parts of [page] that text recognition left out. [text] holds
@@ -36,7 +42,17 @@ List<OcrFigure> findFigures(
     final y0 = (top * page.height).round().clamp(0, page.height);
     final y1 = (bottom * page.height).round().clamp(0, page.height);
     final box = _inkBox(page, y0, y1);
-    if (box != null) figures.add(OcrFigure(top: top, image: _crop(page, box)));
+    if (box != null) {
+      figures.add(
+        OcrFigure(
+          top: top,
+          image: _crop(page, box),
+          left: box.x0 / page.width,
+          right: box.x1 / page.width,
+          bottom: box.y1 / page.height,
+        ),
+      );
+    }
   }
   return figures;
 }

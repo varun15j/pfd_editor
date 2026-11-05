@@ -67,6 +67,30 @@ readable; the Basic plan shows the upgrade pop-up instead.
 | 2 | Camera button, take 2 photos, Review document | A new 2-page document, not the ID card |
 | 3 | Export > Export as PDF > Save PDF | The Library has 2 documents; the ID card is still there |
 
+## J4: Recognize text on 5 pages, Create text PDF, Create Word file
+
+Automated in `integration_test/ocr_journeys_test.dart`. The pages are the 35 Word feature test pages
+(`sample_photos/word_pages/`), added as a tester adds them by hand.
+
+| # | Step | Expected |
+|---|---|---|
+| 1 | Settings > Developer > Add Word test pages | A new 35-page document opens on the Pages screen |
+| 2 | Batch edit > Clear, select pages 1, 2, 6, 7 and 21 | "5 selected" |
+| 3 | OCR > Recognize text on 5 pages | "Finished: 5 with text" |
+| 4 | Create text PDF | A "Creating text PDF" dialog with "Page X of 5" and Cancel, then "Text PDF saved" in under a minute |
+| 5 | Read the PDF's text as a PDF app does (PDFium) | Every page has its text; page 1 has "Feature Test". The pages look like the scan: the text is invisible |
+| 6 | Create Word file | A "Creating Word file" dialog, then "Word file ready" in under a minute |
+| 7 | Read the Word file | It has the text, and at least 2 pictures: the chart and the picture of page 21, cut from the scan |
+
+## J5: All 35 pages, in time
+
+| # | Step | Expected |
+|---|---|---|
+| 1 | Settings > Developer > Add Word test pages, Batch edit | "35 selected" |
+| 2 | OCR > Recognize text on 35 pages | "Finished: ..." |
+| 3 | Create text PDF | "Text PDF saved" in under 2 minutes (it took 10 to 20 minutes before the fix); 30 or more pages have a text layer |
+| 4 | Create Word file | "Word file ready" in under 2 minutes, with pictures |
+
 ## Known limits
 
 - The Google ML Kit document scanner cannot be opened on most emulators (its module download fails), so Retake on

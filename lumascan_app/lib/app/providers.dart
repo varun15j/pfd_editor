@@ -32,6 +32,7 @@ import '../export/word/word_service.dart';
 import '../pdf_edit/pdf_edit_controller.dart';
 import '../features/batch_capture/batch_camera.dart';
 import '../imaging/corner_worker.dart';
+import '../imaging/page_renderer.dart';
 import '../imaging/render_queue.dart';
 import '../imaging/render_service.dart';
 import 'device_load.dart';
@@ -62,7 +63,12 @@ final jpgExporterProvider = Provider<JpgExporter>((ref) => JpgExporter(ref.watch
 /// Makes text PDFs: OCR on the pages, then a PDF of the text with the
 /// pictures kept (Pro and Gold).
 final textPdfServiceProvider = Provider<TextPdfService>(
-  (ref) => TextPdfService(ref.watch(pageStoreProvider), ref.watch(ocrEngineProvider), ref.watch(pdfRasterizerProvider)),
+  (ref) => TextPdfService(
+    ref.watch(pageStoreProvider),
+    ref.watch(ocrEngineProvider),
+    ref.watch(pdfRasterizerProvider),
+    ref.watch(ocrPageImageProvider),
+  ),
 );
 
 /// Converts saved PDFs to Word files and Word files to PDFs.
@@ -96,13 +102,24 @@ final photoAnalyzerProvider = Provider<PhotoAnalyzer>((ref) {
   return DetectorPhotoAnalyzer(smart: smart, worker: smart ? ref.watch(cornerWorkerProvider) : null);
 });
 
+/// Longest side of the page image that text recognition reads.
+const ocrImageSize = 2400;
+
+/// The page as text recognition reads it: its crop, filter and masks, from
+/// the render cache. The text PDF and the Word file reuse the same image, so
+/// the text sits exactly where it was read and no page is drawn twice.
+final ocrPageImageProvider = Provider<Future<RenderedImage> Function(ScanPage page)>((ref) {
+  final render = ref.watch(renderServiceProvider);
+  return (page) => render.renderMasked(page, maxDimension: ocrImageSize);
+});
+
 /// On-device text recognition. It reads each page as rendered with its crop
 /// and filter, at a size that keeps small print legible, with its masks
 /// burned in so hidden ID numbers are never read into the text: ML Kit for
 /// Latin and Devanagari, Tesseract for the other Indian scripts.
 final ocrEngineProvider = Provider<OcrEngine>((ref) {
-  Future<String> imageFor(ScanPage page) async =>
-      (await ref.read(renderServiceProvider).renderMasked(page, maxDimension: 2400)).path;
+  final pageImage = ref.watch(ocrPageImageProvider);
+  Future<String> imageFor(ScanPage page) async => (await pageImage(page)).path;
   return RoutedOcrEngine(
     fallback: MlKitOcrEngine(imageFor: imageFor),
     special: TesseractOcrEngine(imageFor: imageFor),

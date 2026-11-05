@@ -10,12 +10,16 @@ import '../../domain/ocr.dart';
 import '../../domain/plan.dart';
 import '../../domain/saved_export.dart';
 import '../../domain/scan_document.dart';
+import '../../imaging/page_jobs.dart';
+import '../../imaging/page_renderer.dart';
 import '../../pdf_edit/pdf_saver.dart';
 import '../../ui/luma_icons.dart';
 import '../../ui/upgrade_dialog.dart';
+import '../../ui/work_progress.dart';
 import '../export/saved_exports.dart';
 import '../share/docx_sharer.dart';
 import '../word_reader/open_word_document.dart';
+import 'ocr_word_figure.dart';
 // Deferred, like the Word reader: the Word library loads only when used
 // (an on-demand download on Android, built in on iOS).
 import 'ocr_word_builder.dart' deferred as builder;
@@ -49,6 +53,8 @@ Future<void> createOcrWordFile(
     options: {
       'kind': 'ocrWord',
       'text': [for (final page in pages) page.text],
+      // Files made before pictures were added are made again.
+      'pictures': 1,
     },
   );
   final String path;
@@ -64,9 +70,36 @@ Future<void> createOcrWordFile(
     if (plan is ExportReuse) {
       path = plan.saved.path;
     } else {
+      // The parts of each page that were not read (pictures, drawings) are
+      // cut out of the scan, a few pages at a time off the UI thread, with
+      // the page count showing and a Cancel button.
+      // They are cut from the page image text recognition read, which is
+      // already on disk, so no page is drawn again from the full photo.
+      if (!context.mounted) return;
+      final pageImage = ref.read(ocrPageImageProvider);
+      final figures = await runWithProgress(
+        context,
+        title: 'Creating Word file',
+        task: (progress) async {
+          final images = <RenderedImage?>[];
+          for (final p in pages) {
+            if (progress.cancelled) throw const PageJobsCancelled();
+            images.add(await pageImage(p.page).then<RenderedImage?>((r) => r, onError: (Object _) => null));
+          }
+          return runPageJobs(
+            [for (final (i, p) in pages.indexed) (p, images[i])],
+            ((OcrWordInput, RenderedImage?) job) =>
+                ocrWordFigures(job.$1.page, text: job.$1.text, layout: job.$1.layout, image: job.$2),
+            onProgress: progress.report,
+            isCancelled: () => progress.cancelled,
+          );
+        },
+      );
+      if (figures == null) return;
       await builder.loadLibrary();
       final bytes = builder.buildOcrWordFile([
-        for (final page in pages) builder.OcrWordPage(text: page.text, layout: page.layout),
+        for (final (i, page) in pages.indexed)
+          builder.OcrWordPage(text: page.text, layout: page.layout, figures: figures[i]),
       ], title: name);
       final target = plan is ExportNew ? plan.fileName : await store.freeExportName(fileName);
       if (plan is ExportNew) await store.savedDir;
@@ -89,7 +122,8 @@ Future<void> createOcrWordFile(
       }
     }
   } on Object catch (e) {
-    messenger.showSnackBar(SnackBar(content: Text('Could not create the Word file. Try again. ($e)')));
+    debugPrint('OCR to Word failed: $e');
+    messenger.showSnackBar(const SnackBar(content: Text('Could not create the Word file. Try again.')));
     return;
   }
   if (!context.mounted) return;

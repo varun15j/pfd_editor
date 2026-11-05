@@ -13,6 +13,7 @@ import '../pages/scan_controller.dart';
 import 'batch_ocr_job.dart';
 import '../../app/preferences.dart';
 import '../../ui/luma_icons.dart';
+import '../../ui/work_progress.dart';
 import '../ocr_word/create_ocr_word.dart';
 
 /// Batch OCR (BE-07): checks that text recognition can run, then reads the
@@ -81,8 +82,20 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
     setState(() => _building = true);
     OcrPdfFile? made;
     try {
-      made = await OcrPdfBuilder(ref.read(pageStoreProvider)).build(pages, keepLayout: keepLayout);
-    } on Object catch (_) {
+      // Drawing each page can take seconds on a slow phone, so the build
+      // shows which page it is on and can be stopped.
+      made = await runWithProgress(
+        context,
+        title: 'Creating text PDF',
+        task: (progress) => OcrPdfBuilder(ref.read(pageStoreProvider), pageImage: ref.read(ocrPageImageProvider)).build(
+          pages,
+          keepLayout: keepLayout,
+          onProgress: (done, total) => progress.report(done.clamp(0, pages.length), pages.length),
+          isCancelled: () => progress.cancelled,
+        ),
+      );
+    } on Object catch (e, stack) {
+      debugPrint('Create text PDF failed: $e\n$stack');
       messenger.showSnackBar(const SnackBar(content: Text('Could not create the PDF. Try again.')));
     } finally {
       if (mounted) setState(() => _building = false);
