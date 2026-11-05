@@ -129,6 +129,77 @@ void main() {
     expect(cell(wrapped, 2), 'Bulleted lists: multi-level, custom symbol, Wingdings, picture bullet');
   });
 
+  group('real OCR noise', () {
+    // What ML Kit did on BlueStacks with these pages: blocks out of order,
+    // line numbers joined to their lines, a row number misread.
+    OcrWordPage noisy(
+      OcrWordPage p, {
+      bool shuffle = false,
+      bool joinNumbers = false,
+      Map<String, String> misread = const {},
+    }) {
+      var blocks = [...p.layout!.blocks];
+      if (shuffle) blocks = [...blocks.reversed];
+      final out = <OcrBlock>[];
+      final numbers = <OcrLine>[];
+      for (final b in blocks) {
+        final lines = <OcrLine>[];
+        for (final l in b.lines) {
+          final text = misread[l.text] ?? l.text;
+          if (joinNumbers && RegExp(r'^\d+$').hasMatch(text) && l.left < 0.1) {
+            numbers.add(l);
+            continue;
+          }
+          lines.add(OcrLine(text: text, left: l.left, top: l.top, right: l.right, bottom: l.bottom));
+        }
+        if (lines.isNotEmpty) {
+          out.add(OcrBlock(text: '', left: b.left, top: b.top, right: b.right, bottom: b.bottom, lines: lines));
+        }
+      }
+      if (joinNumbers) {
+        // Each margin number becomes the start of the first line beside it.
+        for (final n in numbers) {
+          for (final (bi, b) in out.indexed) {
+            final i = b.lines.indexWhere((l) => (l.top + l.bottom) / 2 > n.top && (l.top + l.bottom) / 2 < n.bottom);
+            if (i < 0) continue;
+            final l = b.lines[i];
+            final lines = [...b.lines];
+            lines[i] = OcrLine(text: '${n.text} ${l.text}', left: n.left, top: l.top, right: l.right, bottom: l.bottom);
+            out[bi] = OcrBlock(text: '', left: b.left, top: b.top, right: b.right, bottom: b.bottom, lines: lines);
+            break;
+          }
+        }
+      }
+      final layout = OcrLayout(out);
+      return OcrWordPage(text: layout.text, layout: layout);
+    }
+
+    String cell(WordTableRow r, int c) => _words((r.cells[c].blocks.first as WordParagraph).text);
+
+    test('blocks out of order still give one table, top to bottom', () {
+      final doc = WordReader.read(
+        buildOcrWordFile([
+          noisy(pages[4], shuffle: true, misread: {'40': '4;'}),
+        ]),
+      );
+      final tables = _tables(doc.sections.first).toList();
+      expect(tables, hasLength(1));
+      final first = [for (final r in tables.first.rows) cell(r, 0)];
+      expect(first.take(4), ['#', '25', '26', '27']);
+      expect(first.last, '56');
+      final text = _words(doc.plainText);
+      expect(text.indexOf('Even page header'), lessThan(text.indexOf('Paragraph shading')));
+    });
+
+    test('line numbers joined to their lines are taken off', () {
+      final doc = WordReader.read(buildOcrWordFile([noisy(pages[13], joinNumbers: true)]));
+      expect(doc.sections.first.lineNumbers, isNotNull);
+      final paras = doc.sections.first.blocks.whereType<WordParagraph>().map((p) => p.text).toList();
+      expect(paras, containsAll(['Styles', '4.1 Built-in styles', 'This paragraph uses the built-in Quote style.']));
+      expect(paras.where((t) => RegExp(r'^16\d ').hasMatch(t)), isEmpty);
+    });
+  });
+
   group('layout from line positions', () {
     OcrLine line(String t, double l, double top, double r, {double h = 0.016}) =>
         OcrLine(text: t, left: l, top: top, right: r, bottom: top + h);

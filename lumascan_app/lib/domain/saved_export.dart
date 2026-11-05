@@ -11,7 +11,12 @@ import 'scan_document.dart';
 enum ExportFormat {
   pdf('pdf', 'PDF'),
   textPdf('text_pdf', 'Text PDF'),
-  word('docx', 'Word');
+  word('docx', 'Word'),
+
+  /// OCR to Word (Pro and Gold): the recognised text rebuilt as an
+  /// editable Word file with the luma_docx library. Kept apart from [word]
+  /// so it never replaces the Basic Word export of the same scan.
+  ocrWord('ocr_docx', 'Word (text)');
 
   const ExportFormat(this.id, this.label);
 

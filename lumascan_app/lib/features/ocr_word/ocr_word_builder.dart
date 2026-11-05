@@ -121,7 +121,25 @@ class _Builder {
       }
     }
     if (lines.isEmpty) return _plain(page.text);
-    return _layout(_withoutLineNumbers(_withoutOverprint(lines)));
+    return _layout(_readingOrder(_withoutLineNumbers(_withoutOverprint(lines))));
+  }
+
+  /// Engines report blocks in their own order (ML Kit does not always go
+  /// top to bottom). Blocks are put in order of where they start on the
+  /// page, keeping each block's lines together.
+  List<_Line> _readingOrder(List<_Line> lines) {
+    final tops = <int, double>{};
+    for (final l in lines) {
+      tops[l.block] = tops[l.block] == null || l.top < tops[l.block]! ? l.top : tops[l.block]!;
+    }
+    final order = [...lines.indexed];
+    order.sort((a, b) {
+      final byBlock = tops[a.$2.block]!.compareTo(tops[b.$2.block]!);
+      if (byBlock != 0 && a.$2.block != b.$2.block) return byBlock;
+      if (a.$2.block != b.$2.block) return a.$2.block.compareTo(b.$2.block);
+      return a.$1.compareTo(b.$1);
+    });
+    return [for (final (_, l) in order) l];
   }
 
   /// Drops large text printed across other text, such as a SAMPLE or
@@ -132,7 +150,7 @@ class _Builder {
         a.block != b.block && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
     final kept = [
       for (final l in lines)
-        if (!(l.height > 2 * _median(lines) && lines.where((o) => crosses(l, o)).length >= 2)) l,
+        if (!(l.height > 2 * _median(lines) && lines.any((o) => crosses(l, o)))) l,
     ];
     return kept.isEmpty ? lines : kept;
   }
@@ -142,20 +160,38 @@ class _Builder {
   /// every line and turn the page into a table, so they are taken out and
   /// the page gets Word's own line numbering instead.
   List<_Line> _withoutLineNumbers(List<_Line> lines) {
-    final digits = RegExp(r'^\d{1,4}$');
-    final numbers = lines.where((l) => digits.hasMatch(l.text)).toList();
-    if (numbers.length < 3) return lines;
-    final edge = numbers.map((l) => l.left).reduce((a, b) => a < b ? a : b);
-    final column = numbers.where((l) => l.left - edge < 12).toList();
-    final columnRight = column.map((l) => l.right).reduce((a, b) => a > b ? a : b);
-    final others = lines.where((l) => !column.contains(l));
-    if (column.length < 3 || others.isEmpty) return lines;
+    // OCR may read a number alone ("12", "12.") or join it to the text of
+    // its line ("12 Table of Contents").
+    final alone = RegExp(r'^\d{1,4}[.;:,]?$');
+    final joined = RegExp(r'^\d{1,4}\s+(?=\S)');
+    final numbers = lines.where((l) => alone.hasMatch(l.text)).toList();
+    final prefixed = lines.where((l) => joined.hasMatch(l.text)).toList();
+    final edgeOf = numbers.length >= 3 ? numbers : (prefixed.length >= 5 ? prefixed : null);
+    if (edgeOf == null) return lines;
+    final edge = edgeOf.map((l) => l.left).reduce((a, b) => a < b ? a : b);
+    final column = numbers.where((l) => l.left - edge < 12).toSet();
+    final starts = prefixed.where((l) => l.left - edge < 12).toSet();
+    if (column.length + starts.length < 3) return lines;
+    final columnRight = column.isEmpty ? edge + 20 : column.map((l) => l.right).reduce((a, b) => a > b ? a : b);
+    final others = lines.where((l) => !column.contains(l) && !starts.contains(l)).toList();
     // Nearly all the other text starts clear of the column (a line set out
     // into the margin may not).
     final clear = others.where((l) => l.left - columnRight >= 12).length;
-    if (clear < others.length * 0.95) return lines;
+    if (others.isNotEmpty && clear < others.length * 0.95) return lines;
     lineNumbers = true;
-    return others.toList();
+    return [
+      for (final l in lines)
+        if (column.contains(l))
+          ...<_Line>[]
+        else if (starts.contains(l))
+          () {
+            final cut = joined.firstMatch(l.text)!.end;
+            final left = l.left + (l.right - l.left) * cut / l.text.length;
+            return _Line(l.text.substring(cut), left, l.top, l.right, l.bottom, l.block);
+          }()
+        else
+          l,
+    ];
   }
 
   double _median(List<_Line> lines) {
@@ -289,8 +325,9 @@ class _Builder {
     }
 
     final index = _index++;
-    if (level != null)
+    if (level != null) {
       headings.add(WordHeading(level: level, text: group.map((l) => l.text).join(' '), paragraphIndex: index));
+    }
     return WordParagraph(
       index: index,
       style: WordParagraphStyle(
@@ -380,6 +417,24 @@ class _Builder {
             l.table = id;
           }
         }
+        // The same table split by a row that was read badly: join them,
+        // with the rows between.
+        final last = tables.isEmpty ? null : tables.last;
+        if (last != null && _sameColumns(last, run, body)) {
+          final from = rows.indexOf(last.last) + 1;
+          final between = rows.sublist(from, k);
+          final gap = run.first.first.top - last.last.map((l) => l.bottom).reduce((a, b) => a > b ? a : b);
+          if (between.length <= 3 && gap < body * 8) {
+            for (final r in [...between, ...run]) {
+              for (final l in r) {
+                l.table = tables.length - 1;
+              }
+            }
+            last.addAll([...between, ...run]);
+            k = m;
+            continue;
+          }
+        }
         tables.add(run);
         k = m;
       } else {
@@ -387,6 +442,16 @@ class _Builder {
       }
     }
     return tables;
+  }
+
+  bool _sameColumns(List<List<_Line>> a, List<List<_Line>> b, double body) {
+    List<double> starts(List<List<_Line>> t) => [
+      for (final l in t.reduce((x, y) => y.length > x.length ? y : x)) l.left,
+    ];
+    final sa = starts(a);
+    final sb = starts(b);
+    return sa.length == sb.length &&
+        [for (var i = 0; i < sa.length; i++) (sa[i] - sb[i]).abs() < body * 2].every((v) => v);
   }
 
   WordTable _table(List<List<_Line>> rows, double left, double right) {
