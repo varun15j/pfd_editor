@@ -9,10 +9,16 @@ import '../../ui/file_size.dart';
 import '../../ui/luma_icons.dart';
 import '../library/document_tile.dart';
 import '../share/docx_sharer.dart';
+import '../word_reader/open_word_document.dart' as reader;
 import 'saved_exports.dart';
 
 /// Opens a saved Word file in Word or another app that reads .docx.
 Future<void> openWordFile(BuildContext context, SavedExport export) async {
+  // A Word file made by OCR to Word (Pro and Gold) opens in the app's own
+  // Word reader, like it did when it was made.
+  if (export.format == ExportFormat.ocrWord) {
+    return reader.openWordFile(context, export.path, name: p.basenameWithoutExtension(export.path));
+  }
   final messenger = ScaffoldMessenger.of(context);
   final result = await OpenFilex.open(export.path, type: SharePlusDocxSharer.mimeType);
   if (result.type == ResultType.done) return;

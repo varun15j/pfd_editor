@@ -28,7 +28,7 @@ Uint8List buildOcrWordFile(List<OcrWordPage> pages, {String? title}) =>
 /// indents, bullet and numbered lists, and tables from text in rows and
 /// columns. Without a layout the text goes in paragraph by paragraph.
 WordDocument buildOcrWordDocument(List<OcrWordPage> pages, {String? title}) {
-  final b = _Builder();
+  final b = _Builder()..watermarks = _watermarks(pages);
   final sections = <WordSection>[
     for (final p in pages)
       () {
@@ -61,6 +61,36 @@ WordDocument buildOcrWordDocument(List<OcrWordPage> pages, {String? title}) {
   );
 }
 
+/// Large text that comes back on many pages, such as a SAMPLE or DRAFT
+/// watermark: it is printed over the page, not part of the text. Found by
+/// the words, so a misread on one page doesn't matter.
+Set<String> _watermarks(List<OcrWordPage> pages) {
+  final seen = <String, int>{};
+  for (final p in pages) {
+    final lines = [
+      for (final b in p.layout?.blocks ?? const <OcrBlock>[])
+        for (final l in b.lines.isEmpty ? <OcrBox>[b] : b.lines) l,
+    ];
+    if (lines.length < 3) continue;
+    final heights = [for (final l in lines) l.bottom - l.top]..sort();
+    final median = heights[heights.length ~/ 2];
+    final big = {
+      for (final l in lines)
+        if (l.bottom - l.top > 2.5 * median && _key(l.text).length >= 3) _key(l.text),
+    };
+    for (final k in big) {
+      seen[k] = (seen[k] ?? 0) + 1;
+    }
+  }
+  final enough = pages.length < 4 ? 2 : (pages.length * 0.25).ceil().clamp(3, 1 << 30);
+  return {
+    for (final e in seen.entries)
+      if (e.value >= enough) e.key,
+  };
+}
+
+String _key(String text) => text.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+
 const _pageW = 595.3;
 const _pageH = 841.9;
 const _margin = 54.0;
@@ -71,6 +101,7 @@ const _boxToFont = 1.2;
 
 final _bullet = RegExp(r'^([•●▪◦○■□➢►✓\-–\*·])\s+');
 final _number = RegExp(r'^(\d{1,3})[.)]\s+');
+final _leader = RegExp(r'[.…·_-]{4,}\s*\S{0,8}$');
 
 class _Line {
   _Line(this.text, this.left, this.top, this.right, this.bottom, this.block);
@@ -91,6 +122,9 @@ class _Builder {
   var _index = 0;
   var _lists = 0;
   final headings = <WordHeading>[];
+
+  /// Text found by [_watermarks], left out wherever it is large.
+  Set<String> watermarks = const {};
 
   /// Whether the last page built had line numbers down its margin.
   var lineNumbers = false;
@@ -150,7 +184,8 @@ class _Builder {
         a.block != b.block && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
     final kept = [
       for (final l in lines)
-        if (!(l.height > 2 * _median(lines) && lines.any((o) => crosses(l, o)))) l,
+        if (!(l.height > 2 * _median(lines) && (lines.any((o) => crosses(l, o)) || watermarks.contains(_key(l.text)))))
+          l,
     ];
     return kept.isEmpty ? lines : kept;
   }
@@ -160,24 +195,17 @@ class _Builder {
   /// every line and turn the page into a table, so they are taken out and
   /// the page gets Word's own line numbering instead.
   List<_Line> _withoutLineNumbers(List<_Line> lines) {
-    // OCR may read a number alone ("12", "12.") or join it to the text of
-    // its line ("12 Table of Contents").
+    // Line numbers sit in the page margin, left of where text starts (Word
+    // puts them about 0.25 inch from the text). OCR may read a number alone
+    // ("12", "12.") or join it to the text of its line ("12 Table of
+    // Contents", "103Negative indent"). Table cells with numbers start
+    // inside the margin, so they are not taken.
+    const zone = 66.0;
     final alone = RegExp(r'^\d{1,4}[.;:,]?$');
-    final joined = RegExp(r'^\d{1,4}\s+(?=\S)');
-    final numbers = lines.where((l) => alone.hasMatch(l.text)).toList();
-    final prefixed = lines.where((l) => joined.hasMatch(l.text)).toList();
-    final edgeOf = numbers.length >= 3 ? numbers : (prefixed.length >= 5 ? prefixed : null);
-    if (edgeOf == null) return lines;
-    final edge = edgeOf.map((l) => l.left).reduce((a, b) => a < b ? a : b);
-    final column = numbers.where((l) => l.left - edge < 12).toSet();
-    final starts = prefixed.where((l) => l.left - edge < 12).toSet();
-    if (column.length + starts.length < 3) return lines;
-    final columnRight = column.isEmpty ? edge + 20 : column.map((l) => l.right).reduce((a, b) => a > b ? a : b);
-    final others = lines.where((l) => !column.contains(l) && !starts.contains(l)).toList();
-    // Nearly all the other text starts clear of the column (a line set out
-    // into the margin may not).
-    final clear = others.where((l) => l.left - columnRight >= 12).length;
-    if (others.isNotEmpty && clear < others.length * 0.95) return lines;
+    final joined = RegExp(r'^\d{1,4}(\s+|(?=[A-Z(“"]))(?=\S)');
+    final column = lines.where((l) => alone.hasMatch(l.text) && l.right < zone).toSet();
+    final starts = lines.where((l) => !column.contains(l) && l.left < zone - 12 && joined.hasMatch(l.text)).toSet();
+    if (column.length + starts.length < 2) return lines;
     lineNumbers = true;
     return [
       for (final l in lines)
@@ -255,6 +283,8 @@ class _Builder {
         final prev = group.last;
         if (next.table != null || next.block != line.block) break;
         if (_bullet.hasMatch(next.text) || _number.hasMatch(next.text)) break;
+        // A contents entry ("Fonts ....... 2") is a line of its own.
+        if (_leader.hasMatch(prev.text) || _leader.hasMatch(next.text)) break;
         if (next.top - prev.bottom > prev.height * 0.8) break;
         if ((next.size - prev.size).abs() > body * 0.25) break;
         group.add(next);
@@ -276,9 +306,12 @@ class _Builder {
     final level = !heading ? null : (size >= body * 1.7 ? 1 : 2);
 
     WordAlign align = WordAlign.left;
-    final centred = group.every(
-      (l) => (l.centre - (left + right) / 2).abs() < width * 0.04 && l.left - left > width * 0.08,
-    );
+    // Centred: as much space on each side, and clearly not a full line.
+    final centred = group.every((l) {
+      final gapLeft = l.left - left;
+      final gapRight = right - l.right;
+      return (gapLeft - gapRight).abs() < width * 0.06 && gapLeft > width * 0.035;
+    });
     final righted = group.every((l) => (right - l.right) < width * 0.02 && l.left - left > width * 0.3);
     if (centred) {
       align = WordAlign.center;
@@ -356,7 +389,12 @@ class _Builder {
     for (final l in sorted) {
       final mid = (l.top + l.bottom) / 2;
       final row = rows.isEmpty ? null : rows.last;
-      if (row != null && row.any((o) => mid > o.top && mid < o.bottom && o.block != l.block)) {
+      // Cells of one row: other blocks on the same band, or lines of the
+      // same block side by side (an engine may put a whole row in a block).
+      if (row != null &&
+          row.any(
+            (o) => mid > o.top && mid < o.bottom && (o.block != l.block || l.left >= o.right || o.left >= l.right),
+          )) {
         row.add(l);
       } else {
         rows.add([l]);
@@ -388,8 +426,15 @@ class _Builder {
       // one of them on its left or right side (numbers sit on the right).
       final lefts = [for (final l in rows[k]) l.left];
       final rights = [for (final l in rows[k]) l.right];
-      bool fits(List<_Line> r) =>
-          r.every((l) => lefts.any((x) => (x - l.left).abs() < body) || rights.any((x) => (x - l.right).abs() < body));
+      // Most cells must line up (a header can miss a cell OCR didn't read,
+      // such as a lone "#", and then has fewer cells than the rows below).
+      bool fits(List<_Line> r) {
+        final hit = r
+            .where((l) => lefts.any((x) => (x - l.left).abs() < body) || rights.any((x) => (x - l.right).abs() < body))
+            .length;
+        return r.length <= 2 ? hit == r.length : hit >= r.length - 1 && hit >= 2;
+      }
+
       var m = k + 1;
       while (m < rows.length) {
         final r = rows[m];
@@ -404,6 +449,11 @@ class _Builder {
             m + 1 < rows.length &&
             multi(rows[m + 1])) {
           run.add(r); // wrapped text of a cell
+        } else if (r.length == 1 &&
+            r.first.top - prevBottom < body * 0.8 &&
+            lefts.any((x) => (x - r.first.left).abs() < body) &&
+            r.first.left > run.first.first.left + body) {
+          run.add(r); // the last row's wrapped text
         } else {
           break;
         }

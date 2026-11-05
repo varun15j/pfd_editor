@@ -96,7 +96,7 @@ void main() {
     final body = read.sections[13]; // section 3 of the test document, numbered lines
     expect(body.lineNumbers, isNotNull);
     expect(_tables(body), isEmpty);
-    expect(read.sections[4].lineNumbers, isNull); // the feature list
+    expect(_tables(read.sections[4]), hasLength(1)); // the feature list stays one table
   });
 
   test('the landscape pages stay landscape', () {
@@ -112,6 +112,10 @@ void main() {
   test('the cover title is a heading', () {
     final h = read.headings.map((h) => _words(h.text)).toList();
     expect(h.any((t) => t.contains('Microsoft Word Feature Test')), isTrue, reason: '$h');
+    final title = read.sections.first.blocks.whereType<WordParagraph>().firstWhere(
+      (p) => p.text.contains('Microsoft Word'),
+    );
+    expect(title.style.align, WordAlign.center);
   });
 
   test('the feature list pages become tables with their columns', () {
@@ -146,6 +150,7 @@ void main() {
         final lines = <OcrLine>[];
         for (final l in b.lines) {
           final text = misread[l.text] ?? l.text;
+          if (text.isEmpty) continue;
           if (joinNumbers && RegExp(r'^\d+$').hasMatch(text) && l.left < 0.1) {
             numbers.add(l);
             continue;
@@ -189,6 +194,36 @@ void main() {
       expect(first.last, '56');
       final text = _words(doc.plainText);
       expect(text.indexOf('Even page header'), lessThan(text.indexOf('Paragraph shading')));
+    });
+
+    test('a header row whose # was not read stays the first row of the table', () {
+      final doc = WordReader.read(
+        buildOcrWordFile([
+          noisy(pages[4], shuffle: true, misread: {'#': ''}),
+        ]),
+      );
+      final table = _tables(doc.sections.first).single;
+      expect(
+        [for (var c = 1; c < 4; c++) cell(table.rows.first, c)],
+        ['Ribbon tab / area', 'Feature', 'Sample in this document'],
+      );
+      expect(cell(table.rows[1], 0), '25');
+    });
+
+    test('a watermark that crosses no text is still left out when it is on many pages', () {
+      final doc = WordReader.read(buildOcrWordFile(pages));
+      final paras = [
+        for (final s in doc.sections)
+          for (final b in s.blocks.whereType<WordParagraph>()) _words(b.text),
+      ];
+      expect(paras.where((t) => t == 'SAMPLE'), isEmpty);
+    });
+
+    test('two margin numbers (header and footer lines) are taken off', () {
+      final doc = WordReader.read(buildOcrWordFile([pages[4]]));
+      final paras = doc.sections.first.blocks.whereType<WordParagraph>().map((p) => _words(p.text)).toList();
+      expect(paras.where((t) => RegExp(r'^\d+$').hasMatch(t)), isEmpty, reason: '$paras');
+      expect(doc.sections.first.lineNumbers, isNotNull);
     });
 
     test('line numbers joined to their lines are taken off', () {
