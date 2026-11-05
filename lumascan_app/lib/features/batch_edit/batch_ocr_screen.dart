@@ -13,6 +13,7 @@ import '../pages/scan_controller.dart';
 import 'batch_ocr_job.dart';
 import '../../app/preferences.dart';
 import '../../ui/luma_icons.dart';
+import '../ocr_word/create_ocr_word.dart';
 
 /// Batch OCR (BE-07): checks that text recognition can run, then reads the
 /// selected pages one by one with progress and Cancel, and ends with which
@@ -97,6 +98,20 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
     );
   }
 
+  /// Builds an editable Word file from the pages that were read (Pro and Gold).
+  Future<void> _createWord(BatchOcrJob job, int? Function(String) numberOf) async {
+    final read = [
+      for (final r in job.results)
+        if (r.status == OcrPageStatus.done || r.status == OcrPageStatus.empty) r,
+    ]..sort((a, b) => (numberOf(a.pageId) ?? 0).compareTo(numberOf(b.pageId) ?? 0));
+    setState(() => _building = true);
+    try {
+      await createOcrWordFile(context, ref, [for (final r in read) (text: r.text ?? '', layout: r.layout)]);
+    } finally {
+      if (mounted) setState(() => _building = false);
+    }
+  }
+
   void _start() {
     final state = ref.read(scanControllerProvider);
     final job = BatchOcrJob(
@@ -134,6 +149,7 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
                 numberOf: numberOf,
                 building: _building,
                 onCreatePdf: () => _createPdf(job, numberOf),
+                onCreateWord: () => _createWord(job, numberOf),
               ),
             );
           }
@@ -220,12 +236,19 @@ class _Intro extends StatelessWidget {
 }
 
 class _JobView extends StatelessWidget {
-  const _JobView({required this.job, required this.numberOf, required this.building, required this.onCreatePdf});
+  const _JobView({
+    required this.job,
+    required this.numberOf,
+    required this.building,
+    required this.onCreatePdf,
+    required this.onCreateWord,
+  });
 
   final BatchOcrJob job;
   final int? Function(String pageId) numberOf;
   final bool building;
   final VoidCallback onCreatePdf;
+  final VoidCallback onCreateWord;
 
   @override
   Widget build(BuildContext context) {
@@ -264,6 +287,13 @@ class _JobView extends StatelessWidget {
                   ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(LumaIcons.pdf),
               label: const Text('Create text PDF'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+              onPressed: building ? null : onCreateWord,
+              icon: const Icon(LumaIcons.article),
+              label: const Text('Create Word file'),
             ),
             const SizedBox(height: 8),
           ],

@@ -111,7 +111,12 @@ enum PlanFeature {
   /// Word reader: open a .docx file and read it with its formatting,
   /// pictures, tables, charts, equations, comments and tracked changes
   /// (the luma_docx library). Word to PDF stays on every plan.
-  wordReader(AppPlan.pro);
+  wordReader(AppPlan.pro),
+
+  /// OCR to Word: after Recognize text, builds an editable Word file from
+  /// the text with its layout (headings, lists, tables), with the luma_docx
+  /// library. The Basic Word export stays as it is.
+  ocrToWord(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 
