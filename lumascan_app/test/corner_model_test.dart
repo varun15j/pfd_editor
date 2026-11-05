@@ -106,10 +106,10 @@ void main() {
       expect(analyzeFrame(frame, model: _FakeModel(null)).quad, isNull);
     });
 
-    test('is not used without smart scanning', () {
+    test('is used on Basic too (no smart scanning)', () {
       final model = _FakeModel(quad);
-      analyzeFrame(frame, smart: false, model: model);
-      expect(model.calls, 0);
+      expect(analyzeFrame(frame, smart: false, model: model).quad, quad);
+      expect(model.calls, 1);
     });
   });
 
@@ -143,10 +143,10 @@ void main() {
       expect(PhotoCornerJob(photo).run(null), isNull);
     });
 
-    test('without smart scanning a photo never asks the model', () {
+    test('Basic (no smart scanning) asks the model too, with the plain detector as fallback', () {
       final model = _FakeModel(quad);
-      PhotoCornerJob(photo, smart: false).run(model);
-      expect(model.calls, 0);
+      expect(PhotoCornerJob(photo, smart: false).run(model), quad);
+      expect(model.calls, 1);
     });
 
     test('an unreadable photo still throws, so imports can say which one failed', () {
