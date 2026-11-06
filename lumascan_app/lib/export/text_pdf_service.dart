@@ -4,6 +4,7 @@ import '../data/page_store.dart';
 import '../domain/models.dart';
 import '../domain/ocr.dart';
 import '../features/batch_edit/batch_ocr_job.dart';
+import '../imaging/page_renderer.dart';
 import '../pdf_edit/pdf_saver.dart';
 import 'ocr_pdf_builder.dart';
 
@@ -11,11 +12,14 @@ import 'ocr_pdf_builder.dart';
 /// new PDF, with the parts that were not read kept as images. A page that
 /// could not be read at all goes in as an image, so nothing is lost.
 class TextPdfService {
-  TextPdfService(this._store, this._ocr, this._rasterizer);
+  TextPdfService(this._store, this._ocr, this._rasterizer, [this._pageImage]);
 
   final PageStore _store;
   final OcrEngine _ocr;
   final PdfRasterizer _rasterizer;
+
+  /// The page image text recognition read (see [OcrPdfBuilder.pageImage]).
+  final Future<RenderedImage> Function(ScanPage page)? _pageImage;
 
   /// Longest side of a PDF page when it is rendered to be read.
   static const readSize = 2000;
@@ -55,7 +59,7 @@ class TextPdfService {
     if (read.every((r) => r.status == OcrPageStatus.failed || r.status == OcrPageStatus.cancelled)) {
       throw StateError('No page could be read.');
     }
-    return OcrPdfBuilder(_store).build(
+    return OcrPdfBuilder(_store, pageImage: _pageImage).build(
       [
         for (final (i, r) in read.indexed)
           OcrPdfPage(page: snapshot[i], number: i + 1, text: r.text ?? '', layout: r.layout),

@@ -6,6 +6,8 @@ import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/ocr.dart';
 import 'package:lumascan/export/ocr_pdf_builder.dart';
+
+import 'support/pdf_content.dart';
 import 'support/temp_dir.dart';
 
 /// Line boxes per sample photo, read with tesseract (see the fixture's
@@ -33,7 +35,8 @@ OcrPdfPage _pageFor(String path, List<OcrLine> lines) => OcrPdfPage(
   number: 1,
   text: lines.map((l) => l.text).join('\n'),
   layout: OcrLayout([
-    for (final l in lines) OcrBlock(text: l.text, left: l.left, top: l.top, right: l.right, bottom: l.bottom, lines: [l]),
+    for (final l in lines)
+      OcrBlock(text: l.text, left: l.left, top: l.top, right: l.right, bottom: l.bottom, lines: [l]),
   ]),
 );
 
@@ -65,7 +68,10 @@ void main() {
 
         // The page itself is the background, and it covers the whole page.
         expect(pictures, hasLength(1));
-        expect([pictures.single.left, pictures.single.top, pictures.single.right, pictures.single.bottom], [0, 0, 1, 1]);
+        expect(
+          [pictures.single.left, pictures.single.top, pictures.single.right, pictures.single.bottom],
+          [0, 0, 1, 1],
+        );
         expect(draft.pieces.first, pictures.single);
       });
     }
@@ -87,16 +93,18 @@ void main() {
     expect(out.pageCount, 1);
     final bytes = out.file.readAsBytesSync();
     expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
-    // The text layer is fully transparent, so the photo shows unchanged.
-    expect(latin1.decode(bytes), contains('/ca 0'));
+    // The text layer is invisible PDF text (render mode 3), so the photo
+    // shows unchanged and PDF apps still find and copy the text.
+    expect(pdfContentText(bytes), contains('3 Tr'));
+    expect(latin1.decode(bytes), isNot(contains('/ca 0')));
   });
 
-  test('without keepLayout the text is not made transparent, as in Basic', () async {
+  test('without keepLayout the text is not made invisible, as in Basic', () async {
     final path = fixtures.keys.firstWhere((k) => k.endsWith('05_bend_a_straw.jpg'));
     final tmp = Directory.systemTemp.createTempSync('lumascan_flow');
     addTearDown(() => deleteTemp(tmp));
     final out = await OcrPdfBuilder(PageStore(rootDir: () async => tmp))
         .build([_pageFor(path, fixtures[path]!)], fileName: 'flow.pdf');
-    expect(latin1.decode(out.file.readAsBytesSync()), isNot(contains('/ca 0')));
+    expect(pdfContentText(out.file.readAsBytesSync()), isNot(contains('3 Tr')));
   });
 }
