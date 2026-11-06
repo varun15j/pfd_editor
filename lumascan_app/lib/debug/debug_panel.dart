@@ -1,3 +1,6 @@
+import 'test_data_backup.dart';
+import 'test_data_backup_tile.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -140,6 +143,7 @@ class DebugPanel extends StatelessWidget {
                 SamplePagesTile(set: oddsBookSamples, onStart: onClose),
                 SamplePagesTile(set: edgeSamples, onStart: onClose),
                 SamplePagesTile(set: colourBookSamples, onStart: onClose),
+                if (TestDataBackup.supported) ...[const Divider(), const TestDataBackupTile()],
                 const Divider(),
                 SwitchListTile(
                   title: const Text('Profile image loading'),
