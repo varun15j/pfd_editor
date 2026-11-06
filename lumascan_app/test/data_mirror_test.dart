@@ -32,6 +32,7 @@ void main() {
     write(docs, 'exports/Saved/Scan.pdf', 'pdf');
     write(docs, 'pages/a.jpg', 'photo');
     write(docs, 'renders/a_preview.jpg', 'preview');
+    write(docs, 'res_timestamp-80-1793961195461', '');
     write(dbs, 'export_state.db', 'db');
     final info = backUpMirror(job, version: '1.44.0+76')!;
     expect(info.files, 4);

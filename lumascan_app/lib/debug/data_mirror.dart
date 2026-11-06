@@ -114,7 +114,13 @@ int restoreMirror(MirrorJob job, {bool replace = false}) {
 void _copy(File src, File dst) {
   dst.parent.createSync(recursive: true);
   src.copySync(dst.path);
-  dst.setLastModifiedSync(src.lastModifiedSync());
+  try {
+    dst.setLastModifiedSync(src.lastModifiedSync());
+  } on FileSystemException {
+    // Shared storage on some phones (BlueStacks) does not let an app set a
+    // file's time. The copy is then as new as the moment it was made, never
+    // older than its source, so it still counts as current.
+  }
 }
 
 /// Every file under [dir], as paths relative to it, without the skipped
@@ -126,7 +132,11 @@ List<String> _files(String dir) {
     for (final e in root.listSync(recursive: true, followLinks: false))
       if (e is File)
         if (p.relative(e.path, from: dir) case final rel
-            when !mirrorSkipped.contains(p.split(rel).first) && !rel.endsWith('-journal') && rel != mirrorLink)
+            when !mirrorSkipped.contains(p.split(rel).first) &&
+                !rel.endsWith('-journal') &&
+                rel != mirrorLink &&
+                // Flutter's own marker of when the app was installed.
+                !p.basename(rel).startsWith('res_timestamp-'))
           rel,
   ];
 }
