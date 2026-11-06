@@ -23,7 +23,7 @@ class ProfileLocation {
     bool? isAndroid,
   }) : sharedDir = sharedDir ?? defaultSharedDir,
        _privateDir = privateDir ?? getDatabasesPath,
-       _requestAccess = requestAccess ?? _askForAllFilesAccess,
+       _requestAccess = requestAccess ?? askForAllFilesAccess,
        _isAndroid = isAndroid ?? Platform.isAndroid;
 
   /// The shared Documents folder on Android's primary storage.
@@ -75,7 +75,7 @@ class ProfileLocation {
 
   /// Android 11 and newer: "All files access" (opens the system page);
   /// Android 8 to 10: the storage permission.
-  static Future<bool> _askForAllFilesAccess() async {
+  static Future<bool> askForAllFilesAccess() async {
     if ((await Permission.manageExternalStorage.request()).isGranted) return true;
     return (await Permission.storage.request()).isGranted;
   }
