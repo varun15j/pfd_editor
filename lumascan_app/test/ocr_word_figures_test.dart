@@ -42,18 +42,69 @@ OcrBlock _block(String text, double top, double bottom) => OcrBlock(
 
 void main() {
   group('pictures cut from the scan for OCR to Word', () {
-    test('the chart and the picture on the pictures page are found where they sat', () {
+    test('every picture on the pictures page is found where it sat, beside text too', () {
       final (page, layout) = wordTestPage(21);
       final figures = ocrWordFigures(page, text: layout.text, layout: layout);
-      expect(figures, hasLength(2));
-      // The bar chart under "7.1 Inline PNG picture", then the centred
-      // green picture lower down.
-      expect(figures[0].top, closeTo(0.15, 0.03));
-      expect(figures[0].bottom, closeTo(0.35, 0.03));
-      expect(figures[1].left, closeTo(0.41, 0.03));
-      expect(figures[1].right, closeTo(0.59, 0.03));
+      // The bar chart, the gradient right of a paragraph, the green picture
+      // left of one, the centred green picture, the strip behind a line.
+      final boxes = [for (final f in figures) (f.left, f.top, f.right, f.bottom)];
+      const expected = [
+        (0.24, 0.15, 0.77, 0.36),
+        (0.69, 0.42, 0.88, 0.52),
+        (0.12, 0.55, 0.27, 0.63),
+        (0.42, 0.71, 0.58, 0.79),
+        (0.12, 0.84, 0.50, 0.90),
+      ];
+      expect(boxes, hasLength(expected.length));
+      for (final (i, (l, t, r, b)) in expected.indexed) {
+        final (fl, ft, fr, fb) = boxes[i];
+        expect(ft, closeTo(t, 0.03), reason: 'picture ${i + 1} top');
+        expect(fb, closeTo(b, 0.03), reason: 'picture ${i + 1} bottom');
+        expect((fl + fr) / 2, closeTo((l + r) / 2, 0.05), reason: 'picture ${i + 1} middle');
+      }
       for (final f in figures) {
         expect(img.decodeJpg(f.jpeg)!.width, f.pixelWidth);
+      }
+    });
+
+    test('chart labels read as text stay with the chart, and tables and boxed paragraphs stay text', () {
+      final (page, layout) = wordTestPage(21);
+      // As ML Kit reads it on a phone: the chart's title and axis labels as lines.
+      OcrBlock label(String t, double l, double top, double r, double b) => OcrBlock(
+        text: t,
+        left: l,
+        top: top,
+        right: r,
+        bottom: b,
+        lines: [OcrLine(text: t, left: l, top: top, right: r, bottom: b)],
+      );
+      final read = OcrLayout([
+        ...layout.blocks,
+        label('Sample bar chart (PNG image)', 0.43, 0.158, 0.53, 0.164),
+        for (var i = 0; i < 6; i++) label('Q${i + 1}', 0.305 + i * 0.073, 0.343, 0.32 + i * 0.073, 0.35),
+      ]);
+      final figures = ocrWordFigures(page, text: read.text, layout: read);
+      expect(figures, hasLength(5));
+      expect(figures.first.top, lessThan(0.158));
+      expect(figures.first.bottom, greaterThan(0.35));
+      // The labels are in the picture, so not repeated as text.
+      final doc = buildOcrWordDocument([OcrWordPage(text: read.text, layout: read, figures: figures)]);
+      final text = doc.sections.single.blocks
+          .whereType<WordParagraph>()
+          .expand((p) => p.inlines)
+          .whereType<WordText>()
+          .map((t) => t.text)
+          .join(' ');
+      expect(text, isNot(contains('Sample bar chart')));
+      expect(text, contains('Text wrapping styles'));
+      // Pages of tables, shaded rows and boxed paragraphs have no pictures.
+      for (final n in [12, 17, 18, 19]) {
+        final (p, l) = wordTestPage(n);
+        expect(
+          ocrWordFigures(p, text: l.text, layout: l),
+          isEmpty,
+          reason: 'page $n',
+        );
       }
     });
 

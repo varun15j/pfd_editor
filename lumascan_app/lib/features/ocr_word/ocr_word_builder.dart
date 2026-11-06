@@ -164,6 +164,10 @@ class _Builder {
       for (final l in ls) {
         final t = l.text.trim();
         if (t.isEmpty) continue;
+        // Text inside a picture (chart labels, words on a photo) is in the
+        // picture already.
+        final cx = (l.left + l.right) / 2, cy = (l.top + l.bottom) / 2;
+        if (figures.any((f) => cx >= f.left && cx <= f.right && cy >= f.top && cy <= f.bottom)) continue;
         lines.add(_Line(t, l.left * width, l.top * height, l.right * width, l.bottom * height, i));
       }
     }

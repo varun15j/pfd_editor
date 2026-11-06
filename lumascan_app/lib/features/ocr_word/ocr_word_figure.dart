@@ -3,10 +3,10 @@ import 'dart:typed_data';
 
 import '../../domain/models.dart';
 import '../../domain/ocr.dart';
-import '../../imaging/ocr_figures.dart';
 import '../../imaging/page_renderer.dart';
 import '../../imaging/rgb_image.dart';
 import '../../pdf_edit/annotations.dart';
+import 'ocr_word_regions.dart';
 
 /// A part of a scanned page that text recognition did not read (a photo, a
 /// drawing, a stamp, a table it could not make out), cut out of the page to
@@ -31,9 +31,9 @@ class OcrWordFigure {
   final int pixelHeight;
 }
 
-/// The parts of [page] to add as pictures to its Word page: the same
-/// figure finder as the text PDF ([findFigures]), which takes the bands
-/// between the text blocks that have something on them. A page with no
+/// The parts of [page] to add as pictures to its Word page: whatever is on
+/// the paper besides the recognised text, beside it or between it
+/// ([findPictureBoxes]). A page with no
 /// text at all goes in as one picture. A page with text but no layout gets
 /// none, as there is nowhere to place them. Pure Dart, for an isolate.
 ///
@@ -67,23 +67,28 @@ List<OcrWordFigure> ocrWordFigures(ScanPage page, {required String text, OcrLayo
           maxDimension: 1600,
           masks: masksIn(page.annotations),
         );
-  final found = blocks.isEmpty
-      ? [OcrFigure(top: 0, image: picture, bottom: 1)]
-      : findFigures(picture, [for (final b in blocks) (b.top, b.bottom)]);
-  return [
-    for (final f in found)
-      // Ruled lines and the page border are not pictures.
-      if (!_onlyLines(f.image))
-        OcrWordFigure(
-          left: f.left,
-          top: f.top,
-          right: f.right,
-          bottom: f.bottom,
-          jpeg: f.image.encodeJpg(quality: 85),
-          pixelWidth: f.image.width,
-          pixelHeight: f.image.height,
-        ),
+  if (blocks.isEmpty) {
+    return [_figure(picture, (x0: 0, y0: 0, x1: picture.width, y1: picture.height))];
+  }
+  // Pictures are looked for in both directions, beside the text as well as
+  // between it, with the recognised lines painted out first.
+  final lines = [
+    for (final b in blocks) ...(b.lines.isEmpty ? <OcrBox>[b] : b.lines),
   ];
+  return [for (final box in findPictureBoxes(picture, lines)) _figure(picture, box)];
+}
+
+OcrWordFigure _figure(RgbImage page, PictureBox b) {
+  final crop = cropPicture(page, b);
+  return OcrWordFigure(
+    left: b.x0 / page.width,
+    top: b.y0 / page.height,
+    right: b.x1 / page.width,
+    bottom: b.y1 / page.height,
+    jpeg: crop.encodeJpg(quality: 85),
+    pixelWidth: crop.width,
+    pixelHeight: crop.height,
+  );
 }
 
 /// One page's figure job: everything [ocrWordFigures] needs, as plain data
@@ -102,55 +107,4 @@ Uint8List? _bytesOf(String path) {
   } on FileSystemException {
     return null;
   }
-}
-
-/// True when all that is on [image] is straight lines: rows or columns that
-/// are inked most of the way across, such as a rule under a header or the
-/// sides of a page border. Ink off those lines (a photo, a drawing, chart
-/// bars, text) makes it a picture.
-bool _onlyLines(RgbImage image) {
-  final w = image.width, h = image.height, d = image.data;
-  if (w == 0 || h == 0) return true;
-  final ink = List<bool>.filled(w * h, false);
-  final luma = List<int>.filled(w * h, 0);
-  for (var i = 0; i < w * h; i++) {
-    luma[i] = (d[i * 3] * 77 + d[i * 3 + 1] * 150 + d[i * 3 + 2] * 29) >> 8;
-  }
-  // The paper: the crop has a margin of it all round, so the middle value
-  // along the edge is the paper, even when a filled box fills the middle.
-  final edge = [
-    for (var x = 0; x < w; x++) ...[luma[x], luma[(h - 1) * w + x]],
-    for (var y = 0; y < h; y++) ...[luma[y * w], luma[y * w + w - 1]],
-  ]..sort();
-  final background = edge[edge.length ~/ 2];
-  for (var i = 0; i < w * h; i++) {
-    ink[i] = (luma[i] - background).abs() > 40;
-  }
-  // A line is a long unbroken run of ink: a third of the way across (or
-  // down) or more. Text and chart bars break up; rules and borders don't.
-  final lineRow = List.filled(h, false), lineCol = List.filled(w, false);
-  for (var y = 0; y < h; y++) {
-    var run = 0;
-    for (var x = 0; x < w && !lineRow[y]; x++) {
-      run = ink[y * w + x] ? run + 1 : 0;
-      if (run >= w / 3) lineRow[y] = true;
-    }
-  }
-  for (var x = 0; x < w; x++) {
-    var run = 0;
-    for (var y = 0; y < h && !lineCol[x]; y++) {
-      run = ink[y * w + x] ? run + 1 : 0;
-      if (run >= h / 3) lineCol[x] = true;
-    }
-  }
-  // Many of them make a filled area (a coloured box, a photo), not lines.
-  if (lineRow.where((l) => l).length > h * 0.15 || lineCol.where((l) => l).length > w * 0.15) return false;
-  var off = 0;
-  for (var y = 0; y < h; y++) {
-    if (lineRow[y]) continue;
-    for (var x = 0; x < w; x++) {
-      if (ink[y * w + x] && !lineCol[x]) off++;
-    }
-  }
-  return off < w * h * 0.005;
 }
