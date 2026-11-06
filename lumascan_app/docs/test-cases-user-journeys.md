@@ -105,3 +105,13 @@ Automated in `integration_test/ocr_journeys_test.dart`. The pages are the 35 Wor
 |---|---|---|---|
 | OnePlus CPH2661, Android 16, display size large (320 dp wide) | Pass | Pass | Whole run 1 min 21 s. J2 needs PR #88: without it the ID review's Edit sheet overflows on this screen |
 | Emulator sdk_gphone16k_x86_64, 4 cores, 4 GB | Pass (about 4 min) | Pass | With 1 core and 2 GB, Android's watchdog restarted the system during long runs; give the AVD at least 4 cores |
+
+## Results (6 November 2026, PR #106, debug build 1.43.0+75)
+
+| Device | J1 | J2 + J3 | J4 | J5 | Notes |
+|---|---|---|---|---|---|
+| BlueStacks (Android 9, 4 GB), at e6e75ea | Fail at retake (test timing) | Pass | Pass | Pass | J4: text PDF 3.8 s, text on 5 of 5 pages, Word 7.2 s with 4 pictures. J5: text PDF 4.0 s, text on 35 of 35 pages, Word 21 s with 13 pictures. OCR 17 to 22 s per page |
+| Android Studio emulator, at 2435783 | Pass in code after 796ac93 | Not run in full | Fail: 1 Word picture | Pass | Text PDF 35 pages 7.5 s. The 1-picture result led to the 2-D picture finder in e6e75ea |
+
+J1 on BlueStacks: the "Page 2 retaken" note came and went while the test waited for the screen to settle. The app
+itself was back on the 3-page document. The test now waits for page 2 to be replaced instead of for the note.

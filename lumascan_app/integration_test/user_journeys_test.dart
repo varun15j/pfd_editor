@@ -123,7 +123,9 @@ void main() {
     // Retake opens the app's camera for one photo, which takes the page's
     // place, and comes back here.
     await tapOn(tester, find.bySemanticsLabel(RegExp(r'^Take (the new )?photo$')));
-    await waitFor(tester, find.text('Page 2 retaken'));
+    // Wait for the new page itself: the "Page 2 retaken" note can come and
+    // go while the screen settles on a fast device (BlueStacks).
+    await waitUntil(tester, () => scanState(tester).pages.length == 3 && page(tester, 1).id != oldSecond);
     // Its Undo bar sits over the page tools until it times out.
     await waitGone(tester, find.text('Page 2 retaken'));
     expect(page(tester, 1).id, isNot(oldSecond), reason: 'page 2 was replaced in place');
