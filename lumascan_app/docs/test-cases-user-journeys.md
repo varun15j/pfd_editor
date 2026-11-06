@@ -45,7 +45,7 @@ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:
 | 8 | Export > Export as PDF > Save PDF | "PDF saved"; the Library has one 3-page document |
 | 9 | Add pages > Scan with camera, take 1 photo, Review document | 4 pages, same document name |
 | 10 | Add pages > Import photos > Add 1 page | 5 pages |
-| 11 | Export > Export as PDF > Save PDF | A new 5-page PDF in the Library; the first 3-page PDF is kept (saving never overwrites a PDF) |
+| 11 | Export > Export as PDF > Save PDF | The scan's PDF in the Library is replaced by the 5-page one (exporting a scan again replaces its earlier file) |
 
 ## J2: ID card front and back, hide the number, save and export
 

@@ -153,11 +153,11 @@ void main() {
     expect(scanState(tester).pages, hasLength(5));
     final second = await exportPdf(tester);
     expect(second.existsSync(), isTrue);
-    // Saving never overwrites an earlier PDF: the update is a new PDF next
-    // to the first one.
+    // Exporting the same scan again replaces its earlier PDF (saved exports,
+    // since 1.37.0): one document, now with 5 pages.
     final saved = journey.library.index.documents;
-    expect(saved, hasLength(2));
-    expect(saved.map((d) => d.pageCount), unorderedEquals([3, 5]));
+    expect(saved, hasLength(1));
+    expect(saved.single.pageCount, 5);
   });
 
   testWidgets('J2: ID card front and back, hide the number, save and export; J3: then a new scan', (tester) async {
