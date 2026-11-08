@@ -19,6 +19,7 @@ import 'about_section.dart';
 import 'app_lock_tile.dart';
 import 'ocr_language_screen.dart';
 import 'storage_section.dart';
+import 'sync_screen.dart';
 import '../../ui/luma_icons.dart';
 
 /// Settings tab: preferences for new scans and saves, appearance, storage,
@@ -53,6 +54,18 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Google Drive, OneDrive and iCloud Drive. Import documents into your Library.'),
             trailing: const Icon(LumaIcons.next),
             onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AccountsScreen())),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(LumaIcons.cloud),
+            title: const Text('Sync'),
+            subtitle: Text(
+              settings.syncEnabled
+                  ? 'Save every export to your Google Drive${settings.syncOnCellular ? '' : ', on Wi-Fi only'}.'
+                  : 'Off. Exports stay on this phone.',
+            ),
+            trailing: const Icon(LumaIcons.next),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SyncScreen())),
           ),
           const SizedBox(height: Space.lg),
           const _Header('Scanning'),

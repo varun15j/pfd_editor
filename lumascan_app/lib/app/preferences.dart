@@ -96,6 +96,10 @@ class AppSettingsController extends Notifier<AppSettings> {
 
   void setAppLockDelay(AppLockDelay value) => _set(state.copyWith(appLockDelay: value));
 
+  void setSyncEnabled(bool value) => _set(state.copyWith(syncEnabled: value));
+
+  void setSyncOnCellular(bool value) => _set(state.copyWith(syncOnCellular: value));
+
   void _set(AppSettings settings) {
     _changed = true;
     state = settings;

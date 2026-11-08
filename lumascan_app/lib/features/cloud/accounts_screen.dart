@@ -12,7 +12,7 @@ import 'cloud_import_flow.dart';
 import '../../ui/luma_icons.dart';
 
 /// Settings > Accounts: cloud storage accounts to import documents from.
-/// Connecting is optional and read-only; nothing is uploaded or synced.
+/// Connecting is optional and read-only; uploads are in Settings > Sync.
 class AccountsScreen extends ConsumerWidget {
   const AccountsScreen({super.key});
 
@@ -29,7 +29,7 @@ class AccountsScreen extends ConsumerWidget {
         children: [
           Text(
             'Connect cloud storage to import its PDF and Word files into your Library. '
-            '$appName only reads your files. It never uploads, changes or deletes anything in your accounts.',
+            'Importing only reads the file you pick. To save your exports to Google Drive, turn on Settings > Sync.',
             style: text.bodyMedium?.copyWith(color: c.muted),
           ),
           const SizedBox(height: Space.lg),

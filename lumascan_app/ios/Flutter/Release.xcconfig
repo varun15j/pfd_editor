@@ -1,2 +1,8 @@
 #include "Generated.xcconfig"
 #include "AppName.xcconfig"
+
+// Google Drive backup sign-in: the release iOS client ID reversed, so
+// "123-abc.apps.googleusercontent.com" becomes
+// "com.googleusercontent.apps.123-abc". It must match
+// releaseCloudClientIds.googleIosClientId in lib/app/cloud_config.dart.
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.YOUR_RELEASE_IOS_CLIENT_ID

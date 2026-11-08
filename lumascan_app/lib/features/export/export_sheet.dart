@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
@@ -17,6 +19,7 @@ import '../../ui/file_size.dart';
 import '../../ui/upgrade_dialog.dart';
 import '../library/library_controller.dart';
 import '../pages/scan_controller.dart';
+import '../cloud/drive_sync.dart';
 import '../share/send_pdf_sheet.dart';
 import 'saved_exports.dart';
 import '../../ui/luma_icons.dart';
@@ -119,6 +122,7 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
     final keepOriginals = ref.read(appSettingsProvider).keepOriginals;
     final info = ref.read(scanControllerProvider).info;
     final savedExports = ref.read(savedExportsProvider.notifier);
+    final sync = ref.read(driveSyncProvider.notifier);
     final keepLayout = ref.read(planIncludesProvider(PlanFeature.smartScan));
     final language = ref.read(ocrLanguageProvider);
     final format = textPdf ? ExportFormat.textPdf : ExportFormat.pdf;
@@ -213,6 +217,9 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
           previous: previous,
         );
       }
+      // Settings > Sync: a copy goes to Google Drive (now, or once the phone
+      // may sync). An unchanged export is already there.
+      if (!_reused) unawaited(sync.enqueue(file));
       if (!keepOriginals) {
         // Settings: do not keep page images once the PDF is saved. Only after
         // the PDF is safely in the Library, so a failed save loses nothing.
@@ -265,6 +272,26 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
   Future<void> _setPageNumbers(bool on) async {
     if (on && !await ensurePlan(context, ref, PlanFeature.pageNumbers, what: 'Page numbers')) return;
     if (mounted) setState(() => _pageNumbers = on);
+  }
+
+  /// Saves a copy where the user picks in the system save screen: Google
+  /// Drive (when its app is installed), Files, Downloads or another app.
+  Future<void> _saveCopy() async {
+    final file = _result!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final saved = await FilePicker.saveFile(
+        dialogTitle: 'Save to Google Drive or Files',
+        fileName: p.basename(file.path),
+        bytes: await file.readAsBytes(),
+        mimeType: 'application/pdf',
+        type: FileType.custom,
+        allowedExtensions: const ['pdf'],
+      );
+      if (saved != null) messenger.showSnackBar(const SnackBar(content: Text('Copy saved')));
+    } on Object catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Could not save a copy. $e')));
+    }
   }
 
   Future<void> _send() {
@@ -323,7 +350,15 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
                   Text(_error!, style: TextStyle(color: scheme.error)),
                 ],
                 const SizedBox(height: 16),
+                const _SyncLine(),
+                const SizedBox(height: 16),
                 FilledButton.icon(onPressed: _send, icon: const Icon(LumaIcons.share), label: const Text('Share')),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _saveCopy,
+                  icon: const Icon(LumaIcons.googleDrive),
+                  label: const Text('Save to Google Drive or Files'),
+                ),
                 const SizedBox(height: 8),
                 TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
               ] else ...[
@@ -464,6 +499,37 @@ class _QualityTile extends StatelessWidget {
         title: Text(quality.label),
         subtitle: Text(quality.hint),
         trailing: Text('about $size'),
+      ),
+    );
+  }
+}
+
+/// Under a saved export: where its Google Drive copy is, when sync is on.
+class _SyncLine extends ConsumerWidget {
+  const _SyncLine();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(driveSyncProvider).value;
+    if (state == null || state.account == null) return const SizedBox.shrink();
+    final textTheme = Theme.of(context).textTheme;
+    final line = switch (state) {
+      DriveSyncState(error: final String error) => error,
+      DriveSyncState(uploading: true) => 'Uploading to Google Drive…',
+      DriveSyncState(pending: 0) => 'Saved to Google Drive in the $appName folder.',
+      DriveSyncState(hold: SyncHold.off) => 'Sync is off, so it waits on this phone.',
+      DriveSyncState(hold: SyncHold.offline) => 'Will upload to Google Drive when you are online.',
+      DriveSyncState(hold: SyncHold.waitingForWifi) => 'Will upload to Google Drive on Wi-Fi.',
+      _ => 'Waiting to upload to Google Drive.',
+    };
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Icon(LumaIcons.googleDrive, size: 16, color: textTheme.bodySmall?.color),
+          const SizedBox(width: 6),
+          Expanded(child: Text(line, style: textTheme.bodySmall)),
+        ],
       ),
     );
   }

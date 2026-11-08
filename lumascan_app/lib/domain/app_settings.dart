@@ -95,6 +95,8 @@ class AppSettings {
     this.ocrLanguage = 'en',
     this.appLock = false,
     this.appLockDelay = AppLockDelay.oneMinute,
+    this.syncEnabled = true,
+    this.syncOnCellular = false,
     this.eulaAcceptedVersion = 0,
   });
 
@@ -174,6 +176,14 @@ class AppSettings {
   /// How long the app may be in the background before the lock asks again.
   final AppLockDelay appLockDelay;
 
+  /// Settings > Sync: exports are uploaded to the connected Google Drive.
+  /// Has no effect until a Drive account is connected for sync.
+  final bool syncEnabled;
+
+  /// Settings > Sync: uploads may use mobile data. When off, exports made on
+  /// mobile data wait and upload once the phone is on Wi-Fi.
+  final bool syncOnCellular;
+
   /// Version of the End User Licence Agreement the user last accepted; 0 when
   /// they never have. Below [eulaVersion], the agreement is shown at start.
   final int eulaAcceptedVersion;
@@ -201,6 +211,8 @@ class AppSettings {
     String? ocrLanguage,
     bool? appLock,
     AppLockDelay? appLockDelay,
+    bool? syncEnabled,
+    bool? syncOnCellular,
     int? eulaAcceptedVersion,
   }) => AppSettings(
     themeMode: themeMode ?? this.themeMode,
@@ -222,6 +234,8 @@ class AppSettings {
     ocrLanguage: ocrLanguage ?? this.ocrLanguage,
     appLock: appLock ?? this.appLock,
     appLockDelay: appLockDelay ?? this.appLockDelay,
+    syncEnabled: syncEnabled ?? this.syncEnabled,
+    syncOnCellular: syncOnCellular ?? this.syncOnCellular,
     eulaAcceptedVersion: eulaAcceptedVersion ?? this.eulaAcceptedVersion,
   );
 
@@ -253,6 +267,8 @@ class AppSettings {
     'ocrLanguage': ocrLanguage,
     'appLock': appLock,
     'appLockDelay': appLockDelay.name,
+    'syncEnabled': syncEnabled,
+    'syncOnCellular': syncOnCellular,
     'eulaAcceptedVersion': eulaAcceptedVersion,
   };
 
@@ -279,6 +295,8 @@ class AppSettings {
     ocrLanguage: OcrLanguage.byCode(json['ocrLanguage'] as String? ?? '')?.code ?? 'en',
     appLock: json['appLock'] as bool? ?? false,
     appLockDelay: AppLockDelay.values.asNameMap()[json['appLockDelay']] ?? AppLockDelay.oneMinute,
+    syncEnabled: json['syncEnabled'] as bool? ?? true,
+    syncOnCellular: json['syncOnCellular'] as bool? ?? false,
     eulaAcceptedVersion: (json['eulaAcceptedVersion'] as num?)?.toInt() ?? 0,
   );
 
@@ -324,6 +342,8 @@ class AppSettings {
       other.ocrLanguage == ocrLanguage &&
       other.appLock == appLock &&
       other.appLockDelay == appLockDelay &&
+      other.syncEnabled == syncEnabled &&
+      other.syncOnCellular == syncOnCellular &&
       other.eulaAcceptedVersion == eulaAcceptedVersion;
 
   @override
@@ -345,8 +365,7 @@ class AppSettings {
     debugPerfOverlay,
     debugBusyCores,
     ocrLanguage,
-    appLock,
-    appLockDelay,
+    Object.hash(appLock, appLockDelay, syncEnabled, syncOnCellular),
     eulaAcceptedVersion,
   );
 }
