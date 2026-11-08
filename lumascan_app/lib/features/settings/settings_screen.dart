@@ -9,6 +9,8 @@ import '../../debug/image_profiler.dart';
 import '../../debug/profiling_report_screen.dart';
 import '../../debug/sample_pages.dart';
 import '../../debug/sample_pages_tile.dart';
+import '../../debug/test_data_backup.dart';
+import '../../debug/test_data_backup_tile.dart';
 import '../../domain/app_settings.dart';
 import '../../domain/models.dart';
 import '../cloud/accounts_screen.dart';
@@ -174,6 +176,7 @@ class SettingsScreen extends ConsumerWidget {
               onTap: () =>
                   Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ProfilingReportScreen())),
             ),
+            if (TestDataBackup.supported) const TestDataBackupTile(contentPadding: EdgeInsets.zero),
             // The debug panel's edge swipe is taken by the system back
             // gesture on phones with gesture navigation, so this is here too.
             const SamplePagesTile(contentPadding: EdgeInsets.zero),
