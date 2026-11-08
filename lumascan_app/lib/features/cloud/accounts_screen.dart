@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -74,7 +76,12 @@ class _ProviderCardState extends ConsumerState<_ProviderCard> {
       CloudAvailability.unsupportedPlatform =>
         provider.id == CloudProviderId.iCloudDrive ? 'Only on iPhone and iPad' : 'Not available on this device',
       CloudAvailability.notConfigured => 'Not set up in this build yet',
-      CloudAvailability.ready when provider.usesSystemPicker => 'Uses the Apple account on this iPhone',
+      CloudAvailability.ready when provider.id == CloudProviderId.iCloudDrive =>
+        'Uses the Apple account on this iPhone',
+      CloudAvailability.ready when provider.id == CloudProviderId.googleDrive && Platform.isIOS =>
+        'Pick from Google Drive in Files. Needs the Google Drive app',
+      CloudAvailability.ready when provider.usesSystemPicker =>
+        'Pick a file from ${provider.id.label} in the file picker',
       CloudAvailability.ready => account == null ? 'Not connected' : 'Connected as ${account.label}',
     };
   }
