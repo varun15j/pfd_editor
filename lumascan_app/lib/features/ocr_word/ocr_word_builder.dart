@@ -2,15 +2,23 @@ import 'dart:typed_data';
 
 import 'package:luma_docx/luma_docx.dart';
 
+import '../../app/app_info.dart';
 import '../../domain/ocr.dart';
+import 'ocr_word_figure.dart';
+
+export 'ocr_word_figure.dart' show OcrWordFigure;
 
 /// One page of recognised text to put in a Word file: the text, and where
 /// each block and line sat when the engine reports it.
 class OcrWordPage {
-  const OcrWordPage({required this.text, this.layout, this.landscape = false});
+  const OcrWordPage({required this.text, this.layout, this.landscape = false, this.figures = const []});
 
   final String text;
   final OcrLayout? layout;
+
+  /// Parts of the page that were not read (pictures, drawings), cut out of
+  /// the scan ([ocrWordFigures]); each goes in as a picture where it sat.
+  final List<OcrWordFigure> figures;
 
   /// A page wider than it is tall becomes a landscape A4 page.
   final bool landscape;
@@ -56,7 +64,7 @@ WordDocument buildOcrWordDocument(List<OcrWordPage> pages, {String? title}) {
   }
   return WordDocument(
     sections: sections,
-    properties: WordProperties(title: title, application: 'LumaScan OCR to Word'),
+    properties: WordProperties(title: title, application: '$appName OCR to Word'),
     headings: b.headings,
   );
 }
@@ -144,18 +152,63 @@ class _Builder {
     width = page.landscape ? _pageH : _pageW;
     height = page.landscape ? _pageW : _pageH;
     final layout = page.layout;
-    if (layout == null || layout.blocks.isEmpty) return _plain(page.text);
+    final figures = [...page.figures]..sort((a, b) => a.top.compareTo(b.top));
+    if (layout == null || layout.blocks.isEmpty) {
+      final text = page.text.trim().isEmpty ? <WordBlock>[] : _plain(page.text);
+      final pictures = [for (final f in figures) _picture(f, 0)];
+      return [...text, ...pictures].isEmpty ? [para('')] : [...text, ...pictures];
+    }
     final lines = <_Line>[];
     for (final (i, b) in layout.blocks.indexed) {
       final ls = b.lines.isEmpty ? <OcrBox>[b] : b.lines;
       for (final l in ls) {
         final t = l.text.trim();
         if (t.isEmpty) continue;
+        // Text inside a picture (chart labels, words on a photo) is in the
+        // picture already.
+        final cx = (l.left + l.right) / 2, cy = (l.top + l.bottom) / 2;
+        if (figures.any((f) => cx >= f.left && cx <= f.right && cy >= f.top && cy <= f.bottom)) continue;
         lines.add(_Line(t, l.left * width, l.top * height, l.right * width, l.bottom * height, i));
       }
     }
-    if (lines.isEmpty) return _plain(page.text);
-    return _layout(_readingOrder(_withoutLineNumbers(_withoutOverprint(lines))));
+    if (lines.isEmpty) {
+      return figures.isEmpty ? _plain(page.text) : [for (final f in figures) _picture(f, 0)];
+    }
+    return _layout(_readingOrder(_withoutLineNumbers(_withoutOverprint(lines))), figures);
+  }
+
+  /// Text area of the page, in points: the page less its margins.
+  double get _textWidth => width - 2 * _margin;
+  double get _textHeight => height - 2 * _margin;
+
+  /// A picture cut from the scan, in a paragraph of its own: as wide as it
+  /// was on the page (never wider than the text area, nor taller than a
+  /// page), and moved in from the left by as much as it was.
+  WordParagraph _picture(OcrWordFigure f, double textLeft, {double gap = 0}) {
+    var w = ((f.right - f.left) * width).clamp(24.0, _textWidth);
+    var h = w * f.pixelHeight / f.pixelWidth;
+    if (h > _textHeight * 0.9) {
+      w = w * _textHeight * 0.9 / h;
+      h = _textHeight * 0.9;
+    }
+    final indent = (f.left * width - textLeft).clamp(0.0, _textWidth - w);
+    return WordParagraph(
+      index: _index++,
+      style: WordParagraphStyle(
+        indentLeft: indent < 12 ? 0 : indent.roundToDouble(),
+        spaceBefore: (gap / 3).roundToDouble() * 3,
+        spaceAfter: 6,
+      ),
+      inlines: [
+        WordPicture(
+          bytes: f.jpeg,
+          width: w.roundToDouble(),
+          height: h.roundToDouble(),
+          contentType: 'image/jpeg',
+          altText: 'Part of the scanned page',
+        ),
+      ],
+    );
   }
 
   /// Engines report blocks in their own order (ML Kit does not always go
@@ -249,7 +302,7 @@ class _Builder {
     return out.isEmpty ? [para('')] : out;
   }
 
-  List<WordBlock> _layout(List<_Line> lines) {
+  List<WordBlock> _layout(List<_Line> lines, [List<OcrWordFigure> figures = const []]) {
     // Body size: the size most of the text is in.
     final sizes = [
       for (final l in lines)
@@ -263,9 +316,21 @@ class _Builder {
     final out = <WordBlock>[];
     double? lastBottom;
     final done = <int>{};
+    // Pictures go in before the first text that starts below them.
+    var f = 0;
+    void picturesAbove(double top) {
+      while (f < figures.length && figures[f].top * height <= top) {
+        final fig = figures[f++];
+        final gap = lastBottom == null ? 0.0 : (fig.top * height - lastBottom!).clamp(0, 36).toDouble();
+        out.add(_picture(fig, left, gap: gap));
+        lastBottom = fig.bottom * height;
+      }
+    }
+
     var i = 0;
     while (i < lines.length) {
       final line = lines[i];
+      picturesAbove(line.top);
       if (line.table != null) {
         if (done.add(line.table!)) {
           final rows = tables[line.table!];
@@ -294,6 +359,7 @@ class _Builder {
       lastBottom = group.last.bottom;
       i = j;
     }
+    picturesAbove(double.infinity);
     return out;
   }
 

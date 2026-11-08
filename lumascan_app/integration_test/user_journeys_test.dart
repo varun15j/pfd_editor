@@ -120,7 +120,12 @@ void main() {
     await tapOn(tester, find.text('2'));
     final oldSecond = page(tester, 1).id;
     await tapOn(tester, find.text('Retake'));
-    await waitFor(tester, find.text('Page 2 retaken'));
+    // Retake opens the app's camera for one photo, which takes the page's
+    // place, and comes back here.
+    await tapOn(tester, find.bySemanticsLabel(RegExp(r'^Take (the new )?photo$')));
+    // Wait for the new page itself: the "Page 2 retaken" note can come and
+    // go while the screen settles on a fast device (BlueStacks).
+    await waitUntil(tester, () => scanState(tester).pages.length == 3 && page(tester, 1).id != oldSecond);
     // Its Undo bar sits over the page tools until it times out.
     await waitGone(tester, find.text('Page 2 retaken'));
     expect(page(tester, 1).id, isNot(oldSecond), reason: 'page 2 was replaced in place');
@@ -150,11 +155,11 @@ void main() {
     expect(scanState(tester).pages, hasLength(5));
     final second = await exportPdf(tester);
     expect(second.existsSync(), isTrue);
-    // Saving never overwrites an earlier PDF: the update is a new PDF next
-    // to the first one.
+    // Exporting the same scan again replaces its earlier PDF (saved exports,
+    // since 1.37.0): one document, now with 5 pages.
     final saved = journey.library.index.documents;
-    expect(saved, hasLength(2));
-    expect(saved.map((d) => d.pageCount), unorderedEquals([3, 5]));
+    expect(saved, hasLength(1));
+    expect(saved.single.pageCount, 5);
   });
 
   testWidgets('J2: ID card front and back, hide the number, save and export; J3: then a new scan', (tester) async {
