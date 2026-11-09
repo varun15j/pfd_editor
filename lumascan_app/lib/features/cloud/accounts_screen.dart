@@ -12,7 +12,7 @@ import 'cloud_import_flow.dart';
 import '../../ui/luma_icons.dart';
 
 /// Settings > Accounts: cloud storage accounts to import documents from.
-/// Connecting is optional and read-only; nothing is uploaded or synced.
+/// Connecting is optional and read-only; uploads are in Settings > Sync.
 class AccountsScreen extends ConsumerWidget {
   const AccountsScreen({super.key});
 
@@ -29,7 +29,7 @@ class AccountsScreen extends ConsumerWidget {
         children: [
           Text(
             'Connect cloud storage to import its PDF and Word files into your Library. '
-            '$appName only reads your files. It never uploads, changes or deletes anything in your accounts.',
+            'Importing only reads the file you pick. To save your exports to Google Drive, turn on Settings > Sync.',
             style: text.bodyMedium?.copyWith(color: c.muted),
           ),
           const SizedBox(height: Space.lg),
@@ -185,14 +185,35 @@ class _ProviderCardState extends ConsumerState<_ProviderCard> {
 
   Future<void> _pick() async {
     final messenger = ScaffoldMessenger.of(context);
-    final PickedCloudFile? picked;
+    final navigator = Navigator.of(context);
+    final label = provider.id.label;
+    var waiting = false;
+    PickedCloudFile? picked;
     try {
-      picked = await provider.pickFile();
+      picked = await provider.pickFile(
+        onFetching: () {
+          // The chosen file is still coming over (from Google Drive it is
+          // downloaded first). Without this the app looks frozen meanwhile.
+          if (!mounted || waiting) return;
+          waiting = true;
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => PopScope(canPop: false, child: _FetchingDialog(from: label)),
+          );
+        },
+      );
     } on Object catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not open the file picker ($e)')));
+      messenger.showSnackBar(SnackBar(content: Text('Could not get the file from $label. $e')));
+      return;
+    } finally {
+      if (waiting) navigator.pop();
+    }
+    if (picked == null) {
+      if (waiting) messenger.showSnackBar(SnackBar(content: Text('Could not get the file from $label.')));
       return;
     }
-    if (picked == null || !mounted) return;
+    if (!mounted) return;
     final file = picked;
     final destination = await pickImportFolder(context, file.name);
     if (destination == null || !mounted) {
@@ -216,4 +237,23 @@ class _ProviderCardState extends ConsumerState<_ProviderCard> {
       // A temp copy; the system clears these.
     }
   }
+}
+
+/// Shown while a picked file is copied in, which for Google Drive includes
+/// downloading it.
+class _FetchingDialog extends StatelessWidget {
+  const _FetchingDialog({required this.from});
+
+  final String from;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    content: Row(
+      children: [
+        const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2.5)),
+        const SizedBox(width: Space.lg),
+        Expanded(child: Text('Getting the file from $from…')),
+      ],
+    ),
+  );
 }

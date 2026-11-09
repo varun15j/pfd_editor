@@ -8,17 +8,29 @@
 // Paste each ID between the quotes below, or pass it at build time instead
 // (a --dart-define value wins over the pasted one for that build):
 //
-//   flutter run --dart-define=LUMASCAN_MICROSOFT_CLIENT_ID=...
+//   flutter run --dart-define=LUMASCAN_GOOGLE_SERVER_CLIENT_ID=...
 //
 // A provider whose IDs are empty shows "Not set up in this build yet" in
 // Settings > Accounts instead of a Connect button. How to create the IDs is
-// in docs/cloud-accounts.md. Google Drive and iCloud Drive need no IDs: they
-// use the system file picker.
+// in docs/cloud-accounts.md. Importing from Google Drive and iCloud Drive
+// needs no IDs (it uses the system file picker); the Google IDs are only for
+// backing up exports to Google Drive.
 import 'package:flutter/foundation.dart';
 
 /// The client IDs used by one kind of build.
 class CloudClientIds {
-  const CloudClientIds({required this.microsoftClientId});
+  const CloudClientIds({
+    required this.googleServerClientId,
+    required this.googleIosClientId,
+    required this.microsoftClientId,
+  });
+
+  /// Google OAuth client of type "Web application". Android's sign-in needs
+  /// it as the server client ID even though LumaScan has no server.
+  final String googleServerClientId;
+
+  /// Google OAuth client of type "iOS" for bundle ID com.lumascan.lumascan.
+  final String googleIosClientId;
 
   /// Microsoft app registration's Application (client) ID.
   final String microsoftClientId;
@@ -28,11 +40,15 @@ class CloudClientIds {
 
 /// Used by `flutter run` and debug APKs, signed with the debug keystore.
 const debugCloudClientIds = CloudClientIds(
+  googleServerClientId: '786720786625-1bd0vbe1n2gs11esd49sm1sijl3k1ov7.apps.googleusercontent.com', // "....apps.googleusercontent.com", type Web application
+  googleIosClientId: '', // "....apps.googleusercontent.com", type iOS
   microsoftClientId: '', // Application (client) ID, a GUID
 );
 
 /// Used by release and profile builds, signed with the release key.
 const releaseCloudClientIds = CloudClientIds(
+  googleServerClientId: '', // "....apps.googleusercontent.com", type Web application
+  googleIosClientId: '', // "....apps.googleusercontent.com", type iOS
   microsoftClientId: '', // Application (client) ID, a GUID
 );
 
@@ -41,6 +57,19 @@ CloudClientIds cloudClientIdsFor({required bool debug}) => debug ? debugCloudCli
 
 abstract final class CloudConfig {
   static final _ids = cloudClientIdsFor(debug: kDebugMode);
+
+  // Google Drive backup (Google Cloud console > APIs & Services > Credentials).
+
+  static String get googleServerClientId =>
+      _define(const String.fromEnvironment('LUMASCAN_GOOGLE_SERVER_CLIENT_ID'), _ids.googleServerClientId);
+
+  static String get googleIosClientId =>
+      _define(const String.fromEnvironment('LUMASCAN_GOOGLE_IOS_CLIENT_ID'), _ids.googleIosClientId);
+
+  /// Access only to files this app creates in the user's Drive. Google lists
+  /// it as a non-sensitive scope: a public release needs brand verification
+  /// only, not the restricted-scope security assessment.
+  static const googleDriveBackupScopes = ['https://www.googleapis.com/auth/drive.file'];
 
   // Microsoft OneDrive (Microsoft Entra admin center > App registrations).
 
