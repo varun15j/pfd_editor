@@ -12,6 +12,10 @@ import '../share/send_pdf_sheet.dart';
 import 'cloud_importer.dart';
 import '../../ui/luma_icons.dart';
 
+/// Whether a file of [kind] is imported as a new document of editable
+/// pages (see importPdfToBatchEdit) instead of being saved to the Library.
+bool opensAsPages(CloudEntryKind kind) => kind == CloudEntryKind.pdf || kind == CloudEntryKind.googleDoc;
+
 /// Where an imported document goes: a Library folder, or the top level when
 /// [folderId] is null.
 class ImportDestination {
