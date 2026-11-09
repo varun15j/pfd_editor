@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
+import '../../app/credit_config.dart';
+import '../../domain/credits.dart';
 import '../../domain/plan.dart';
 import '../../domain/purchases.dart';
 
@@ -11,7 +13,7 @@ import '../../domain/purchases.dart';
 /// purchase into a [PurchaseUpdate], and finishing purchases so the store
 /// does not refund them. Each store's own rules live in its subclass.
 abstract class InAppPurchaseService implements PurchaseService {
-  InAppPurchaseService({InAppPurchase? iap}) : iap = iap ?? InAppPurchase.instance {
+  InAppPurchaseService({InAppPurchase? iap, this.creditProducts = const {}}) : iap = iap ?? InAppPurchase.instance {
     _subscription = this.iap.purchaseStream.listen(
       _onPurchases,
       onError: (Object e) => report(PurchaseFailed('$storeName could not finish the purchase.')),
@@ -20,6 +22,9 @@ abstract class InAppPurchaseService implements PurchaseService {
 
   @protected
   final InAppPurchase iap;
+
+  /// Product IDs of the consumable credit packs (`credit_config.dart`).
+  final Set<String> creditProducts;
 
   // Synchronous, so an update is handled before refresh() returns.
   final _updates = StreamController<PurchaseUpdate>.broadcast(sync: true);
@@ -34,7 +39,11 @@ abstract class InAppPurchaseService implements PurchaseService {
 
   /// Whether [purchase] may unlock its plan. Store classes add their checks.
   @protected
-  bool isValid(PurchaseDetails purchase) => planOf(purchase) != null;
+  bool isValid(PurchaseDetails purchase) => planOf(purchase) != null && isPaid(purchase);
+
+  /// Whether the store says [purchase] is paid for, not only started.
+  @protected
+  bool isPaid(PurchaseDetails purchase) => true;
 
   /// Called for each valid purchase the store reports, bought now or
   /// restored, so a store class can keep it (for example to upgrade it later).
@@ -50,10 +59,17 @@ abstract class InAppPurchaseService implements PurchaseService {
     if (!_updates.isClosed) _updates.add(update);
   }
 
+  /// The id that tells one purchase from another, for counting credits once.
+  static String purchaseIdOf(PurchaseDetails purchase) =>
+      purchase.purchaseID ?? purchase.verificationData.serverVerificationData;
+
   Future<void> _onPurchases(List<PurchaseDetails> purchases) async {
     for (final purchase in purchases) {
       final plan = planOf(purchase);
+      final credits = creditProducts.contains(purchase.productID);
       switch (purchase.status) {
+        case PurchaseStatus.purchased || PurchaseStatus.restored when credits:
+          if (isPaid(purchase)) report(CreditsBought(purchase.productID, purchaseIdOf(purchase)));
         case PurchaseStatus.pending:
           report(PurchasePending(plan));
         case PurchaseStatus.purchased:
@@ -87,6 +103,35 @@ abstract class InAppPurchaseService implements PurchaseService {
   String _failure(IAPError? error) {
     final detail = error?.message ?? '';
     return detail.isEmpty ? 'The purchase did not go through.' : 'The purchase did not go through ($detail).';
+  }
+
+  @override
+  Future<List<CreditOffer>> loadCreditOffers() async {
+    if (creditProducts.isEmpty) return const [];
+    final response = await iap.queryProductDetails(creditProducts);
+    if (response.error != null && response.productDetails.isEmpty) {
+      throw StateError('$storeName did not return the credit packs: ${response.error!.message}');
+    }
+    return creditOffersFrom(response.productDetails);
+  }
+
+  /// One offer per product that is a known credit pack, smallest first.
+  @visibleForTesting
+  static List<CreditOffer> creditOffersFrom(List<ProductDetails> details) {
+    final offers = [
+      for (final product in details)
+        if (creditRules.packOf(product.id) case final pack?)
+          CreditOffer(productId: product.id, credits: pack.credits, price: product.price, storeData: product),
+    ];
+    offers.sort((a, b) => a.credits - b.credits);
+    return offers;
+  }
+
+  @override
+  Future<void> buyCredits(CreditOffer offer) async {
+    // Consumed once bought (Android) or finished (iOS), so a pack can be
+    // bought again.
+    await iap.buyConsumable(purchaseParam: PurchaseParam(productDetails: offer.storeData as ProductDetails));
   }
 
   @override

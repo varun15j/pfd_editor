@@ -8,9 +8,11 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../../app/shell.dart';
 import '../../domain/cloud_storage.dart';
+import '../../domain/credits.dart';
 import '../../domain/photo_import.dart';
 import '../../pdf_edit/pdf_saver.dart';
 import '../batch_edit/batch_review_screen.dart';
+import '../credits/credits_screen.dart';
 import '../open/open_progress.dart';
 import '../open/pdf_file_check.dart';
 import '../pages/scan_controller.dart';
@@ -41,6 +43,7 @@ Future<bool> importPdfToBatchEdit(
   required String name,
   required Future<File> Function(OpenProgress progress) fetch,
 }) async {
+  if (!await ensureCredits(context, ref, CreditAction.importing) || !context.mounted) return false;
   final messenger = ScaffoldMessenger.of(context);
   final navigator = Navigator.of(context);
   final maker = ref.read(pdfPagesMakerProvider);

@@ -11,10 +11,12 @@ import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../data/photo_import_services.dart';
+import '../../domain/credits.dart';
 import '../../domain/id_copy.dart';
 import '../../domain/models.dart';
 import '../../domain/scanner_service.dart';
 import '../batch_capture/batch_camera.dart';
+import '../credits/credits_screen.dart';
 import '../pages/page_image.dart';
 import '../pages/scan_controller.dart';
 import 'id_card_review_screen.dart';
@@ -149,6 +151,8 @@ class _IdCardCaptureScreenState extends ConsumerState<IdCardCaptureScreen> with 
     if (draft == null) return;
     final controller = ref.read(scanControllerProvider.notifier);
     final replacing = _side < draft.sideIds.length ? draft.sideIds[_side] : null;
+    // A new side uses a scan's credits once saved; a retake is free.
+    if (replacing == null && (!mounted || !await ensureCredits(context, ref, CreditAction.scan))) return;
     final page = await controller.addCapture(path, replacing: replacing);
     if (page == null) {
       _toast('That photo could not be saved. Take it again.');

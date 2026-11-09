@@ -7,8 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 
 import '../../app/app_info.dart';
+import '../../app/credits.dart';
 import '../../app/preferences.dart';
 import '../../app/providers.dart';
+import '../../domain/credits.dart';
 import '../../domain/models.dart';
 import '../../domain/plan.dart';
 import '../../domain/saved_export.dart';
@@ -20,6 +22,7 @@ import '../../ui/upgrade_dialog.dart';
 import '../library/library_controller.dart';
 import '../pages/scan_controller.dart';
 import '../cloud/drive_sync.dart';
+import '../credits/credits_screen.dart';
 import '../share/send_pdf_sheet.dart';
 import 'saved_exports.dart';
 import '../../ui/luma_icons.dart';
@@ -135,6 +138,8 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
           : {'size': _size.name, 'quality': _quality.name, 'watermark': watermark, 'pageNumbers': pageNumbers},
     );
     final docKey = info == null ? null : scanDocKey(info);
+    final credits = ref.read(creditsProvider.notifier);
+    var charged = false;
     _savedPages = pages.length;
     setState(() {
       _progress = 0;
@@ -160,6 +165,16 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
         }
         return;
       }
+      // A new file uses an export's credits; the same export again reuses
+      // the saved file and is free. Given back if the export fails.
+      if (!credits.trySpend(CreditAction.exporting, note: fileName)) {
+        if (mounted) {
+          setState(() => _progress = null);
+          await showOutOfCreditsSheet(context, CreditAction.exporting);
+        }
+        return;
+      }
+      charged = true;
       final previous = plan is ExportNew ? plan.previous : null;
       // Exporting again replaces the scan's earlier file; a name another
       // file already has gets a number, never replaces it.
@@ -227,6 +242,8 @@ class _ExportSheetState extends ConsumerState<ExportSheet> {
         if (mounted) setState(() => _originalsRemoved = true);
       }
     } on Object catch (e) {
+      // No file was made: the credits come back.
+      if (charged && _result == null) credits.refund(CreditAction.exporting, note: fileName);
       if (!mounted) return;
       if (_result != null) {
         setState(() => _error = 'The PDF was created but could not be added to your Library. ($e)');

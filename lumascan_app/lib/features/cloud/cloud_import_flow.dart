@@ -4,8 +4,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/credits.dart';
 import '../../app/theme.dart';
 import '../../domain/cloud_storage.dart';
+import '../../domain/credits.dart';
+import '../credits/credits_screen.dart';
 import '../library/library_controller.dart';
 import '../library/library_organize.dart';
 import '../share/send_pdf_sheet.dart';
@@ -93,9 +96,11 @@ Future<bool> runCloudImport(
   required ImportDestination destination,
   required Future<File> Function() fetch,
 }) async {
+  if (!await ensureCredits(context, ref, CreditAction.importing) || !context.mounted) return false;
   final messenger = ScaffoldMessenger.of(context);
   final navigator = Navigator.of(context, rootNavigator: true);
   final importer = ref.read(cloudImporterProvider);
+  final credits = ref.read(creditsProvider.notifier);
   final stage = ValueNotifier<String>('Downloading');
   unawaited(
     showDialog<void>(
@@ -112,6 +117,7 @@ Future<bool> runCloudImport(
     file = await fetch();
     stage.value = 'Saving to your Library';
     final saved = await importer.import(file, name: name, kind: kind, folderId: destination.folderId);
+    credits.charge(CreditAction.importing, note: name);
     navigator.pop();
     final folder = ref.read(libraryProvider).value?.folderById(destination.folderId)?.name;
     messenger

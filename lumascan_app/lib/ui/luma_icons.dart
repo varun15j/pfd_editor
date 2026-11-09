@@ -41,6 +41,8 @@ abstract final class LumaIcons {
   static const IconData create = IconData(0xe236, fontFamily: _regular);
   static const IconData createNewFolder = IconData(0xe25e, fontFamily: _regular);
   static const IconData creditCard = IconData(0xe1d2, fontFamily: _regular);
+  /// Scan credits (Settings > Credits).
+  static const IconData credits = creditCard;
   static const IconData crop = IconData(0xe1d4, fontFamily: _regular);
   static const IconData darkTheme = IconData(0xe330, fontFamily: _regular);
   static const IconData date = IconData(0xe10a, fontFamily: _regular);

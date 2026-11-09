@@ -14,6 +14,7 @@ import '../../debug/test_data_backup_tile.dart';
 import '../../domain/app_settings.dart';
 import '../../domain/models.dart';
 import '../cloud/accounts_screen.dart';
+import '../credits/credits_screen.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../../domain/ocr_languages.dart';
 import '../plans/paywall_screen.dart';
@@ -49,6 +50,7 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(LumaIcons.next),
             onTap: () => openPaywall(context),
           ),
+          const CreditsTile(contentPadding: EdgeInsets.zero),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(LumaIcons.cloud),

@@ -18,7 +18,12 @@ import 'in_app_purchase_service.dart';
 /// [refresh] restores purchases, which with StoreKit 2 returns only the
 /// current entitlements, and collects what arrives.
 class AppStorePurchaseService extends InAppPurchaseService {
-  AppStorePurchaseService(this.config, {super.iap, this.restoreSettle = const Duration(seconds: 1)});
+  AppStorePurchaseService(
+    this.config, {
+    super.iap,
+    super.creditProducts,
+    this.restoreSettle = const Duration(seconds: 1),
+  });
 
   final AppStoreConfig config;
 

@@ -16,7 +16,7 @@ import 'in_app_purchase_service.dart';
 /// directly, so [refresh] knows when a plan has ended. Moving from Pro to
 /// Gold replaces the Pro subscription, and Play credits its unused time.
 class GooglePlayPurchaseService extends InAppPurchaseService {
-  GooglePlayPurchaseService(this.config, {super.iap});
+  GooglePlayPurchaseService(this.config, {super.iap, super.creditProducts});
 
   final GooglePlayStoreConfig config;
 
@@ -30,10 +30,9 @@ class GooglePlayPurchaseService extends InAppPurchaseService {
   AppPlan? planOf(PurchaseDetails purchase) => config.subscriptions[purchase.productID];
 
   @override
-  bool isValid(PurchaseDetails purchase) =>
-      super.isValid(purchase) &&
-      (purchase is! GooglePlayPurchaseDetails ||
-          purchase.billingClientPurchase.purchaseState == PurchaseStateWrapper.purchased);
+  bool isPaid(PurchaseDetails purchase) =>
+      purchase is! GooglePlayPurchaseDetails ||
+      purchase.billingClientPurchase.purchaseState == PurchaseStateWrapper.purchased;
 
   @override
   void onOwned(PurchaseDetails purchase, AppPlan plan) {
@@ -122,6 +121,15 @@ class GooglePlayPurchaseService extends InAppPurchaseService {
       }
     }
     report(OwnedPlans(owned.keys.toSet()));
+    // A credit pack that was paid for but not consumed (the app closed
+    // first) is counted now and consumed, so it can be bought again.
+    for (final purchase in response.pastPurchases) {
+      if (!creditProducts.contains(purchase.productID) || !isPaid(purchase)) continue;
+      report(CreditsBought(purchase.productID, InAppPurchaseService.purchaseIdOf(purchase)));
+      try {
+        await addition.consumePurchase(purchase);
+      } catch (_) {}
+    }
   }
 
   /// The paid-for purchase of each plan among [purchases]. Pending ones and

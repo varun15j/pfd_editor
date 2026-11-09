@@ -1,3 +1,4 @@
+import 'credits.dart';
 import 'plan.dart';
 
 /// How often a plan is paid for.
@@ -60,6 +61,15 @@ class PurchasePending extends PurchaseUpdate {
   final AppPlan? plan;
 }
 
+/// A credit pack was paid for. [purchaseId] is the store's id for this
+/// purchase, so one the store reports twice adds its credits once.
+class CreditsBought extends PurchaseUpdate {
+  const CreditsBought(this.productId, this.purchaseId);
+
+  final String productId;
+  final String purchaseId;
+}
+
 class PurchaseFailed extends PurchaseUpdate {
   const PurchaseFailed(this.message);
 
@@ -102,6 +112,13 @@ abstract class PurchaseService {
   /// Opens the store's page for cancelling or changing a subscription.
   Future<void> openManageSubscriptions();
 
+  /// The credit packs the store sells, with their prices.
+  Future<List<CreditOffer>> loadCreditOffers();
+
+  /// Starts buying a credit pack. The result arrives on [updates] as
+  /// [CreditsBought].
+  Future<void> buyCredits(CreditOffer offer);
+
   void dispose();
 }
 
@@ -127,6 +144,12 @@ class NoStorePurchaseService implements PurchaseService {
 
   @override
   Future<void> openManageSubscriptions() async {}
+
+  @override
+  Future<List<CreditOffer>> loadCreditOffers() async => const [];
+
+  @override
+  Future<void> buyCredits(CreditOffer offer) async {}
 
   @override
   void dispose() {}

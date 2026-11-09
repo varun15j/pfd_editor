@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../app/app_info.dart';
+import '../../domain/credits.dart';
 import '../../domain/scanner_service.dart';
+import '../credits/credits_screen.dart';
 import '../batch_capture/batch_capture_screen.dart';
 import '../capture/photo_import_screen.dart';
 import 'scan_controller.dart';
@@ -20,6 +22,9 @@ Future<bool> runScan(BuildContext context, WidgetRef ref, ScanSource source, {Vo
   // Photos go through LumaScan's own import, which keeps the chosen order and
   // can auto-crop (C2).
   if (source == ScanSource.gallery) return importPhotosFlow(context, ref, onAdding: onAdding);
+  // Credits are taken per photo once they are saved; at least one photo's
+  // worth must be left to start.
+  if (!await ensureCredits(context, ref, CreditAction.scan) || !context.mounted) return false;
   // The camera stays open between shots (BE-01), so pages are taken one
   // after another with no preview in between.
   if (source == ScanSource.camera) {
