@@ -7,7 +7,7 @@ import 'corner_model.dart';
 import 'rgb_image.dart';
 
 /// Asset of the corner model ([CornerModel]).
-const cornerModelAsset = 'assets/models/lcnet100_h_e_bifpn_256_fp32.onnx';
+const cornerModelAsset = 'assets/models/lcnet100_256_lumascan_v1.onnx';
 
 /// [CornerModel] run with ONNX Runtime on the CPU. Made from the model's
 /// bytes, so it can be built inside the isolate that analyses frames.

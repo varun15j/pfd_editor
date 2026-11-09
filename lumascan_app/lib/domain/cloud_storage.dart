@@ -133,8 +133,11 @@ abstract class CloudStorageProvider {
       throw UnsupportedError('${id.label} has no browse screen');
 
   /// Opens the system document picker for PDF and Word files. Returns null
-  /// when the user closes it.
-  Future<PickedCloudFile?> pickFile() => throw UnsupportedError('${id.label} has a browse screen');
+  /// when the user closes it. [onFetching] is called once a file is chosen
+  /// and its content is being copied over, which can take a while for a file
+  /// that has to come down from Google Drive first.
+  Future<PickedCloudFile?> pickFile({void Function()? onFetching}) =>
+      throw UnsupportedError('${id.label} has a browse screen');
 }
 
 /// Folders first, then files, each in name order ignoring case.

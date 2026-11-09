@@ -11,10 +11,10 @@
 //   flutter run --dart-define=LUMASCAN_GOOGLE_SERVER_CLIENT_ID=...
 //
 // A provider whose IDs are empty shows "Not set up in this build yet" in
-// Settings > Accounts instead of a Connect button. How to create the IDs,
-// and the native files that need matching values (the iOS URL scheme in
-// ios/Flutter/Debug.xcconfig and Release.xcconfig), are in
-// docs/cloud-accounts.md.
+// Settings > Accounts instead of a Connect button. How to create the IDs is
+// in docs/cloud-accounts.md. Importing from Google Drive and iCloud Drive
+// needs no IDs (it uses the system file picker); the Google IDs are only for
+// backing up exports to Google Drive.
 import 'package:flutter/foundation.dart';
 
 /// The client IDs used by one kind of build.
@@ -58,7 +58,7 @@ CloudClientIds cloudClientIdsFor({required bool debug}) => debug ? debugCloudCli
 abstract final class CloudConfig {
   static final _ids = cloudClientIdsFor(debug: kDebugMode);
 
-  // Google Drive (Google Cloud console > APIs & Services > Credentials).
+  // Google Drive backup (Google Cloud console > APIs & Services > Credentials).
 
   static String get googleServerClientId =>
       _define(const String.fromEnvironment('LUMASCAN_GOOGLE_SERVER_CLIENT_ID'), _ids.googleServerClientId);
@@ -66,10 +66,10 @@ abstract final class CloudConfig {
   static String get googleIosClientId =>
       _define(const String.fromEnvironment('LUMASCAN_GOOGLE_IOS_CLIENT_ID'), _ids.googleIosClientId);
 
-  /// Read-only access to every file in the user's Drive, so existing files
-  /// can be listed. Google treats this as a restricted scope: a public
-  /// release needs Google's app verification.
-  static const googleDriveScopes = ['https://www.googleapis.com/auth/drive.readonly'];
+  /// Access only to files this app creates in the user's Drive. Google lists
+  /// it as a non-sensitive scope: a public release needs brand verification
+  /// only, not the restricted-scope security assessment.
+  static const googleDriveBackupScopes = ['https://www.googleapis.com/auth/drive.file'];
 
   // Microsoft OneDrive (Microsoft Entra admin center > App registrations).
 

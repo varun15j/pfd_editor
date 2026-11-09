@@ -96,10 +96,11 @@ final photoPickerProvider = Provider<PhotoPicker>((ref) => FilePickerPhotoPicker
 final shareInboxProvider = Provider<ShareInbox>((ref) => DirectoryShareInbox(platformShareInboxDir));
 
 /// Finds the page in a photo, for every kind of scan: the corner model
-/// first on Pro and Gold, the hand-made detector otherwise.
+/// first on every plan, the hand-made detector when the model is not sure
+/// (the smarter one on Pro and Gold).
 final photoAnalyzerProvider = Provider<PhotoAnalyzer>((ref) {
   final smart = ref.watch(planIncludesProvider(PlanFeature.smartScan));
-  return DetectorPhotoAnalyzer(smart: smart, worker: smart ? ref.watch(cornerWorkerProvider) : null);
+  return DetectorPhotoAnalyzer(smart: smart, worker: ref.watch(cornerWorkerProvider));
 });
 
 /// Longest side of the page image that text recognition reads.

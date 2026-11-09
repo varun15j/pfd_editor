@@ -50,8 +50,8 @@ class DetectorPhotoAnalyzer implements PhotoAnalyzer {
   @override
   Future<CropQuad?> analyze(String path) async {
     final smart = this.smart;
-    final w = smart ? await worker?.call() : null;
-    if (w != null) return w.run(PhotoCornerJob(path));
+    final w = await worker?.call();
+    if (w != null) return w.run(PhotoCornerJob(path, smart: smart));
     return Isolate.run(() => PhotoCornerJob(path, smart: smart).run(null));
   }
 }
@@ -89,6 +89,6 @@ class PhotoCornerJob extends CornerJob<CropQuad?> {
   @override
   CropQuad? run(CornerModel? model) {
     final image = RgbImage.decode(File(path).readAsBytesSync(), maxDimension: DetectorPhotoAnalyzer.decodeSize);
-    return (smart ? model?.find(image) : null) ?? detectPageQuad(image, smart: smart);
+    return model?.find(image) ?? detectPageQuad(image, smart: smart);
   }
 }
