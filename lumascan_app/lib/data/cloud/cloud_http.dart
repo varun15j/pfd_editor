@@ -27,10 +27,18 @@ class CloudHttp {
   final Future<String> Function() _token;
   final Future<void> Function(String token)? onRejected;
 
-  Future<http.StreamedResponse> _send(Uri uri) async {
+  Future<http.StreamedResponse> _send(
+    Uri uri, {
+    String method = 'GET',
+    List<int>? body,
+    Map<String, String> headers = const {},
+  }) async {
     for (var attempt = 0; ; attempt++) {
       final token = await _token();
-      final request = http.Request('GET', uri)..headers['Authorization'] = 'Bearer $token';
+      final request = http.Request(method, uri)
+        ..headers.addAll(headers)
+        ..headers['Authorization'] = 'Bearer $token';
+      if (body != null) request.bodyBytes = body;
       final response = await _client.send(request);
       if (response.statusCode == 401) {
         await response.stream.drain<void>();
@@ -50,6 +58,17 @@ class CloudHttp {
 
   Future<Map<String, dynamic>> getJson(Uri uri) async {
     final response = await _send(uri);
+    return (jsonDecode(await response.stream.bytesToString()) as Map).cast<String, dynamic>();
+  }
+
+  /// Sends [body] with [method] (POST, PATCH) and reads the JSON answer.
+  Future<Map<String, dynamic>> sendJson(
+    String method,
+    Uri uri, {
+    required List<int> body,
+    required String contentType,
+  }) async {
+    final response = await _send(uri, method: method, body: body, headers: {'Content-Type': contentType});
     return (jsonDecode(await response.stream.bytesToString()) as Map).cast<String, dynamic>();
   }
 

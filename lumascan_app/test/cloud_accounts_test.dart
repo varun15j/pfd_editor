@@ -132,70 +132,15 @@ const _drive = [
 const _work = [CloudEntry(id: 'invoice', name: 'Invoice.pdf', kind: CloudEntryKind.pdf)];
 
 void main() {
-  group('Google Drive API', () {
-    test('lists every page of a folder, folders first, and tells file kinds apart', () async {
-      final queries = <Map<String, String>>[];
-      final client = MockClient((request) async {
-        expect(request.headers['Authorization'], 'Bearer t1');
-        queries.add(request.url.queryParameters);
-        final first = request.url.queryParameters['pageToken'] == null;
-        return http.Response(
-          jsonEncode(
-            first
-                ? {
-                    'nextPageToken': 'p2',
-                    'files': [
-                      {'id': '1', 'name': 'b.pdf', 'mimeType': 'application/pdf', 'size': '2048'},
-                      {'id': '2', 'name': 'Plans', 'mimeType': GoogleDriveApi.googleDocMime},
-                    ],
-                  }
-                : {
-                    'files': [
-                      {'id': '3', 'name': 'Zed', 'mimeType': GoogleDriveApi.folderMime},
-                      {'id': '4', 'name': 'a.docx', 'mimeType': 'application/octet-stream'},
-                      {'id': '5', 'name': 'pic.png', 'mimeType': 'image/png'},
-                    ],
-                  },
-          ),
-          200,
-        );
-      });
-      final api = GoogleDriveApi(CloudHttp(client, () async => 't1'));
+  group('Google Drive', () {
+    test('uses the system file picker, so there is no sign-in or Drive scope', () async {
+      final drive = GoogleDriveProvider();
 
-      final entries = await api.list(null);
-
-      expect(queries.first['q'], "'root' in parents and trashed = false");
-      expect(queries.last['pageToken'], 'p2');
-      expect(entries.map((e) => e.name), ['Zed', 'a.docx', 'b.pdf', 'pic.png', 'Plans']);
-      expect(entries.map((e) => e.kind), [
-        CloudEntryKind.folder,
-        CloudEntryKind.word,
-        CloudEntryKind.pdf,
-        CloudEntryKind.other,
-        CloudEntryKind.googleDoc,
-      ]);
-      expect(entries[2].sizeBytes, 2048);
-    });
-
-    test('exports a Google Doc as PDF and downloads other files as they are', () async {
-      final tmp = Directory.systemTemp.createTempSync('lumascan_drive');
-      addTearDown(() => deleteTemp(tmp));
-      final urls = <Uri>[];
-      final client = MockClient((request) async {
-        urls.add(request.url);
-        return http.Response.bytes(utf8.encode('%PDF-1.7'), 200);
-      });
-      final api = GoogleDriveApi(CloudHttp(client, () async => 't'));
-
-      final doc = await api.download(const CloudEntry(id: 'd1', name: 'Plans', kind: CloudEntryKind.googleDoc), tmp);
-      final word = await api.download(const CloudEntry(id: 'w1', name: 'a.docx', kind: CloudEntryKind.word), tmp);
-
-      expect(urls[0].path, '/drive/v3/files/d1/export');
-      expect(urls[0].queryParameters['mimeType'], 'application/pdf');
-      expect(urls[1].queryParameters['alt'], 'media');
-      expect(p.extension(doc.path), '.pdf');
-      expect(p.extension(word.path), '.docx');
-      expect(doc.readAsStringSync(), '%PDF-1.7');
+      expect(drive.id, CloudProviderId.googleDrive);
+      expect(drive.usesSystemPicker, isTrue);
+      expect(await drive.restore(), isNull);
+      expect(drive.connect, throwsUnsupportedError);
+      expect(() => drive.list(null), throwsUnsupportedError);
     });
   });
 
@@ -402,8 +347,10 @@ void main() {
     late _RecordingImporter importer;
 
     setUp(() {
-      drive = FakeCloudProvider(CloudProviderId.googleDrive, tree: {null: _drive, 'f-work': _work});
-      oneDrive = FakeCloudProvider(CloudProviderId.oneDrive, availability: CloudAvailability.notConfigured);
+      // Google Drive itself uses the system picker; OneDrive is the service
+      // with a sign-in and a browse screen.
+      drive = FakeCloudProvider(CloudProviderId.googleDrive, availability: CloudAvailability.notConfigured);
+      oneDrive = FakeCloudProvider(CloudProviderId.oneDrive, tree: {null: _drive, 'f-work': _work});
       icloud = FakeCloudProvider(CloudProviderId.iCloudDrive, availability: CloudAvailability.unsupportedPlatform);
       importer = _RecordingImporter();
     });
@@ -428,18 +375,18 @@ void main() {
       await openAccounts(tester);
 
       expect(find.text('Google Drive'), findsOneWidget);
-      expect(find.text('Not connected'), findsOneWidget);
-      expect(find.text('Microsoft OneDrive'), findsOneWidget);
       expect(find.text('Not set up in this build yet'), findsOneWidget);
+      expect(find.text('Microsoft OneDrive'), findsOneWidget);
+      expect(find.text('Not connected'), findsOneWidget);
       expect(find.text('iCloud Drive'), findsOneWidget);
       expect(find.text('Only on iPhone and iPad'), findsOneWidget);
-      expect(find.text('Connect Microsoft OneDrive'), findsNothing);
+      expect(find.text('Connect Google Drive'), findsNothing);
     });
 
     testWidgets('connects, shows the account and disconnects', (tester) async {
       await openAccounts(tester);
 
-      await tester.tap(find.text('Connect Google Drive'));
+      await tester.tap(find.text('Connect Microsoft OneDrive'));
       await tester.pumpAndSettle();
       expect(find.text('Connected as Varun (varun@example.com)'), findsOneWidget);
       expect(find.text('Browse files'), findsOneWidget);
@@ -448,19 +395,19 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Disconnect'));
       await tester.pumpAndSettle();
-      expect(drive.disconnected, isTrue);
+      expect(oneDrive.disconnected, isTrue);
       expect(find.text('Not connected'), findsOneWidget);
     });
 
     testWidgets('a saved sign-in shows as connected on the next visit', (tester) async {
-      drive.saved = const CloudAccount(name: 'Varun', email: 'varun@example.com');
+      oneDrive.saved = const CloudAccount(name: 'Varun', email: 'varun@example.com');
       await openAccounts(tester);
 
       expect(find.text('Connected as Varun (varun@example.com)'), findsOneWidget);
     });
 
     testWidgets('browses into a folder and imports a PDF into a Library folder', (tester) async {
-      drive.saved = const CloudAccount(name: 'Varun');
+      oneDrive.saved = const CloudAccount(name: 'Varun');
       await openAccounts(
         tester,
         index: const LibraryIndex(
@@ -476,7 +423,7 @@ void main() {
 
       await tester.tap(find.text('Work'));
       await tester.pumpAndSettle();
-      expect(drive.listed, [null, 'f-work']);
+      expect(oneDrive.listed, [null, 'f-work']);
       await tester.tap(find.text('Invoice.pdf'));
       await tester.pumpAndSettle();
       expect(find.text('Import to'), findsOneWidget);
@@ -484,7 +431,7 @@ void main() {
       await tester.tap(find.text('Bills'));
       await tester.pumpAndSettle();
 
-      expect(drive.downloaded, ['invoice']);
+      expect(oneDrive.downloaded, ['invoice']);
       expect(importer.calls.single, (name: 'Invoice.pdf', kind: CloudEntryKind.pdf, folderId: 'bills'));
       expect(find.text('Saved Invoice.pdf to Bills'), findsOneWidget);
 
@@ -495,7 +442,7 @@ void main() {
     });
 
     testWidgets('imports a Word file to the top of the Library', (tester) async {
-      drive.saved = const CloudAccount(name: 'Varun');
+      oneDrive.saved = const CloudAccount(name: 'Varun');
       await openAccounts(tester);
       await tester.tap(find.text('Browse files'));
       await tester.pumpAndSettle();
@@ -514,7 +461,7 @@ void main() {
     });
 
     testWidgets('files that are not PDF or Word cannot be imported', (tester) async {
-      drive.saved = const CloudAccount(name: 'Varun');
+      oneDrive.saved = const CloudAccount(name: 'Varun');
       await openAccounts(tester);
       await tester.tap(find.text('Browse files'));
       await tester.pumpAndSettle();
@@ -527,8 +474,8 @@ void main() {
     });
 
     testWidgets('an expired sign-in sends the user back to connect again', (tester) async {
-      drive.saved = const CloudAccount(name: 'Varun');
-      drive.listError = const CloudSignInExpired();
+      oneDrive.saved = const CloudAccount(name: 'Varun');
+      oneDrive.listError = const CloudSignInExpired();
       await openAccounts(tester);
       await tester.tap(find.text('Browse files'));
       await tester.pumpAndSettle();
@@ -537,7 +484,7 @@ void main() {
       await tester.tap(find.text('Back to Accounts'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Connect Google Drive'), findsOneWidget);
+      expect(find.text('Connect Microsoft OneDrive'), findsOneWidget);
     });
   });
 }
