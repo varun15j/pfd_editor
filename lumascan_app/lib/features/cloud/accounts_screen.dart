@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_info.dart';
 import '../../app/theme.dart';
 import '../../domain/cloud_storage.dart';
+import '../capture/pdf_import.dart';
 import 'cloud_accounts.dart';
 import 'cloud_browse_screen.dart';
 import 'cloud_import_flow.dart';
@@ -28,7 +29,8 @@ class AccountsScreen extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(Space.page, Space.sm, Space.page, Space.xxl),
         children: [
           Text(
-            'Connect cloud storage to import its PDF and Word files into your Library. '
+            'Connect cloud storage to import its files. A PDF opens as pages you can edit, '
+            'like a new scan. A Word file is saved into your Library. '
             'Importing only reads the file you pick. To save your exports to Google Drive, turn on Settings > Sync.',
             style: text.bodyMedium?.copyWith(color: c.muted),
           ),
@@ -215,6 +217,12 @@ class _ProviderCardState extends ConsumerState<_ProviderCard> {
     }
     if (!mounted) return;
     final file = picked;
+    final kind = CloudEntry.kindForName(file.name);
+    if (opensAsPages(kind)) {
+      // A PDF opens straight away as pages to edit, like a new scan.
+      await importPdfToBatchEdit(context, ref, name: file.name, fetch: (_) async => file.file);
+      return;
+    }
     final destination = await pickImportFolder(context, file.name);
     if (destination == null || !mounted) {
       _deleteQuietly(file);
@@ -224,7 +232,7 @@ class _ProviderCardState extends ConsumerState<_ProviderCard> {
       context,
       ref,
       name: file.name,
-      kind: CloudEntry.kindForName(file.name),
+      kind: kind,
       destination: destination,
       fetch: () async => file.file,
     );

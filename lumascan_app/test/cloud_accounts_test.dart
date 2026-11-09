@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:image/image.dart' as img;
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/data/cloud/cloud_http.dart';
 import 'package:lumascan/data/cloud/google_drive_provider.dart';
@@ -13,13 +14,18 @@ import 'package:lumascan/data/cloud/onedrive_provider.dart';
 import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/domain/cloud_storage.dart';
 import 'package:lumascan/domain/library.dart';
+import 'package:lumascan/domain/photo_import.dart';
 import 'package:lumascan/export/word/word_service.dart';
+import 'package:lumascan/features/capture/pdf_import.dart';
 import 'package:lumascan/features/cloud/cloud_accounts.dart';
 import 'package:lumascan/features/cloud/cloud_importer.dart';
 import 'package:lumascan/features/library/library_controller.dart';
 import 'package:lumascan/features/merge/pdf_inspector.dart';
+import 'package:lumascan/features/open/open_progress.dart';
+import 'package:lumascan/features/pages/scan_controller.dart';
 import 'package:path/path.dart' as p;
 
+import 'support/fake_photos.dart';
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
 import 'support/temp_dir.dart';
@@ -70,7 +76,7 @@ class FakeCloudProvider extends CloudStorageProvider {
   @override
   Future<File> download(CloudEntry entry, Directory directory) async {
     downloaded.add(entry.id);
-    return File(p.join(directory.path, 'download-${entry.id}'));
+    return File(p.join(directory.path, 'download-${entry.id}'))..writeAsStringSync('%PDF-1.7');
   }
 }
 
@@ -96,6 +102,43 @@ class _RecordingImporter implements CloudImporter {
       modifiedAt: now,
       folderId: folderId,
     );
+  }
+}
+
+/// A service reached through the system file picker, like Google Drive.
+class _PickerProvider extends FakeCloudProvider {
+  _PickerProvider(this.pick) : super(CloudProviderId.googleDrive);
+
+  final PickedCloudFile Function() pick;
+
+  @override
+  bool get usesSystemPicker => true;
+
+  @override
+  Future<PickedCloudFile?> pickFile({void Function()? onFetching}) async => pick();
+}
+
+/// Makes three small page images for any PDF, as pdfrx would.
+class _FakePagesMaker implements PdfPagesMaker {
+  final opened = <String>[];
+  final dirs = <Directory>[];
+
+  @override
+  Future<List<PickedPhoto>> makePages(
+    BuildContext context,
+    String path,
+    String name,
+    Directory dir,
+    OpenProgress progress,
+  ) async {
+    opened.add(path);
+    dirs.add(dir);
+    final jpeg = img.encodeJpg(img.Image(width: 60, height: 80)..clear(img.ColorRgb8(250, 250, 250)));
+    final photos = [
+      for (var i = 1; i <= 3; i++)
+        PickedPhoto(path: (File(p.join(dir.path, 'page_$i.jpg'))..writeAsBytesSync(jpeg)).path, name: 'page $i'),
+    ];
+    return photos;
   }
 }
 
@@ -345,6 +388,9 @@ void main() {
     late FakeCloudProvider oneDrive;
     late FakeCloudProvider icloud;
     late _RecordingImporter importer;
+    late Directory tmp;
+    late Directory downloads;
+    late _FakePagesMaker pages;
 
     setUp(() {
       // Google Drive itself uses the system picker; OneDrive is the service
@@ -353,7 +399,12 @@ void main() {
       oneDrive = FakeCloudProvider(CloudProviderId.oneDrive, tree: {null: _drive, 'f-work': _work});
       icloud = FakeCloudProvider(CloudProviderId.iCloudDrive, availability: CloudAvailability.unsupportedPlatform);
       importer = _RecordingImporter();
+      tmp = Directory.systemTemp.createTempSync('lumascan_cloud_ui');
+      downloads = Directory(p.join(tmp.path, 'downloads'))..createSync();
+      pages = _FakePagesMaker();
     });
+
+    tearDown(() => deleteTemp(tmp));
 
     Future<void> openAccounts(WidgetTester tester, {LibraryIndex index = const LibraryIndex()}) async {
       await pumpApp(
@@ -362,7 +413,11 @@ void main() {
         overrides: [
           cloudProvidersProvider.overrideWithValue([drive, oneDrive, icloud]),
           cloudImporterProvider.overrideWithValue(importer),
-          cloudDownloadDirProvider.overrideWithValue(() async => Directory.systemTemp),
+          cloudDownloadDirProvider.overrideWithValue(() async => downloads),
+          pdfPagesMakerProvider.overrideWithValue(pages),
+          pdfImportDirProvider.overrideWithValue(() async => Directory(p.join(tmp.path, 'pages')).create()),
+          pageStoreProvider.overrideWithValue(PageStore(rootDir: () async => Directory(p.join(tmp.path, 'store')))),
+          photoAnalyzerProvider.overrideWithValue(FakePhotoAnalyzer()),
         ],
       );
       await tester.tap(find.byTooltip('Settings'));
@@ -406,14 +461,9 @@ void main() {
       expect(find.text('Connected as Varun (varun@example.com)'), findsOneWidget);
     });
 
-    testWidgets('browses into a folder and imports a PDF into a Library folder', (tester) async {
+    testWidgets('browses into a folder and opens a PDF as editable pages in Batch review', (tester) async {
       oneDrive.saved = const CloudAccount(name: 'Varun');
-      await openAccounts(
-        tester,
-        index: const LibraryIndex(
-          folders: [LibraryFolder(id: 'bills', name: 'Bills')],
-        ),
-      );
+      await openAccounts(tester);
 
       await tester.tap(find.text('Browse files'));
       await tester.pumpAndSettle();
@@ -424,21 +474,53 @@ void main() {
       await tester.tap(find.text('Work'));
       await tester.pumpAndSettle();
       expect(oneDrive.listed, [null, 'f-work']);
+      // Real file copies happen on the way, so let real time pass.
       await tester.tap(find.text('Invoice.pdf'));
-      await tester.pumpAndSettle();
-      expect(find.text('Import to'), findsOneWidget);
+      for (var i = 0; i < 100 && find.text('Batch review').evaluate().isEmpty; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pump(const Duration(milliseconds: 500));
 
-      await tester.tap(find.text('Bills'));
-      await tester.pumpAndSettle();
-
+      // No Library folder to choose and nothing saved to the Library.
+      expect(find.text('Import to'), findsNothing);
+      expect(importer.calls, isEmpty);
       expect(oneDrive.downloaded, ['invoice']);
-      expect(importer.calls.single, (name: 'Invoice.pdf', kind: CloudEntryKind.pdf, folderId: 'bills'));
-      expect(find.text('Saved Invoice.pdf to Bills'), findsOneWidget);
+      expect(pages.opened.single, endsWith('download-invoice'));
+      expect(find.text('Batch review'), findsOneWidget);
 
-      // Back goes up a folder before leaving the account.
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-      expect(find.text('Lease.pdf'), findsOneWidget);
+      final container = ProviderScope.containerOf(tester.element(find.text('Batch review')));
+      final draft = container.read(scanControllerProvider);
+      expect(draft.pages, hasLength(3));
+      expect(draft.info?.name, 'Invoice');
+      // Each page starts uncropped: a PDF page is already a page.
+      expect(draft.pages.every((pg) => pg.recipe.crop.isFull), isTrue);
+      // The download and the page images made from it are gone.
+      expect(File(pages.opened.single).existsSync(), isFalse);
+      expect(pages.dirs.single.existsSync(), isFalse);
+    });
+
+    testWidgets('a PDF chosen in the system picker opens as pages in Batch review', (tester) async {
+      final picked = File(p.join(downloads.path, 'Lease.pdf'))..writeAsStringSync('%PDF-1.7');
+      drive = _PickerProvider(() => PickedCloudFile(name: 'Lease.pdf', file: picked));
+      await openAccounts(tester);
+
+      await tester.tap(find.text('Choose a file'));
+      for (var i = 0; i < 100 && find.text('Batch review').evaluate().isEmpty; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Import to'), findsNothing);
+      expect(importer.calls, isEmpty);
+      expect(find.text('Batch review'), findsOneWidget);
+      final draft = ProviderScope.containerOf(tester.element(find.text('Batch review'))).read(scanControllerProvider);
+      expect(draft.pages, hasLength(3));
+      expect(draft.info?.name, 'Lease');
+      expect(picked.existsSync(), isFalse);
     });
 
     testWidgets('imports a Word file to the top of the Library', (tester) async {

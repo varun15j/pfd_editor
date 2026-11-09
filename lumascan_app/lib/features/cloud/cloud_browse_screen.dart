@@ -4,13 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../domain/cloud_storage.dart';
 import '../../ui/file_size.dart';
+import '../capture/pdf_import.dart';
 import '../library/document_tile.dart' show formatModified;
 import 'cloud_accounts.dart';
 import 'cloud_import_flow.dart';
 import '../../ui/luma_icons.dart';
 
 /// Folders and files in a connected cloud account. Tapping a folder opens
-/// it; tapping a PDF or Word file imports it into a chosen Library folder.
+/// it; tapping a PDF (or a Google Doc) opens its pages in Batch Review as a
+/// new document; tapping a Word file imports it into a chosen Library folder.
 /// Other files are listed but cannot be imported.
 class CloudBrowseScreen extends ConsumerStatefulWidget {
   const CloudBrowseScreen({super.key, required this.provider, required this.account});
@@ -110,6 +112,7 @@ class _CloudBrowseScreenState extends ConsumerState<CloudBrowseScreen> {
 
   Future<void> _import(CloudEntry entry) async {
     if (!entry.kind.importable) return;
+    if (opensAsPages(entry.kind)) return _openAsPages(entry);
     final destination = await pickImportFolder(context, entry.name);
     if (destination == null || !mounted) return;
     final dir = await ref.read(cloudDownloadDirProvider)();
@@ -123,6 +126,25 @@ class _CloudBrowseScreenState extends ConsumerState<CloudBrowseScreen> {
       fetch: () => widget.provider.download(entry, dir),
     );
     if (!signedIn && mounted) _signedOut();
+  }
+
+  /// Downloads a PDF (or a Google Doc as PDF) and opens its pages in Batch
+  /// Review as a new document.
+  Future<void> _openAsPages(CloudEntry entry) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final dir = await ref.read(cloudDownloadDirProvider)();
+    if (!mounted) return;
+    try {
+      await importPdfToBatchEdit(
+        context,
+        ref,
+        name: entry.kind == CloudEntryKind.googleDoc ? '${entry.name}.pdf' : entry.name,
+        fetch: (_) => widget.provider.download(entry, dir),
+      );
+    } on CloudSignInExpired {
+      messenger.showSnackBar(const SnackBar(content: Text('The sign-in has expired. Connect the account again.')));
+      if (mounted) _signedOut();
+    }
   }
 }
 

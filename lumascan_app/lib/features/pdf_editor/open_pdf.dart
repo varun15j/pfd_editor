@@ -122,7 +122,7 @@ Future<void> _openWithProgress(
         ownedPath = path;
         progress.throwIfCancelled();
         if (!context.mounted) throw const OpenCancelled();
-        final document = await _openPdf(context, path, progress);
+        final document = await openCheckedPdf(context, path, progress);
         return _OpenedPdf(path, shownName, document.$1, document.$2);
       },
     );
@@ -169,7 +169,15 @@ Future<void> _openWithProgress(
 /// measures every page a slice at a time, reporting progress and stopping as
 /// soon as the user cancels. PDFium reads the file from disk as it needs it,
 /// so even a very large file is never loaded into memory in one piece.
-Future<(PdfDocument, String?)> _openPdf(BuildContext context, String path, OpenProgress progress) async {
+///
+/// With [maxPages], a longer document fails with [OpenFailure.tooManyPages]
+/// before any page is read.
+Future<(PdfDocument, String?)> openCheckedPdf(
+  BuildContext context,
+  String path,
+  OpenProgress progress, {
+  int? maxPages,
+}) async {
   progress.report('Checking the file');
   final facts = await checkPdfFile(path);
   progress.throwIfCancelled();
@@ -200,6 +208,9 @@ Future<(PdfDocument, String?)> _openPdf(BuildContext context, String path, OpenP
     progress.throwIfCancelled();
     final total = document.pages.length;
     if (total == 0) throw const DocumentOpenException(OpenFailure.noPages);
+    if (maxPages != null && total > maxPages) {
+      throw DocumentOpenException(OpenFailure.tooManyPages, detail: '$total');
+    }
     progress.report('Reading pages', done: 0, total: total);
     await document.loadPagesProgressively(
       onPageLoadProgress: (loaded, total, _) {
