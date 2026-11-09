@@ -33,5 +33,6 @@ class GoogleDriveProvider extends CloudStorageProvider {
   Future<void> disconnect() async {}
 
   @override
-  Future<PickedCloudFile?> pickFile() => pickDocumentWithSystemPicker();
+  Future<PickedCloudFile?> pickFile({void Function()? onFetching}) =>
+      pickDocumentWithSystemPicker(onFetching: onFetching);
 }
