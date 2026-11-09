@@ -70,7 +70,7 @@ void main() {
       await pumpApp(tester);
       await tester.tap(find.byTooltip('Search'));
       await tester.pumpAndSettle();
-      expect(find.text('No saved documents yet'), findsOneWidget);
+      expect(find.text('No documents yet'), findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();
 
@@ -170,7 +170,7 @@ void main() {
       await pumpApp(tester, library: MemoryLibraryStore(library));
       await tester.tap(find.byTooltip('Search'));
       await tester.pumpAndSettle();
-      expect(find.text('No saved documents yet'), findsNothing);
+      expect(find.text('No documents yet'), findsNothing);
       expect(find.text('Rental agreement'), findsWidgets);
       expect(find.text('7 Mar 2026 · 3 pages'), findsWidgets);
     });

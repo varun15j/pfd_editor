@@ -66,3 +66,14 @@ class FakeDriveBackup implements DriveBackup {
   @override
   Future<void> removePending(String path) async => queue.remove(path);
 }
+
+/// Queues each export where it is, so tests see the paths they made.
+class InPlaceSyncQueue implements DriveSyncQueue {
+  final released = <String>[];
+
+  @override
+  Future<String> keep(File file) async => file.path;
+
+  @override
+  Future<void> release(String path) async => released.add(path);
+}

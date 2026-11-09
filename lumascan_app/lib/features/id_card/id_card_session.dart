@@ -9,13 +9,11 @@ import '../../app/app_info.dart';
 import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../domain/id_copy.dart';
-import '../../domain/library.dart';
 import '../../domain/models.dart';
 import '../../domain/plan.dart';
 import '../../export/pdf_exporter.dart';
 import '../../imaging/id_copy_composer.dart';
 import '../../pdf_edit/pdf_saver.dart';
-import '../library/library_controller.dart';
 import '../pages/scan_controller.dart';
 
 /// The ID copy on screen: the scan document's ID copy setup, or null when
@@ -31,10 +29,6 @@ class IdCopyDraftNotifier extends Notifier<IdCopyDraft?> {
   /// The sides the copy page was last made from, so a change that leaves
   /// them as they were does not make it again.
   List<ScanPage?>? _madeFrom;
-
-  /// Copy pages waiting to be made again. The saved PDF is brought up to
-  /// date once, after the last of them.
-  int _toRemake = 0;
 
   @override
   IdCopyDraft? build() {
@@ -70,34 +64,15 @@ class IdCopyDraftNotifier extends Notifier<IdCopyDraft?> {
     final was = sidePages(before.info!.idCopy!, before);
     final now = sidePages(draft, after);
     if (listEquals(was, now) || now.any((s) => s == null)) return;
-    _toRemake++;
+    // No PDF is kept to make again: the copy is exported as a PDF only when
+    // it is shared or saved, from the pages as they are then.
     _remaking = _remaking.then((_) async {
-      var made = false;
       try {
-        made = await _remakeCopy();
+        await _remakeCopy();
       } on Object catch (e) {
         debugPrint('ID copy remake failed: $e');
       }
-      _toRemake--;
-      if (made) _remadeSinceSave = true;
-      if (_toRemake == 0 && _remadeSinceSave && ref.mounted) {
-        _remadeSinceSave = false;
-        await _resave();
-      }
     });
-  }
-
-  bool _remadeSinceSave = false;
-
-  /// The copy was saved as a PDF in the Library when it was made, so that
-  /// file is saved again with the new copy page: opened from Documents or
-  /// shared from there, it shows the side as it is now, not the old one.
-  Future<void> _resave() async {
-    try {
-      await savePdf();
-    } on Object catch (e) {
-      debugPrint('ID copy PDF not saved again: $e');
-    }
   }
 
   /// Makes the copy page again from the sides as they are now. True when it
@@ -181,14 +156,18 @@ class IdCopyDraftNotifier extends Notifier<IdCopyDraft?> {
     return file.path;
   }
 
-  /// Saves the draft's pages as a PDF in the Library, filed as an ID card,
-  /// under the document's name; saving again replaces that file and keeps
-  /// its Library entry. With [only], just those pages go in, under the name
-  /// with " copy" added. Pages are 200 dpi, so the copy prints at real size.
+  /// Exports the draft's pages as a PDF under the document's name, to be
+  /// saved where the user picks or shared. The app keeps no copy: the PDF
+  /// is made in the Outbox, and the ID card stays as its page images. With
+  /// [only], just those pages go in, under the name with " copy" added.
+  /// Pages are 200 dpi, so the copy prints at real size.
   Future<File> savePdf({List<ScanPage>? only}) async {
     final scan = ref.read(scanControllerProvider);
     final pages = only ?? scan.pages;
     final name = scan.info?.name ?? 'ID card';
+    final store = ref.read(pageStoreProvider);
+    await store.clearOutbox();
+    final fileName = await store.outboxName(PdfEditSaver.safeFileName(only == null ? name : '$name copy'));
     final file = await ref
         .read(pdfExporterProvider)
         .export(
@@ -197,12 +176,11 @@ class IdCopyDraftNotifier extends Notifier<IdCopyDraft?> {
             pageSize: PdfPageSize.fitImage,
             fitImageDpi: composeDpi,
             quality: ExportQuality.high,
-            fileName: PdfEditSaver.safeFileName(only == null ? name : '$name copy'),
+            fileName: fileName,
             // Basic exports carry the "Scanned with" mark, ID copies too.
             watermark: ref.read(planIncludesProvider(PlanFeature.noWatermark)) ? null : exportWatermark,
           ),
         );
-    await ref.read(libraryProvider.notifier).addScan(file, pages, type: ScanType.idCard);
     if (only == null) ref.read(scanControllerProvider.notifier).markExported();
     return file;
   }

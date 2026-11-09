@@ -47,6 +47,15 @@ class PageStore {
 
   static const savedFolder = 'Saved';
 
+  /// Exported files waiting for the user to save or share them. The app
+  /// keeps only the page images and the documents being worked on, never
+  /// its exports: each export is made here, handed to the system save
+  /// screen or share sheet, and removed later (see [clearOutbox]). Inside
+  /// [exportsDir], so names for it are given as `Outbox/<id>/<name>`.
+  Future<Directory> get outboxDir => _dir(p.join('exports', outboxFolder));
+
+  static const outboxFolder = 'Outbox';
+
   Future<Directory> get thumbnailsDir => _dir('thumbnails');
 
   /// Smaller copies made for sending. Throwaway: the saved PDF stays in
@@ -167,6 +176,52 @@ class PageStore {
       candidate = '$stem ($n)$ext';
     }
     return candidate;
+  }
+
+  /// A name relative to [exportsDir] for a new export called [fileName]:
+  /// `Outbox/<id>/<fileName>`. Each export gets its own folder, so the user
+  /// sees the name they typed in the save screen, never "name (2)".
+  Future<String> outboxName(String fileName) async =>
+      p.posix.join(outboxFolder, p.basename((await newOutboxFolder()).path), fileName);
+
+  /// A new, empty folder in the Outbox for one export.
+  Future<Directory> newOutboxFolder() async =>
+      Directory(p.join((await outboxDir).path, newId())).create(recursive: true);
+
+  /// Copies of exports waiting to upload to Google Drive (Settings > Sync).
+  /// Kept only until uploaded, since the Outbox is cleared on its own.
+  Future<Directory> get syncQueueDir => _dir(p.join('exports', 'Sync'));
+
+  /// Moves an export made elsewhere in [exportsDir] into the Outbox, under
+  /// the same name. A file already in the Outbox is returned as it is.
+  Future<File> moveToOutbox(File file) async {
+    final outbox = (await outboxDir).path;
+    if (p.isWithin(outbox, file.path)) return file;
+    final target = p.join((await exportsDir).path, await outboxName(p.basename(file.path)));
+    try {
+      return await file.rename(target);
+    } on FileSystemException {
+      // Another volume: copy, then remove the original.
+      final copy = await file.copy(target);
+      await file.delete();
+      return copy;
+    }
+  }
+
+  /// Deletes exports in the Outbox made more than [olderThan] ago: by then
+  /// they were saved or shared, or the user left them. A file just shared is
+  /// kept a while, as the app it went to may still be reading it.
+  Future<void> clearOutbox({Duration olderThan = const Duration(hours: 1)}) async {
+    final dir = Directory(p.join((await exportsDir).path, outboxFolder));
+    if (!dir.existsSync()) return;
+    final before = DateTime.now().subtract(olderThan);
+    await for (final e in dir.list(followLinks: false)) {
+      try {
+        if (e.statSync().modified.isBefore(before)) await e.delete(recursive: true);
+      } on FileSystemException {
+        // Gone already, or still open; the next clear takes it.
+      }
+    }
   }
 
   /// Writes [bytes] to [relativePath] under the root through a temp file and

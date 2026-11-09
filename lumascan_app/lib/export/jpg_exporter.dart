@@ -20,9 +20,16 @@ class JpgExporter {
   final int maxDimension;
   final int quality;
 
-  Future<List<File>> export(List<ScanPage> pages, String name, {void Function(int done, int total)? onProgress}) async {
+  /// Saves the JPGs in a new folder named after [name], inside [into]
+  /// (the exports folder when null).
+  Future<List<File>> export(
+    List<ScanPage> pages,
+    String name, {
+    void Function(int done, int total)? onProgress,
+    Directory? into,
+  }) async {
     final stem = safeStem(name);
-    final exports = (await _files.exportsDir).path;
+    final exports = (into ?? await _files.exportsDir).path;
     // A folder that is already there gets a number, so earlier JPGs are kept.
     var folder = stem;
     for (var n = 2; Directory(p.join(exports, folder)).existsSync(); n++) {

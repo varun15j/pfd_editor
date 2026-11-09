@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
 import 'app/frame_watchdog.dart';
+import 'data/page_store.dart';
 import 'debug/test_data_backup.dart';
 
 Future<void> main() async {
@@ -13,4 +16,6 @@ Future<void> main() async {
   await TestDataBackup.instance.restoreAtStart();
   runApp(const ProviderScope(child: LumaScanApp()));
   TestDataBackup.instance.start();
+  // Exports not saved or shared within the hour are not kept.
+  unawaited(PageStore().clearOutbox().catchError((Object _) {}));
 }

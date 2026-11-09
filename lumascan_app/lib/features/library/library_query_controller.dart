@@ -17,7 +17,14 @@ final libraryQueryProvider = NotifierProvider<LibraryQueryController, LibraryQue
 
 class LibraryQueryController extends Notifier<LibraryQuery> {
   @override
-  LibraryQuery build() => const LibraryQuery();
+  LibraryQuery build() {
+    // Once the last older export is gone, Saved and All are hidden, so the
+    // list goes back to Docs.
+    ref.listen(hasOldExportsProvider, (_, has) {
+      if (!has && state.scope != DocScope.docs) state = state.copyWith(scope: DocScope.docs);
+    });
+    return const LibraryQuery();
+  }
 
   void search(String text) => state = state.copyWith(text: text);
 

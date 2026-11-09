@@ -16,6 +16,7 @@ import 'package:lumascan/domain/photo_import.dart';
 import 'package:lumascan/domain/scanner_service.dart';
 import 'package:lumascan/export/pdf_exporter.dart';
 import 'package:lumascan/features/capture/photo_import_screen.dart';
+import 'package:lumascan/features/export/export_saver.dart';
 import 'package:lumascan/features/export/export_sheet.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
 import 'package:lumascan/features/settings/about_section.dart';
@@ -23,6 +24,7 @@ import 'package:lumascan/features/settings/storage_section.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 
+import 'support/fake_export_saver.dart';
 import 'support/fake_photos.dart';
 import 'support/memory_stores.dart';
 import 'support/pump_app.dart';
@@ -46,11 +48,6 @@ class _FakeExporter implements PdfExporter {
   @override
   Future<File> export(List<ScanPage> pages, ExportOptions options, {void Function(int done, int total)? onProgress}) =>
       Future.value(output);
-}
-
-class _FailingLibraryStore extends MemoryLibraryStore {
-  @override
-  Future<void> save(index) => Future.error(StateError('disk full'));
 }
 
 void main() {
@@ -244,8 +241,9 @@ void main() {
   group('saving', () {
     late ProviderContainer container;
     late List<String> originals;
+    late FakeExportSaver saver;
 
-    Future<void> setUpContainer({LibraryStoreOverride? library}) async {
+    Future<void> setUpContainer() async {
       makeTmp();
       originals = [
         for (var i = 0; i < 2; i++)
@@ -258,8 +256,9 @@ void main() {
           pdfExporterProvider.overrideWithValue(
             _FakeExporter(File('${tmp.path}/out.pdf')..writeAsBytesSync(List.filled(2048, 0))),
           ),
-          libraryStoreProvider.overrideWithValue(library?.call() ?? MemoryLibraryStore()),
+          libraryStoreProvider.overrideWithValue(MemoryLibraryStore()),
           appSettingsStoreProvider.overrideWithValue(MemoryAppSettingsStore()),
+          exportSaverProvider.overrideWithValue(saver = FakeExportSaver()),
         ],
       );
       addTearDown(container.dispose);
@@ -299,6 +298,15 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    /// Waits for the save screen's answer and what follows it.
+    Future<void> tapSaved(WidgetTester tester) async {
+      for (var i = 0; i < 20; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+    }
+
     String nameField(WidgetTester tester) => tester.widget<TextField>(find.byType(TextField)).controller!.text;
 
     testWidgets('the name offered is the scan\'s own name, whatever the file name setting', (tester) async {
@@ -312,38 +320,48 @@ void main() {
       await tester.runAsync(setUpContainer);
       await openSheetAndSave(tester);
       await tapSave(tester);
-      expect(find.text('PDF saved'), findsOneWidget);
+      expect(find.text('PDF ready'), findsOneWidget);
+      await tester.tap(find.text('Save to device'));
+      await tapSaved(tester);
+      expect(saver.saved, hasLength(1));
       expect(find.textContaining('removed from this device'), findsNothing);
       final pages = container.read(scanControllerProvider).pages;
       expect(pages, hasLength(2));
       expect(File(pages.first.originalPath).existsSync(), isTrue);
     });
 
-    testWidgets('with Keep page images off they are deleted once the PDF is in the Library', (tester) async {
+    testWidgets('with Keep page images off they are deleted once the PDF is saved where the user picked', (
+      tester,
+    ) async {
       await tester.runAsync(setUpContainer);
       container.read(appSettingsProvider.notifier).setKeepOriginals(false);
       final paths = [for (final p in container.read(scanControllerProvider).pages) p.originalPath];
       await openSheetAndSave(tester);
       await tapSave(tester);
 
-      expect(find.text('PDF saved'), findsOneWidget);
-      expect(find.text('2 pages · 2 KB'), findsNothing); // sizes are shown from the saved file
+      expect(find.text('PDF ready'), findsOneWidget);
       expect(find.textContaining('2 pages'), findsOneWidget, reason: 'the result keeps the saved page count');
+      expect(container.read(scanControllerProvider).pages, hasLength(2), reason: 'the PDF is not saved anywhere yet');
+
+      await tester.tap(find.text('Save to device'));
+      await tapSaved(tester);
       expect(find.textContaining('removed from this device'), findsOneWidget);
       expect(container.read(scanControllerProvider).pages, isEmpty);
       for (final path in paths) {
         expect(File(path).existsSync(), isFalse, reason: path);
       }
-      expect(File('${tmp.path}/out.pdf').existsSync(), isTrue, reason: 'the saved PDF is kept');
     });
 
-    testWidgets('if the PDF cannot be added to the Library the pages are kept', (tester) async {
-      await tester.runAsync(() => setUpContainer(library: _FailingLibraryStore.new));
+    testWidgets('with Keep page images off, cancelling the save screen keeps the pages', (tester) async {
+      await tester.runAsync(setUpContainer);
+      saver.answer = null;
       container.read(appSettingsProvider.notifier).setKeepOriginals(false);
       await openSheetAndSave(tester);
       await tapSave(tester);
-      expect(find.textContaining('could not be added to your Library'), findsOneWidget);
+      await tester.tap(find.text('Save to device'));
+      await tapSaved(tester);
       expect(container.read(scanControllerProvider).pages, hasLength(2));
+      expect(find.textContaining('removed from this device'), findsNothing);
     });
   });
 
@@ -530,4 +548,3 @@ void main() {
   });
 }
 
-typedef LibraryStoreOverride = MemoryLibraryStore Function();

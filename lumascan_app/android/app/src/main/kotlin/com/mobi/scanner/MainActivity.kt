@@ -24,6 +24,7 @@ class MainActivity : FlutterActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var channel: MethodChannel? = null
     private val deviceAuth = DeviceAuth(this)
+    private val exportSaver = ExportSaver(this)
     private var resumed = false
     private var uiDisplayed = false
     private var debugSession = false
@@ -78,11 +79,14 @@ class MainActivity : FlutterActivity() {
         }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DeviceAuth.CHANNEL)
             .setMethodCallHandler(deviceAuth::handle)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ExportSaver.CHANNEL)
+            .setMethodCallHandler(exportSaver::handle)
     }
 
-    @Deprecated("Needed for the lock screen's confirm screen on Android 8 and 9")
+    @Deprecated("Needed for the lock screen's confirm screen on Android 8 and 9, and the export save screens")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (deviceAuth.onActivityResult(requestCode, resultCode)) return
+        if (exportSaver.onActivityResult(requestCode, resultCode, data)) return
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
     }

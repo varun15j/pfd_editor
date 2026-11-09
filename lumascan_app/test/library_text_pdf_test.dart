@@ -101,13 +101,13 @@ void main() {
   });
 
   for (final plan in [AppPlan.pro, AppPlan.gold]) {
-    testWidgets('on ${plan.label} Create text PDF reads the saved document and files the result', (tester) async {
+    testWidgets('on ${plan.label} Create text PDF reads the saved document and asks where it goes', (tester) async {
       await openMenu(tester, plan);
       expect(find.text('Pro'), findsNothing);
 
       await tester.tap(find.text('Create text PDF'));
       await tester.pump();
-      for (var i = 0; i < 6; i++) {
+      for (var i = 0; i < 14; i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
         await tester.pump();
       }
@@ -116,15 +116,12 @@ void main() {
       expect(service.read, hasLength(1));
       expect(service.read.single.$1, lease.pdfPath);
       expect(service.read.single.$2, 3);
-      expect(service.read.single.$3, 'Lease (text).pdf');
-      // The result is asked about, not filed straight away.
-      expect(find.text('Text PDF saved'), findsOneWidget);
+      expect(service.read.single.$3, matches(RegExp(r'^Outbox/[^/]+/Lease \(text\)\.pdf$')));
+      // The result is saved where the user picks or shared, never filed in the app.
+      expect(find.text('Text PDF ready'), findsOneWidget);
+      expect(find.text('Save to device'), findsOneWidget);
+      expect(find.text('Save to library'), findsNothing);
       expect(find.text('Lease (text)'), findsNothing);
-      await tester.tap(find.text('Save to library'));
-      await tester.pumpAndSettle();
-      expect(find.text('Saved to your Library'), findsOneWidget);
-      // Filed in the Library next to the original.
-      expect(find.text('Lease (text)'), findsWidgets);
     });
   }
 }

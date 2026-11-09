@@ -143,8 +143,9 @@ class _IdCardReviewScreenState extends ConsumerState<IdCardReviewScreen> {
     }
     setState(() => _saving = true);
     try {
+      // The copy stays as page images; a PDF is made only when it is
+      // shared or saved from the next screen.
       await _session.makeCopyPage();
-      await _session.savePdf();
       if (!mounted) return;
       if (widget.fromSaved) {
         Navigator.of(context).pop();

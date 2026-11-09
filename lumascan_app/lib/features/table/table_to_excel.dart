@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_filex/open_filex.dart';
@@ -19,6 +18,7 @@ import '../../domain/table_extractor.dart';
 import '../../export/xlsx_writer.dart';
 import '../../ui/upgrade_dialog.dart';
 import '../pages/scan_actions.dart';
+import '../export/export_delivery.dart';
 import '../share/pdf_sharer.dart';
 import '../../ui/luma_icons.dart';
 
@@ -340,10 +340,12 @@ String tableFileName(DateTime t) {
   return 'Table ${t.year}-${two(t.month)}-${two(t.day)} ${two(t.hour)}${two(t.minute)}.xlsx';
 }
 
-/// Writes [table] to the exports folder as [name], or "name (2).xlsx" when
-/// that file exists. The Library holds PDFs, so the file is not added there.
-Future<File> saveTableAsExcel(PageStore store, ExtractedTable table, {required String name}) async =>
-    store.writeExportAtomically(await store.freeExportName(name), XlsxWriter.write(table.rows));
+/// Writes [table] as [name] in the Outbox, where it waits to be saved where
+/// the user picks or shared. The app keeps no copy of exports.
+Future<File> saveTableAsExcel(PageStore store, ExtractedTable table, {required String name}) async {
+  await store.clearOutbox();
+  return store.writeExportAtomically(await store.outboxName(name), XlsxWriter.write(table.rows));
+}
 
 /// Hands an Excel file to the system share sheet. Behind an interface so
 /// tests do not need the plugin.
@@ -367,8 +369,8 @@ class SharePlusXlsxSharer implements XlsxSharer {
 
 final xlsxSharerProvider = Provider<XlsxSharer>((ref) => SharePlusXlsxSharer());
 
-/// Asks what to do with the Excel file once it is saved: open it, share it,
-/// or save it to the Documents folder.
+/// Asks where the Excel file goes once it is made: saved where the user
+/// picks (Documents, an SD card, Drive) or shared. It can also be opened.
 Future<void> showExcelSavedSheet(BuildContext context, File file) => showModalBottomSheet<void>(
   context: context,
   isScrollControlled: true,
@@ -391,32 +393,19 @@ class ExcelSavedSheet extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Excel file saved', style: textTheme.headlineSmall),
+            Text('Excel file ready', style: textTheme.headlineSmall),
             const SizedBox(height: 4),
             Text(p.basename(file.path), style: textTheme.bodyMedium),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
+            Text(exportNotKeptNote, style: textTheme.bodySmall),
+            const SizedBox(height: 16),
+            ExportDeliveryButtons(paths: [file.path], onShare: (button) => _share(context, ref, button)),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(LumaIcons.openExternal),
               title: const Text('Open in Excel'),
               onTap: () => _open(context),
             ),
-            Builder(
-              builder: (tileContext) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(LumaIcons.share),
-                title: const Text('Share'),
-                onTap: () => _share(context, ref, tileContext),
-              ),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(LumaIcons.folder),
-              title: const Text('Save to Documents folder'),
-              subtitle: const Text('Choose Documents in the save dialog'),
-              onTap: () => _saveToDocuments(context),
-            ),
-            const SizedBox(height: 8),
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
           ],
         ),
@@ -452,30 +441,9 @@ class ExcelSavedSheet extends ConsumerWidget {
     final origin = box == null ? null : box.localToGlobal(Offset.zero) & box.size;
     try {
       final outcome = await ref.read(xlsxSharerProvider).send(file.path, origin: origin);
-      if (outcome == SendOutcome.sent) navigator.pop();
+      if (outcome == SendOutcome.sent && navigator.mounted) navigator.pop();
     } on Object catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('Could not open the share sheet. $e')));
-    }
-  }
-
-  Future<void> _saveToDocuments(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    try {
-      final saved = await FilePicker.saveFile(
-        dialogTitle: 'Save Excel file to Documents',
-        fileName: p.basename(file.path),
-        bytes: await file.readAsBytes(),
-        mimeType: XlsxWriter.mimeType,
-        type: FileType.custom,
-        allowedExtensions: const ['xlsx'],
-      );
-      // Cancelling the dialog keeps the sheet open, so another option can be picked.
-      if (saved == null) return;
-      navigator.pop();
-      messenger.showSnackBar(const SnackBar(content: Text('Saved to Documents')));
-    } on Object catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not save the Excel file. $e')));
     }
   }
 }

@@ -230,7 +230,6 @@ Future<void> createTextPdf(BuildContext context, WidgetRef ref, SavedDocument do
     return;
   }
   final service = ref.read(textPdfServiceProvider);
-  final library = ref.read(libraryProvider.notifier);
   final store = ref.read(pageStoreProvider);
   final progress = ValueNotifier<double>(0);
   final navigator = Navigator.of(context, rootNavigator: true);
@@ -249,21 +248,15 @@ Future<void> createTextPdf(BuildContext context, WidgetRef ref, SavedDocument do
     final made = await service.fromPdf(
       doc.pdfPath,
       pageCount: doc.pageCount,
-      fileName: await store.freeExportName(TextPdfService.textName(doc.name)),
+      // Made in the Outbox: the app keeps no copy once it is saved or shared.
+      fileName: await store.outboxName(TextPdfService.textName(doc.name)),
       keepLayout: ref.read(planIncludesProvider(PlanFeature.smartScan)),
       languageCode: ref.read(ocrLanguageProvider),
       onProgress: (f) => progress.value = f,
     );
     navigator.pop();
     if (!context.mounted) return;
-    await showTextPdfNextSheet(
-      context,
-      pdfPath: made.file.path,
-      pageCount: made.pageCount,
-      saveToLibrary: () async {
-        await library.addPdf(made.file, pageCount: made.pageCount);
-      },
-    );
+    await showTextPdfNextSheet(context, pdfPath: made.file.path, pageCount: made.pageCount);
   } on Object catch (e) {
     navigator.pop();
     messenger.showSnackBar(SnackBar(content: Text('Could not create the text PDF. $e')));

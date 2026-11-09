@@ -3,8 +3,11 @@ import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 
 import '../../app/preferences.dart';
+import '../../app/providers.dart';
+import '../../data/page_store.dart';
 import '../../data/cloud/google_drive_backup.dart';
 import '../../domain/cloud_storage.dart';
 
@@ -47,6 +50,44 @@ class ConnectivityNetworkStatus implements NetworkStatus {
 final networkStatusProvider = Provider<NetworkStatus>((ref) => ConnectivityNetworkStatus());
 
 final driveBackupProvider = Provider<DriveBackup>((ref) => GoogleDriveBackup());
+
+/// Keeps a copy of each export until it is in Drive. The app keeps no
+/// exports (they wait in the Outbox only until saved or shared, and the
+/// Outbox is cleared), so an upload waiting for Wi-Fi needs its own copy.
+abstract class DriveSyncQueue {
+  /// Copies [file] to where it waits, and returns that path.
+  Future<String> keep(File file);
+
+  /// Deletes the waiting copy at [path] once it is uploaded or dropped.
+  Future<void> release(String path);
+}
+
+/// Waiting copies in `exports/Sync`, under the export's own name, so the
+/// same name exported again replaces the same Drive file.
+class PageStoreSyncQueue implements DriveSyncQueue {
+  PageStoreSyncQueue(this._store);
+
+  final PageStore _store;
+
+  @override
+  Future<String> keep(File file) async {
+    final dir = await _store.syncQueueDir;
+    final target = p.join(dir.path, p.basename(file.path));
+    if (p.equals(target, file.path)) return target;
+    await file.copy(target);
+    return target;
+  }
+
+  @override
+  Future<void> release(String path) async {
+    final dir = await _store.syncQueueDir;
+    if (!p.isWithin(dir.path, path)) return;
+    final file = File(path);
+    if (file.existsSync()) await file.delete();
+  }
+}
+
+final driveSyncQueueProvider = Provider<DriveSyncQueue>((ref) => PageStoreSyncQueue(ref.watch(pageStoreProvider)));
 
 /// Why waiting files are not uploading right now.
 enum SyncHold { none, off, offline, waitingForWifi }
@@ -142,7 +183,7 @@ class DriveSyncController extends AsyncNotifier<DriveSyncState> {
     final current = await future;
     if (current.account == null) return;
     try {
-      await _backup.addPending(file.path);
+      await _backup.addPending(await ref.read(driveSyncQueueProvider).keep(file));
       _set((s) => s.copyWith(pending: s.pending + 1));
     } on Object catch (e) {
       _set((s) => s.copyWith(error: () => '$e'));
@@ -197,6 +238,7 @@ class DriveSyncController extends AsyncNotifier<DriveSyncState> {
           continue;
         }
         await _backup.upload(file);
+        await ref.read(driveSyncQueueProvider).release(path);
         _set((s) => s.copyWith(error: () => null));
       }
     } on CloudSignInExpired {

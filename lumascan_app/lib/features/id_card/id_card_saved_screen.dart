@@ -14,7 +14,7 @@ import '../pages/page_actions.dart';
 import '../pages/page_image.dart';
 import '../pages/scan_controller.dart';
 import '../pdf_editor/open_pdf.dart';
-import '../share/send_pdf_sheet.dart';
+import '../export/export_delivery.dart';
 import 'id_card_review_screen.dart';
 import 'id_card_session.dart';
 import '../../ui/luma_icons.dart';
@@ -121,12 +121,9 @@ class _IdCardSavedScreenState extends ConsumerState<IdCardSavedScreen> {
     }
     final file = await _savePdf(only: only ? [copy!] : null);
     if (file == null || !mounted) return;
-    await showSendPdfSheet(
-      context,
-      pdfPath: file.path,
-      name: file.uri.pathSegments.last,
-      pageCount: only ? 1 : scan.pages.length,
-    );
+    // The app keeps no copy of the PDF: it is saved where the user picks,
+    // or shared.
+    await showPdfReadySheet(context, pdfPath: file.path, pageCount: only ? 1 : scan.pages.length);
   }
 
   Future<void> _editPdf() async {
@@ -214,7 +211,6 @@ class _IdCardSavedScreenState extends ConsumerState<IdCardSavedScreen> {
                   children: [
                     Text(scan.info?.name ?? 'ID card', maxLines: 1, overflow: TextOverflow.ellipsis),
                     Text(
-                      '${scan.exported ? 'Saved to your Library · ' : ''}'
                       '${pages.length} page${pages.length == 1 ? '' : 's'}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
