@@ -83,6 +83,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
+      // The Accounts, Sync and OCR language rows push Appearance below the fold.
+      await tester.scrollUntilVisible(find.text('Appearance'), 200, scrollable: find.byType(Scrollable).first);
       expect(find.text('Appearance'), findsOneWidget);
     });
 
@@ -130,7 +132,7 @@ void main() {
       await tester.scrollUntilVisible(find.text('Dark'), 200, scrollable: find.byType(Scrollable).first);
       await tester.tap(find.text('Dark'));
       await tester.pumpAndSettle();
-      final context = tester.element(find.text('Appearance'));
+      final context = tester.element(find.text('Dark'));
       expect(Theme.of(context).brightness, Brightness.dark);
       expect(LumaColors.of(context).background, LumaColors.dark.background);
     });

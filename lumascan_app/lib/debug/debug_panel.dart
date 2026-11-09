@@ -143,6 +143,7 @@ class DebugPanel extends StatelessWidget {
                 SamplePagesTile(set: oddsBookSamples, onStart: onClose),
                 SamplePagesTile(set: edgeSamples, onStart: onClose),
                 SamplePagesTile(set: colourBookSamples, onStart: onClose),
+                SamplePagesTile(set: wordPageSamples, onStart: onClose),
                 if (TestDataBackup.supported) ...[const Divider(), const TestDataBackupTile()],
                 const Divider(),
                 SwitchListTile(

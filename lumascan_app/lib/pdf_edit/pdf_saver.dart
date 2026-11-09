@@ -49,14 +49,16 @@ class PdfrxRasterizer implements PdfRasterizer {
     final doc = await PdfDocument.openFile(path, passwordProvider: createSimplePasswordProvider(password));
     try {
       for (final n in pageNumbers) {
-        yield await _renderPage(doc.pages[n - 1], longEdge, jpegQuality);
+        yield await renderPage(doc.pages[n - 1], longEdge, jpegQuality);
       }
     } finally {
       await doc.dispose();
     }
   }
 
-  Future<RasterPage> _renderPage(PdfPage page, int longEdge, int jpegQuality) async {
+  /// Renders one page of an open document to JPEG, [longEdge] pixels on
+  /// its longer side, on a white background.
+  static Future<RasterPage> renderPage(PdfPage page, int longEdge, int jpegQuality) async {
     final scale = longEdge / (page.width > page.height ? page.width : page.height);
     final w = (page.width * scale).round();
     final h = (page.height * scale).round();

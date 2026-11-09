@@ -327,8 +327,8 @@ void main() {
       await tester.scrollUntilVisible(find.text('PDF to Word'), 200);
       expect(find.text('PDF to Word'), findsOneWidget);
       expect(find.text('Word to PDF'), findsOneWidget);
-      // PDF to Word, and Split PDF beside it, are Pro.
-      expect(find.widgetWithText(PremiumBadge, 'Pro'), findsNWidgets(2));
+      // PDF to Word, and Split PDF and Open Word beside it, are Pro.
+      expect(find.widgetWithText(PremiumBadge, 'Pro'), findsNWidgets(3));
 
       await tester.ensureVisible(find.text('PDF to Word'));
       await tester.pumpAndSettle();

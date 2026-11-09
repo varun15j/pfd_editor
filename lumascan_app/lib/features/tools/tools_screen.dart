@@ -16,6 +16,7 @@ import '../pdf_editor/pdf_editor_screen.dart';
 import '../split/split_actions.dart';
 import '../table/table_to_excel.dart';
 import '../word/word_actions.dart';
+import '../word_reader/open_word_document.dart';
 import '../../ui/luma_icons.dart';
 
 /// Tools tab, laid out as Screens 3 and 4 of the UI/UX screenshots:
@@ -57,6 +58,12 @@ class ToolsScreen extends ConsumerWidget {
               badge: ref.watch(planIncludesProvider(PlanFeature.word)) ? null : 'Pro',
             ),
           _Tool(LumaIcons.toolWordToPdf, 'Word to PDF', () => importWordFile(context, ref)),
+          _Tool(
+            LumaIcons.toolOpenWord,
+            'Open Word',
+            () => openWordDocument(context, ref),
+            badge: ref.watch(planIncludesProvider(PlanFeature.wordReader)) ? null : 'Pro',
+          ),
           _Tool(
             LumaIcons.toolMerge,
             'Merge PDFs',

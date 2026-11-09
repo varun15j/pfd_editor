@@ -209,6 +209,7 @@ abstract final class LumaIcons {
     IconData(0xe702, fontFamily: _duotone),
     IconData(0xe703, fontFamily: _duotone),
   );
+  static const LumaDuotone toolOpenWord = LumaDuotone.single(article);
   static const LumaDuotone toolMerge = LumaDuotone(
     IconData(0xedf6, fontFamily: _duotone),
     IconData(0xedf7, fontFamily: _duotone),

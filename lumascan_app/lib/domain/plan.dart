@@ -106,7 +106,17 @@ enum PlanFeature {
   /// curves towards the spine, and fingers holding it open are painted
   /// over. Also a switch in Crop for any page. Splitting a spread into two
   /// pages stays on every plan.
-  bookFix(AppPlan.pro);
+  bookFix(AppPlan.pro),
+
+  /// Word reader: open a .docx file and read it with its formatting,
+  /// pictures, tables, charts, equations, comments and tracked changes
+  /// (the luma_docx library). Word to PDF stays on every plan.
+  wordReader(AppPlan.pro),
+
+  /// OCR to Word: after Recognize text, builds an editable Word file from
+  /// the text with its layout (headings, lists, tables), with the luma_docx
+  /// library. The Basic Word export stays as it is.
+  ocrToWord(AppPlan.pro);
 
   const PlanFeature(this.minimum);
 

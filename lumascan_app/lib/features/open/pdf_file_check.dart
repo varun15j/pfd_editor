@@ -20,6 +20,10 @@ class DocumentOpenException implements Exception {
   String toString() => 'DocumentOpenException(${kind.name}${detail == null ? '' : ': $detail'})';
 }
 
+/// Most pages a PDF can have to be opened as editable scan pages, each one
+/// an image, so a huge file does not fill the device.
+const maxEditablePdfPages = 200;
+
 /// The kinds of failure, each with its title and message.
 enum OpenFailure {
   missing('File not found'),
@@ -31,7 +35,8 @@ enum OpenFailure {
   corrupted('Damaged PDF'),
   damagedPage('Damaged page'),
   noPages('No pages'),
-  unsupportedSecurity('Protection not supported');
+  unsupportedSecurity('Protection not supported'),
+  tooManyPages('Too many pages');
 
   const OpenFailure(this.title);
 
@@ -52,6 +57,9 @@ enum OpenFailure {
     damagedPage => 'A page in this PDF is damaged, so the document cannot be opened.',
     noPages => 'This PDF has no pages to show.',
     unsupportedSecurity => 'This PDF uses a kind of protection that this app does not support.',
+    tooManyPages =>
+      'This PDF has ${detail ?? 'too many'} pages. Up to $maxEditablePdfPages pages can be opened as editable pages. '
+          'To change a longer PDF, use Edit a PDF.',
   };
 }
 

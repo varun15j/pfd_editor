@@ -15,7 +15,7 @@ The automated run swaps only the parts an emulator cannot do well for real photo
 | Replaced | By |
 |---|---|
 | Camera shots | The five maths revision phone photos in `sample_photos/` (fingers, torn edges, desk backgrounds) |
-| Platform document scanner (Retake on the Pages screen) | Real book photos from `sample_photos/book/` |
+| Platform document scanner | Real book photos from `sample_photos/book/` |
 | Gallery picker | Real book photos from `sample_photos/book/` |
 | ID card photos | A drawn card with a 12-digit number in the Aadhaar layout. No real ID card belongs in the repository |
 
@@ -40,12 +40,12 @@ adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:
 | 3 | Crop: drag the top-left corner in, Apply crop | Page 1's crop changes |
 | 4 | Filters: B&W, Apply, Apply to this page | Page 1 is black and white; pages 2 and 3 keep their filter |
 | 5 | Markup: draw a pen stroke, Done | The stroke is kept on page 1 |
-| 6 | Next page, Retake | "Page 2 retaken"; the new photo is page 2, still 3 pages |
+| 6 | Next page, Retake, take 1 photo | The camera opens for one photo and closes; "Page 2 retaken"; the new photo is page 2, still 3 pages |
 | 7 | Filters on the new page 2: Grayscale, this page | Page 2 is grayscale |
 | 8 | Export > Export as PDF > Save PDF | "PDF saved"; the Library has one 3-page document |
 | 9 | Add pages > Scan with camera, take 1 photo, Review document | 4 pages, same document name |
 | 10 | Add pages > Import photos > Add 1 page | 5 pages |
-| 11 | Export > Export as PDF > Save PDF | A new 5-page PDF in the Library; the first 3-page PDF is kept (saving never overwrites a PDF) |
+| 11 | Export > Export as PDF > Save PDF | The scan's PDF in the Library is replaced by the 5-page one (exporting a scan again replaces its earlier file) |
 
 ## J2: ID card front and back, hide the number, save and export
 
@@ -67,11 +67,35 @@ readable; the Basic plan shows the upgrade pop-up instead.
 | 2 | Camera button, take 2 photos, Review document | A new 2-page document, not the ID card |
 | 3 | Export > Export as PDF > Save PDF | The Library has 2 documents; the ID card is still there |
 
+## J4: Recognize text on 5 pages, Create text PDF, Create Word file
+
+Automated in `integration_test/ocr_journeys_test.dart`. The pages are the 35 Word feature test pages
+(`sample_photos/word_pages/`), added as a tester adds them by hand.
+
+| # | Step | Expected |
+|---|---|---|
+| 1 | Settings > Developer > Add Word test pages | A new 35-page document opens on the Pages screen |
+| 2 | Batch edit > Clear, select pages 1, 2, 6, 7 and 21 | "5 selected" |
+| 3 | OCR > Recognize text on 5 pages | "Finished: 5 with text" |
+| 4 | Create text PDF | A "Creating text PDF" dialog with "Page X of 5" and Cancel, then "Text PDF saved" in under a minute |
+| 5 | Read the PDF's text as a PDF app does (PDFium) | Every page has its text; page 1 has "Feature Test". The pages look like the scan: the text is invisible |
+| 6 | Create Word file | A "Creating Word file" dialog, then "Word file ready" in under a minute |
+| 7 | Read the Word file | It has the text, and at least 2 pictures: the chart and the picture of page 21, cut from the scan |
+
+## J5: All 35 pages, in time
+
+| # | Step | Expected |
+|---|---|---|
+| 1 | Settings > Developer > Add Word test pages, Batch edit | "35 selected" |
+| 2 | OCR > Recognize text on 35 pages | "Finished: ..." |
+| 3 | Create text PDF | "Text PDF saved" in under 2 minutes (it took 10 to 20 minutes before the fix); 30 or more pages have a text layer |
+| 4 | Create Word file | "Word file ready" in under 2 minutes, with pictures |
+
 ## Known limits
 
-- The Google ML Kit document scanner cannot be opened on most emulators (its module download fails), so Retake on
-  the Pages screen is only covered with the replaced scanner. Retake inside the camera (Captured photos > Retake page
-  N) uses the app's own camera and works on the emulator.
+- The Google ML Kit document scanner cannot be opened on most emulators (its module download fails), so it is only
+  covered with the replaced scanner. Retake on the Pages screen (since 1.32.0) and inside the camera both use the
+  app's own camera and work on the emulator.
 - The emulator camera shows a virtual room, so live edge detection and the QR, Text and OCR camera modes need a real
   phone.
 
@@ -81,3 +105,13 @@ readable; the Basic plan shows the upgrade pop-up instead.
 |---|---|---|---|
 | OnePlus CPH2661, Android 16, display size large (320 dp wide) | Pass | Pass | Whole run 1 min 21 s. J2 needs PR #88: without it the ID review's Edit sheet overflows on this screen |
 | Emulator sdk_gphone16k_x86_64, 4 cores, 4 GB | Pass (about 4 min) | Pass | With 1 core and 2 GB, Android's watchdog restarted the system during long runs; give the AVD at least 4 cores |
+
+## Results (6 November 2026, PR #106, debug build 1.43.0+75)
+
+| Device | J1 | J2 + J3 | J4 | J5 | Notes |
+|---|---|---|---|---|---|
+| BlueStacks (Android 9, 4 GB), at e6e75ea (J1 at 15e939b) | Pass (first run failed on test timing, fixed in 15e939b) | Pass | Pass | Pass | J4: text PDF 3.8 s, text on 5 of 5 pages, Word 7.2 s with 4 pictures. J5: text PDF 4.0 s, text on 35 of 35 pages, Word 21 s with 13 pictures. OCR 17 to 22 s per page |
+| Android Studio emulator, at 2435783 | Pass in code after 796ac93 | Not run in full | Fail: 1 Word picture | Pass | Text PDF 35 pages 7.5 s. The 1-picture result led to the 2-D picture finder in e6e75ea |
+
+J1 on BlueStacks: the "Page 2 retaken" note came and went while the test waited for the screen to settle. The app
+itself was back on the 3-page document. The test now waits for page 2 to be replaced instead of for the note.

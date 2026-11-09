@@ -36,12 +36,12 @@ final savedExportsProvider = AsyncNotifierProvider<SavedExportsController, List<
   SavedExportsController.new,
 );
 
-/// Word files in the Saved folder. Saved PDFs are in the Library, so the
+/// Word files in the Saved folder (Word exports and OCR to Word files). Saved PDFs are in the Library, so the
 /// lists show them from there.
 final savedWordFilesProvider = Provider<List<SavedExport>>(
   (ref) => [
     for (final e in ref.watch(savedExportsProvider).value ?? const <SavedExport>[])
-      if (e.format == ExportFormat.word) e,
+      if (e.format == ExportFormat.word || e.format == ExportFormat.ocrWord) e,
   ],
 );
 

@@ -1,0 +1,5 @@
+tags:
+  preview:
+    # Writes PNG screenshots for a visual check; run with
+    # PREVIEW_OUT=/some/dir flutter test --run-skipped -t preview
+    skip: "Visual preview; run on demand"

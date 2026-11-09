@@ -38,7 +38,7 @@ class _SamplePagesTileState extends ConsumerState<SamplePagesTile> {
       // Like any new scan, the samples start a document of their own; the
       // current one stays on Home.
       await scan.startNewDocument();
-      final result = await scan.importPhotos(photos, autoCrop: true);
+      final result = await scan.importPhotos(photos, autoCrop: widget.set.autoCrop);
       if (!mounted) return;
       widget.onStart?.call();
       messenger?.showSnackBar(SnackBar(content: Text('Added ${result.added} sample pages')));
