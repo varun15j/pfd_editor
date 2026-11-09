@@ -11,6 +11,7 @@ import 'app_info.dart';
 import 'app_lock.dart';
 import 'motion.dart';
 import 'preferences.dart';
+import 'credits.dart';
 import 'purchases.dart';
 import 'shell.dart';
 import 'theme.dart';
@@ -53,6 +54,8 @@ class StartGate extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Starts listening to the app store and restores the plan at app start.
     ref.listen(purchasesProvider, (_, _) {});
+    // Reads the credits and counts credit packs bought while no screen waits.
+    ref.listen(creditsProvider, (_, _) {});
     final ready = ref.watch(appSettingsReadyProvider);
     if (!ready.hasValue) return const Scaffold(body: SizedBox.shrink());
     final eula = ref.watch(appSettingsProvider.select((s) => (s.eulaAccepted, s.eulaAcceptedVersion)));

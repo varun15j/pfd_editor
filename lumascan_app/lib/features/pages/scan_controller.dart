@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/credits.dart';
 import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../data/library_store.dart';
+import '../../domain/credits.dart';
 import '../../domain/id_copy.dart';
 import '../../domain/models.dart';
 import '../../domain/photo_import.dart';
@@ -226,6 +228,12 @@ class ScanController extends Notifier<ScanState> {
     if (progress != null && ref.mounted) state = state.copyWith(adding: progress.advanced());
   }
 
+  /// Takes the credits for [photos] scanned photos. Checked before the
+  /// camera opens; the balance stops at 0 for photos already taken.
+  void _chargeScan(int photos) => ref
+      .read(creditsProvider.notifier)
+      .charge(CreditAction.scan, units: photos, note: '$photos photo${photos == 1 ? '' : 's'}');
+
   /// Opens the scanner and appends the captured pages to the draft. [onAdding]
   /// is called once the captured pages are known and are being saved.
   Future<ScanOutcome> scan(ScanSource source, {VoidCallback? onAdding}) async {
@@ -247,6 +255,7 @@ class ScanController extends Notifier<ScanState> {
       await scanner.cleanUp();
       _commit([...state.pages, ...added]);
       ref.read(renderServiceProvider).prepare(added);
+      _chargeScan(added.length);
       return ScanAdded(added.length);
     } on ScannerPermissionDenied catch (e) {
       return ScanPermissionBlocked(permanently: e.permanently);
@@ -296,6 +305,10 @@ class ScanController extends Notifier<ScanState> {
       if (added.isNotEmpty && ref.mounted) {
         _commit([...state.pages, ...added]);
         ref.read(renderServiceProvider).prepare(added);
+        // One import, however many pages it brings.
+        ref
+            .read(creditsProvider.notifier)
+            .charge(CreditAction.importing, note: '${added.length} page${added.length == 1 ? '' : 's'}');
       }
       return PhotoImportResult(added: added.length, unreadable: unreadable);
     } finally {
@@ -407,6 +420,9 @@ class ScanController extends Notifier<ScanState> {
         );
         // Working copies and the grid thumbnail are made in the background.
         ref.read(renderServiceProvider).prepare(added);
+        // One photo is one scan, even when Book mode makes two pages of it.
+        // A retake replaces a page and is free.
+        if (!replaced) _chargeScan(1);
         return added;
       } catch (e) {
         debugPrint('Could not save a captured page: $e');

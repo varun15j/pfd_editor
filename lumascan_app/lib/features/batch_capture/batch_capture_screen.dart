@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../app/credits.dart';
 import '../../app/device_load.dart';
 import '../../app/motion.dart';
 import '../../app/preferences.dart';
@@ -15,6 +16,7 @@ import '../../app/providers.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../domain/app_settings.dart';
+import '../../domain/credits.dart';
 import '../../domain/models.dart';
 import '../../domain/ocr.dart';
 import '../../domain/qr_reader.dart';
@@ -22,6 +24,7 @@ import '../../domain/scanner_service.dart';
 import '../batch_edit/batch_completion.dart';
 import '../batch_edit/batch_review_screen.dart';
 import '../capture/photo_import_screen.dart';
+import '../credits/credits_screen.dart';
 import '../export/export_sheet.dart';
 import '../id_card/id_card_type_screen.dart';
 import '../pages/scan_controller.dart';
@@ -405,6 +408,12 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
     }
     final replacing = _retakeId;
     final mode = _mode;
+    // Each photo uses credits once saved; a retake is free.
+    if (mode.addsPages && replacing == null && !ref.read(creditsProvider.notifier).canAfford(CreditAction.scan)) {
+      _queuedShots = 0;
+      await showOutOfCreditsSheet(context, CreditAction.scan);
+      return;
+    }
     final seen = mode.findsPage && _smart ? _outline : null;
     // Whether tapped or automatic, this page is taken: auto capture now
     // waits for a different page instead of taking the same one again.

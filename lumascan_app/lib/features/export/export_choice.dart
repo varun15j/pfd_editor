@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/preferences.dart';
 import '../../app/providers.dart';
+import '../../domain/credits.dart';
 import '../../domain/plan.dart';
 import '../../domain/saved_export.dart';
 import '../../ui/state_views.dart';
 import '../pages/scan_controller.dart';
+import '../credits/credits_screen.dart';
 import '../share/image_sharer.dart';
 import '../word/word_actions.dart';
 import 'export_sheet.dart';
@@ -19,6 +21,13 @@ import '../../ui/luma_icons.dart';
 Future<void> showExportChoice(BuildContext context, WidgetRef ref) async {
   final choice = await showModalBottomSheet<_ExportKind>(context: context, builder: (_) => const _ExportChoiceSheet());
   if (choice == null || !context.mounted) return;
+  // Each export uses credits. PDF takes them in its sheet, once it knows a
+  // new file is made, so the same PDF again stays free. Word on Basic opens
+  // the upgrade pop-up instead, so it costs nothing there.
+  final charged =
+      choice == _ExportKind.jpg || (choice == _ExportKind.word && ref.read(planIncludesProvider(PlanFeature.word)));
+  if (charged && !await spendCredits(context, ref, CreditAction.exporting, note: choice.name.toUpperCase())) return;
+  if (!context.mounted) return;
   switch (choice) {
     case _ExportKind.pdf:
       await showExportSheet(context);

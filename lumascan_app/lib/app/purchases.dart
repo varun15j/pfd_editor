@@ -9,6 +9,7 @@ import '../data/purchases/app_store_purchase_service.dart';
 import '../data/purchases/google_play_purchase_service.dart';
 import '../domain/plan.dart';
 import '../domain/purchases.dart';
+import 'credit_config.dart';
 import 'providers.dart';
 import 'store_config.dart';
 
@@ -19,9 +20,9 @@ final purchaseServiceProvider = Provider<PurchaseService>((ref) {
   if (kIsWeb) {
     service = NoStorePurchaseService();
   } else if (Platform.isAndroid) {
-    service = GooglePlayPurchaseService(storeConfig.googlePlay);
+    service = GooglePlayPurchaseService(storeConfig.googlePlay, creditProducts: creditRules.googlePlayIds());
   } else if (Platform.isIOS) {
-    service = AppStorePurchaseService(storeConfig.appStore);
+    service = AppStorePurchaseService(storeConfig.appStore, creditProducts: creditRules.appStoreIds());
   } else {
     service = NoStorePurchaseService();
   }
@@ -204,7 +205,14 @@ class PurchasesController extends Notifier<PurchasesState> {
         }
       case PurchasePending(:final plan):
         state = state.copyWith(pending: true);
-        _notify('Payment pending. ${plan?.label ?? 'Your plan'} unlocks as soon as the payment completes.');
+        _notify(
+          plan == null
+              ? 'Payment pending. It is added as soon as the payment completes.'
+              : 'Payment pending. ${plan.label} unlocks as soon as the payment completes.',
+        );
+      case CreditsBought():
+        // Counted by the credits controller.
+        state = state.copyWith(pending: false);
       case PurchaseFailed(:final message):
         _notify(message);
       case PurchaseCancelled():

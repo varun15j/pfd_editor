@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../app/theme.dart';
+import '../../domain/credits.dart';
 import '../../domain/photo_import.dart';
+import '../credits/credits_screen.dart';
 import '../pages/scan_controller.dart';
 import '../../ui/luma_icons.dart';
 
@@ -25,6 +27,8 @@ Future<bool> importPhotosFlow(
   bool newDocument = false,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
+  // The import's credits are taken once its pages are added.
+  if (!await ensureCredits(context, ref, CreditAction.importing) || !context.mounted) return false;
   final List<PickedPhoto> picked;
   if (photos != null) {
     picked = photos;

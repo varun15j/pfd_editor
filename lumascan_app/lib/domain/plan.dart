@@ -116,7 +116,12 @@ enum PlanFeature {
   /// OCR to Word: after Recognize text, builds an editable Word file from
   /// the text with its layout (headings, lists, tables), with the luma_docx
   /// library. The Basic Word export stays as it is.
-  ocrToWord(AppPlan.pro);
+  ocrToWord(AppPlan.pro),
+
+  /// Unlimited credits: scanning, importing and exporting never use
+  /// credits. Basic and Pro spend credits and buy more when they run out
+  /// (`lib/app/credit_config.dart`).
+  unlimitedCredits(AppPlan.gold);
 
   const PlanFeature(this.minimum);
 

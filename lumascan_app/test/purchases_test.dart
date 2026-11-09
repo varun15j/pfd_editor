@@ -11,6 +11,7 @@ import 'package:lumascan/app/purchases.dart';
 import 'package:lumascan/app/store_config.dart';
 import 'package:lumascan/data/purchases/app_store_purchase_service.dart';
 import 'package:lumascan/data/purchases/google_play_purchase_service.dart';
+import 'package:lumascan/domain/credits.dart';
 import 'package:lumascan/domain/plan.dart';
 import 'package:lumascan/domain/purchases.dart';
 import 'package:lumascan/features/plans/paywall_screen.dart';
@@ -67,6 +68,15 @@ class FakePurchaseService implements PurchaseService {
 
   @override
   Future<void> openManageSubscriptions() async {}
+
+  List<CreditOffer> creditOffers = const [];
+  final boughtCredits = <CreditOffer>[];
+
+  @override
+  Future<List<CreditOffer>> loadCreditOffers() async => creditOffers;
+
+  @override
+  Future<void> buyCredits(CreditOffer offer) async => boughtCredits.add(offer);
 
   @override
   void dispose() => _updates.close();
