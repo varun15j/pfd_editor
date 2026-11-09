@@ -142,6 +142,9 @@ void main() {
   });
 
   Future<void> pumpSheet(WidgetTester tester) async {
+    // The scan in setUp already read the plan (for its credits), so the plan
+    // a test sets afterwards needs a fresh read.
+    container.invalidate(planProvider);
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 2.6;
     addTearDown(tester.view.reset);

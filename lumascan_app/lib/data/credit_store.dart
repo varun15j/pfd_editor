@@ -150,15 +150,16 @@ class SqliteCreditStore implements CreditStore {
 
 /// Credits kept in memory, for tests and as the fallback.
 class MemoryCreditStore implements CreditStore {
-  MemoryCreditStore({int? balance, List<CreditEntry>? entries}) : _balance = balance, entries = entries ?? [];
+  MemoryCreditStore({this.storedBalance, List<CreditEntry>? entries}) : entries = entries ?? [];
 
-  int? _balance;
+  /// The saved balance; null for a new install.
+  int? storedBalance;
 
   /// Oldest first.
   final List<CreditEntry> entries;
 
   @override
-  Future<int?> balance() async => _balance;
+  Future<int?> balance() async => storedBalance;
 
   @override
   Future<List<CreditEntry>> history() async => entries.reversed.toList();
@@ -167,7 +168,7 @@ class MemoryCreditStore implements CreditStore {
   Future<bool> add(CreditEntry entry) async {
     if (entry.purchaseId != null && entries.any((e) => e.purchaseId == entry.purchaseId)) return false;
     entries.add(entry);
-    _balance = entry.balanceAfter;
+    storedBalance = entry.balanceAfter;
     return true;
   }
 }

@@ -113,7 +113,7 @@ void main() {
   });
 
   test('a charge for work already done stops at 0', () async {
-    credits = MemoryCreditStore(balance: 7);
+    credits = MemoryCreditStore(storedBalance: 7);
     final container = makeContainer();
     final c = await started(container);
     c.charge(CreditAction.scan, units: 3);
@@ -130,7 +130,7 @@ void main() {
   });
 
   test('Gold uses no credits', () async {
-    credits = MemoryCreditStore(balance: 0);
+    credits = MemoryCreditStore(storedBalance: 0);
     final container = makeContainer(plan: AppPlan.gold);
     final c = await started(container);
     expect(c.unlimited, isTrue);
