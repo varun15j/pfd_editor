@@ -71,6 +71,16 @@ android {
     }
 }
 
+// The test photos for the debug panel (sample_photos/ and sample_scan_img/,
+// about 28 MB) stay out of release builds, so the Play Store download is
+// smaller. Debug and profile builds keep them. lib/debug/sample_pages.dart
+// only loads them in debug builds, where Settings > Developer shows them.
+tasks.withType<Copy>().configureEach {
+    if (name.startsWith("copyFlutterAssets") && name.endsWith("Release")) {
+        exclude("flutter_assets/sample_photos/**", "flutter_assets/sample_scan_img/**")
+    }
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
