@@ -1,3 +1,9 @@
 .idea/pfd_editor.iml
 .idea/pfd_editor.iml
 lumascan_app/pubspec.lock
+
+# Local test runs, release builds and downloaded third-party sources (not part of the app)
+/test_report/
+/scrapy-tags-2.19.0/
+lumascan_app/design/release_*/
+*.apk
