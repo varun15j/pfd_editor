@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
+import 'package:lumascan/app/release_features.dart';
 import 'package:lumascan/app/theme.dart';
 import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/domain/models.dart';
@@ -279,13 +280,14 @@ void main() {
   });
 
   group('Word in the app', () {
-    Future<void> pumpTools(WidgetTester tester, AppPlan plan) async {
+    Future<void> pumpTools(WidgetTester tester, AppPlan plan, {bool pdfToWord = true}) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             libraryStoreProvider.overrideWithValue(MemoryLibraryStore()),
             pdfInspectorProvider.overrideWithValue(_NoInspector()),
             planProvider.overrideWithValue(plan),
+            pdfToWordAvailableProvider.overrideWithValue(pdfToWord),
           ],
           child: MaterialApp(theme: buildLumaTheme(Brightness.light), home: const ToolsScreen()),
         ),
@@ -339,6 +341,19 @@ void main() {
       await pumpTools(tester, AppPlan.gold);
       await tester.scrollUntilVisible(find.text('PDF to Word'), 200);
       expect(find.byType(PremiumBadge), findsNothing);
+    });
+
+    testWidgets('release builds leave PDF to Word out of Tools but keep Word to PDF', (tester) async {
+      await pumpTools(tester, AppPlan.gold, pdfToWord: false);
+      await tester.scrollUntilVisible(find.text('Word to PDF'), 200);
+      expect(find.text('Word to PDF'), findsOneWidget);
+      expect(find.text('PDF to Word'), findsNothing);
+    });
+
+    test('PDF to Word is offered outside release builds', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      expect(container.read(pdfToWordAvailableProvider), isTrue);
     });
 
     testWidgets('Export offers Export as PDF and Export as Word, Word locked on Basic', (tester) async {

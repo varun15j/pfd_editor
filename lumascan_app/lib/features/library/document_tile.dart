@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/motion.dart';
 import '../../app/preferences.dart';
+import '../../app/release_features.dart';
 import '../../app/theme.dart';
 import '../../domain/library.dart';
 import '../../domain/plan.dart';
@@ -233,17 +234,18 @@ class _DocumentInteraction {
                 : const PremiumBadge(label: 'Pro'),
           ),
         ),
-        PopupMenuItem(
-          value: DocumentMenuAction.word,
-          child: ListTile(
-            leading: const Icon(LumaIcons.document),
-            title: const Text('Convert to Word'),
-            // Shown to everyone; on Basic it opens the upgrade pop-up.
-            trailing: ProviderScope.containerOf(menuContext).read(planIncludesProvider(PlanFeature.word))
-                ? null
-                : const PremiumBadge(label: 'Pro'),
+        if (ProviderScope.containerOf(menuContext).read(pdfToWordAvailableProvider))
+          PopupMenuItem(
+            value: DocumentMenuAction.word,
+            child: ListTile(
+              leading: const Icon(LumaIcons.document),
+              title: const Text('Convert to Word'),
+              // Shown to everyone; on Basic it opens the upgrade pop-up.
+              trailing: ProviderScope.containerOf(menuContext).read(planIncludesProvider(PlanFeature.word))
+                  ? null
+                  : const PremiumBadge(label: 'Pro'),
+            ),
           ),
-        ),
         PopupMenuItem(
           value: DocumentMenuAction.split,
           child: ListTile(
