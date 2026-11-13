@@ -7,3 +7,6 @@ lumascan_app/pubspec.lock
 /scrapy-tags-2.19.0/
 lumascan_app/design/release_*/
 *.apk
+
+# Per-developer Flutter DevTools settings
+lumascan_app/devtools_options.yaml
