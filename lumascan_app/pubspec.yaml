@@ -107,7 +107,7 @@ flutter:
     - sample_photos/colour_book/
     - sample_scan_img/odds_book/
     - sample_photos/word_pages/
-    - assets/models/lcnet100_256_lumascan_v1.onnx
+    - assets/models/lcnet100_256_lumascan_v2.onnx
 
   # Phosphor icons (MIT, assets/fonts/phosphor/LICENSE), used through
   # lib/ui/luma_icons.dart.

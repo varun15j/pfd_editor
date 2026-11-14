@@ -189,6 +189,25 @@ On the 64 photos of a single page, Book mode gives the same outline as the usual
 
 **Tests.** `test/corner_model_test.dart`: a corner in two places, the area map choosing the page, Book mode taking both pages and keeping a single page, and the rules of `pageOutline`. `test/edge_model_benchmark_test.dart`: the fair score of the whole crop for the old and the new model (at least 0.86 and 0.89), Book mode on the eight spreads (at least 0.88), and Book mode leaving single pages alone.
 
+## The model that ships (`assets/models/lcnet100_256_lumascan_v2.onnx`)
+
+Trained on all 66 marked photos with phase 2's page maps and phase 3's corners (`train.py 1 1500`, 37 minutes on four CPU cores), then written out with the five maps the app reads. 4.79 MB, 11 KB more than v1.
+
+The whole crop on all 72 photos, as the app makes it. 66 of them were seen in training, so only the odds book column is a fair one:
+
+| | Books | Colour book | Made pages | Notebook | Odds book | All |
+| --- | --- | --- | --- | --- | --- | --- |
+| v1 with the app as it was | 0.876 | 0.978 | 0.985 | 0.933 | 0.854 | 0.938 |
+| **v2 with the app as it is now** | 0.918 | 0.975 | 0.987 | 0.908 | **0.941** | 0.955 |
+
+The odds book, which no model was trained on, goes from 0.854 to 0.941. The hand-made detector now steps in on 1 of the 72 photos. The notebook's 0.933 to 0.908 is five photos the model has seen, with marks good to 3%; the fair notebook score is under "Handwritten notebook pages" below.
+
+**Not measured.** Speed on a phone. The network is the same up to its last layer, which now makes five maps instead of four, and reading the maps adds a few passes over 128 x 128 cells, so no real change is expected; it has not been timed on the OnePlus.
+
+## Handwritten notebook pages
+
+There are five handwritten notebook photos in the repository, and the fair test above holds back only one of them (0.787 before, 0.792 after: no change). A fairer reading, with all five held back from training, is being run and will be added here.
+
 ## Phase 4: dense warp (flattening the page)
 
 The first three approaches end with four corners, and four corners can only undo a tilt. A page in an open book also curves, so after the crop its lines of text still bow and slope. The fourth approach moves every part of the page by its own amount. CamScanner does this with a network; LumaScan already had a hand-made version, `flattenBookPage` (`lib/imaging/book_fix.dart`, part of Book page fix on Pro), which had never been measured on real pages.

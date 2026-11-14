@@ -10,11 +10,13 @@ import 'rgb_image.dart';
 /// The model is DocAligner's LCNet heatmap model (DocsaidLab/DocAligner,
 /// Apache-2.0, `assets/models/`), fine-tuned on LumaScan's own marked
 /// photos (books, colour books, made pages, handwritten notebook pages,
-/// `tool/corner_model_training/`): a 256 x 256 RGB photo in, one 128 x 128
-/// heatmap per corner out, TL, TR, BR, BL. A corner out of the frame is
-/// put on the frame edge, as with an open book filling the frame. Its
-/// answer is used only when every corner stands out
-/// ([minCornerConfidence]); otherwise the hand-made detector decides.
+/// `tool/corner_model_training/`): a 256 x 256 RGB photo in, five 128 x 128
+/// maps out: one heatmap per corner, TL, TR, BR, BL, and the page's area
+/// (`docs/edge-model.md`). A corner out of the frame is put on the frame
+/// edge, as with an open book filling the frame. Its answer is used when
+/// every corner stands out ([minCornerConfidence]) or the corners and the
+/// area map agree on the page ([pageOutline]); otherwise the hand-made
+/// detector decides.
 abstract class CornerModel {
   /// The page in [image], or null when the model is not sure of it. With
   /// [spread] (Book mode) an open book is taken whole, both pages, where
