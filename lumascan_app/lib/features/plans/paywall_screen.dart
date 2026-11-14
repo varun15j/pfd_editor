@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/app_info.dart';
 import '../../app/purchases.dart';
+import '../../app/release_features.dart';
 import '../../app/store_config.dart';
 import '../../app/theme.dart';
 import '../../domain/plan.dart';
@@ -139,10 +140,12 @@ class _PlanCard extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final c = LumaColors.of(context);
     final owned = current.index >= plan.index;
+    // Release builds have no PDF to Word, so the Word line names what is left.
+    final pdfToWord = ProviderScope.containerOf(context).read(pdfToWordAvailableProvider);
     final features = [
       if (plan == AppPlan.gold) 'Everything in Pro',
       for (final f in PlanFeature.values)
-        if (f.minimum == plan) _featureTitle(f),
+        if (f.minimum == plan) f == PlanFeature.word && !pdfToWord ? 'Export scans as Word files' : _featureTitle(f),
     ];
     return Card(
       margin: const EdgeInsets.only(top: Space.md),

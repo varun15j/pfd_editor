@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumascan/app/preferences.dart';
 import 'package:lumascan/app/providers.dart';
+import 'package:lumascan/app/release_features.dart';
 import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/domain/models.dart';
@@ -66,7 +67,7 @@ void main() {
 
   tearDown(() => deleteTemp(tmp));
 
-  Future<void> openMenu(WidgetTester tester, AppPlan plan) async {
+  Future<void> openMenu(WidgetTester tester, AppPlan plan, {bool pdfToWord = true}) async {
     await pumpApp(
       tester,
       library: MemoryLibraryStore(const LibraryIndex().copyWith(documents: [lease])),
@@ -74,6 +75,7 @@ void main() {
         textPdfServiceProvider.overrideWithValue(service),
         pageStoreProvider.overrideWithValue(PageStore(rootDir: () async => tmp)),
         planProvider.overrideWith((ref) => plan),
+        pdfToWordAvailableProvider.overrideWithValue(pdfToWord),
       ],
     );
     await tester.tap(find.byTooltip('Search'));
@@ -98,6 +100,12 @@ void main() {
 
     expect(find.text('Upgrade to Pro'), findsWidgets);
     expect(service.read, isEmpty);
+  });
+
+  testWidgets('release builds leave Convert to Word out of the menu', (tester) async {
+    await openMenu(tester, AppPlan.gold, pdfToWord: false);
+    expect(find.text('Create text PDF'), findsOneWidget);
+    expect(find.text('Convert to Word'), findsNothing);
   });
 
   for (final plan in [AppPlan.pro, AppPlan.gold]) {

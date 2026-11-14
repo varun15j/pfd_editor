@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/preferences.dart';
+import '../../app/release_features.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../domain/plan.dart';
@@ -49,12 +50,13 @@ class ToolsScreen extends ConsumerWidget {
         'Process Files',
         [
           _Tool(LumaIcons.toolPhotos, 'Photos to PDF', () => scanThenReview(context, ref, ScanSource.gallery)),
-          _Tool(
-            LumaIcons.toolPdfToWord,
-            'PDF to Word',
-            () => pickPdfToWord(context, ref),
-            badge: ref.watch(planIncludesProvider(PlanFeature.word)) ? null : 'Pro',
-          ),
+          if (ref.watch(pdfToWordAvailableProvider))
+            _Tool(
+              LumaIcons.toolPdfToWord,
+              'PDF to Word',
+              () => pickPdfToWord(context, ref),
+              badge: ref.watch(planIncludesProvider(PlanFeature.word)) ? null : 'Pro',
+            ),
           _Tool(LumaIcons.toolWordToPdf, 'Word to PDF', () => importWordFile(context, ref)),
           _Tool(
             LumaIcons.toolOpenWord,
