@@ -81,6 +81,18 @@ void main() {
       expect(tilt(flat).abs(), lessThan(2.5));
     });
 
+    test('a page curling up strongly is flattened too', () {
+      // The right edge 100 rows lower than the left, an eighth of the page
+      // height, as on sample book page 14 (docs/edge-model.md, phase 4).
+      final curved = _page(bow: (x) => 100 * x * x - 50);
+      final flat = flattenBookPage(curved);
+      expect(identical(flat, curved), isFalse);
+      // Line 5 is at row 142 near the left side and row 215 near the right.
+      expect(_inkRow(curved, 520, 209, 229) - _inkRow(curved, 80, 136, 156), greaterThan(60));
+      // Flattened, it sits where it was in the middle of the page, row 165.
+      expect((_inkRow(flat, 520, 153, 179) - _inkRow(flat, 80, 153, 179)).abs(), lessThan(3));
+    });
+
     test('a flat page, a blank page and a tiny page are left as they are', () {
       final straight = _page();
       expect(identical(flattenBookPage(straight), straight), isTrue);

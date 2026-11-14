@@ -7,7 +7,7 @@ Started 2026-11-14 on branch `feature/edge_model`, after the research report "Do
 | 1 | Classical edges: gradients, lines, contours | OpenCV scanners, Smart Engines, LumaScan's hand-made detector | The spine of an open book as a scored leaning line |
 | 2 | A learned map of the page, then classical geometry on it | Dropbox, Adobe Scan, Apple Vision | *in progress* |
 | 3 | Direct corner regression | Genius Scan, DocAligner, LumaScan's corner model | *to do* |
-| 4 | Dense warp: flatten the page, not just crop it | CamScanner, DocTr, UVDoc | *to do* |
+| 4 | Dense warp: flatten the page, not just crop it | CamScanner, DocTr, UVDoc | The flattening measured on 48 real pages for the first time; strongly curled pages are no longer skipped |
 
 Earlier history of the detector and of the corner model is in `auto-crop.md`. This file covers what changed on this branch and why.
 
@@ -114,3 +114,39 @@ It takes about 18 ms a photo on the cloud test machine, once per Book mode photo
 **Limits.** The spine's ends are still put on the spread's straight top and bottom sides. Where the two pages meet in a "V" (book 18: the spine's top lies 6% of the height below the line from one outer corner to the other), each page's crop takes in a sliver above the spine. Marking the spine's own ends needs the model (phase 3). A divider the user can drag on the crop screen is not built yet.
 
 **Tests.** `test/spine_line_test.dart`: a spine that is only a step, one that leans, one that is only a dark gutter, a blank spread (splits in the middle), a picture beside the spine (does not win), and the eight marked spreads (mean under 2.2%, none over 4%).
+
+## Phase 4: dense warp (flattening the page)
+
+The first three approaches end with four corners, and four corners can only undo a tilt. A page in an open book also curves, so after the crop its lines of text still bow and slope. The fourth approach moves every part of the page by its own amount. CamScanner does this with a network; LumaScan already had a hand-made version, `flattenBookPage` (`lib/imaging/book_fix.dart`, part of Book page fix on Pro), which had never been measured on real pages.
+
+### How it is measured
+
+48 page pictures: every book, colour book and odds book photo, cropped at its hand-marked corners. On each, the lines of text are found and two numbers are read:
+
+- **Bow**: how far a line's middle strays from the best straight line through it, as a share of the page height. A flat printed page reads about 0.08% (the colour book), which is the floor of this measure.
+- **Slope**: how far the lines lean from level, in degrees.
+
+Pages with fewer than three lines of text (full-page pictures) are left out, which leaves 42 or 43. The scripts are in the project files under `edge_detection_research/phase4_flatten/`.
+
+### Result
+
+| | Books (18) | Colour book (18) | Odds book (6) |
+| --- | --- | --- | --- |
+| Cropped only | bow 0.185%, slope 3.05° | 0.093%, 0.82° | 0.244%, 2.59° |
+| Flattened, before this branch | 0.118%, 1.04° | 0.092%, 0.63° | 0.174%, 2.15° |
+| **Flattened, now** | 0.118%, **0.67°** | 0.092%, 0.63° | 0.174%, 2.15° |
+
+So the existing flattening was already doing its job on the book pages: it takes out a third of the bow and two thirds of the slope, and leaves the flat colour book pages alone. This is the first time that has been put in numbers.
+
+**The improvement: strongly curled pages.** The flattening gave up on a page when any band of its lines bent by more than 10% of the page height, on the reading that so much must be a mismatch. Book page 14, a page curling up off a thick book, bends by 11%, so the worst page in the set was the one left untouched. The limit is now 16% (`_mostBend`). Page 14 goes from a slope of 7.4° to 0.9°, and the text line finder, which could follow 5 of its lines before, follows 11. No other page changes.
+
+### Tried and dropped
+
+- **A second pass over the flattened page.** No gain (books 0.122%, 1.06°). What is left after one pass is at the floor of the measure.
+- **Using one band of text for the whole page.** Picture pages with text only at the top or bottom (four of the six odds book pages) are skipped, because the bend must be followed in at least two bands. Letting one band stand for the whole page lowered their slope from 2.15° to 1.68° but left the bow as it was and tilted pictures elsewhere on the page. Not worth the risk.
+
+### Not done: a dewarping network
+
+The research report names UVDoc (MIT licence, 32 MB of weights) as the open model nearest to what CamScanner does. Its code and weights were downloaded for a comparison on the same 48 pages, but running downloaded third-party code was stopped by the safety rules of the cloud machine this work ran on, and needs Varun's say-so. Until it is measured, nothing can be said about whether it would beat 0.118% on these pages, which are only mildly curved; it would add 32 MB to the app and about a second a page.
+
+**Tests.** `test/book_fix_test.dart`: "a page curling up strongly is flattened too" (a bend of an eighth of the page height, which the old limit refused).

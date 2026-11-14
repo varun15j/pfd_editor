@@ -9,6 +9,10 @@ import 'rgb_image.dart';
 /// nothing to fix, so a flat sheet comes out as it went in.
 RgbImage fixBookPage(RgbImage page) => removeFingers(flattenBookPage(page));
 
+/// Largest bend of a band of lines that is still taken for a curve, as a
+/// share of the page height (`docs/edge-model.md`, phase 4).
+const _mostBend = 0.16;
+
 /// Flattens the curve of a page photographed from an open book.
 ///
 /// After the perspective crop the page's corners sit at the corners of the
@@ -76,8 +80,10 @@ RgbImage flattenBookPage(RgbImage page) {
       at[x] = _eval(c, (x / (w - 1)).clamp(c[4], c[5])) * h;
     }
     final range = at.reduce(math.max) - at.reduce(math.min);
-    // Over a tenth of the page is a mismatch, not a curve.
-    if (range > h * 0.1) return page;
+    // A page curling up off a thick book bends its lines by up to an
+    // eighth of its height (sample book page 14: 11%). More than that is
+    // a mismatch, not a curve.
+    if (range > h * _mostBend) return page;
     bend = math.max(bend, range);
     rows.add((lo + hi) / 2 * h);
     shifts.add(at);
