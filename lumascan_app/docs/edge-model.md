@@ -5,8 +5,8 @@ Started 2026-11-14 on branch `feature/edge_model`, after the research report "Do
 | Phase | Approach | Used by | What LumaScan gains |
 | --- | --- | --- | --- |
 | 1 | Classical edges: gradients, lines, contours | OpenCV scanners, Smart Engines, LumaScan's hand-made detector | The spine of an open book as a scored leaning line |
-| 2 | A learned map of the page, then classical geometry on it | Dropbox, Adobe Scan, Apple Vision | *in progress* |
-| 3 | Direct corner regression | Genius Scan, DocAligner, LumaScan's corner model | *to do* |
+| 2 | A learned map of the page, then classical geometry on it | Dropbox, Adobe Scan, Apple Vision | The model also draws the page's area; an outline is used when corners and area agree |
+| 3 | Direct corner regression | Genius Scan, DocAligner, LumaScan's corner model | A corner seen in two places is read as two; Book mode gets both pages of an open book |
 | 4 | Dense warp: flatten the page, not just crop it | CamScanner, DocTr, UVDoc | The flattening measured on 48 real pages for the first time; strongly curled pages are no longer skipped |
 
 Earlier history of the detector and of the corner model is in `auto-crop.md`. This file covers what changed on this branch and why.
@@ -31,7 +31,7 @@ Where a photo of an open book could fairly be cropped more than one way (either 
 
 22 photos is a small test. One photo going from wrong to right moves the mean by 0.01 to 0.02, and two training runs of the same recipe differ by about as much. Differences smaller than 0.02 are not read as gains.
 
-**How the tests run.** The ONNX model cannot run inside `flutter test` (the native library is not there). So `tool/corner_model_training/dump_heatmaps.py` writes the model's raw output maps for all 72 photos to `test/fixtures/edge_model/`, and the Dart tests read those and run the app's own code on them: reading the maps, falling back to the hand-made detector, everything after the network. `test/edge_model_benchmark_test.dart` is the score of the whole crop; it prints the mean for each set.
+**How the tests run.** The ONNX model cannot run inside `flutter test` (the native library is not there). So `tool/corner_model_training/dump_heatmaps.py` writes the model's raw output maps for all 72 photos to `test/fixtures/edge_model/`, and the Dart tests read those and run the app's own code on them: reading the maps, falling back to the hand-made detector, everything after the network. `test/edge_model_benchmark_test.dart` is the score of the whole crop; it prints the mean for each set. Two sets of maps are kept: `v1_heldback` (the model as it was before this branch, trained without the 22 photos) and `v2_heldback` (the model of phases 2 and 3, trained without them).
 
 ```bash
 flutter test test/edge_model_benchmark_test.dart test/spine_line_test.dart
@@ -114,6 +114,80 @@ It takes about 18 ms a photo on the cloud test machine, once per Book mode photo
 **Limits.** The spine's ends are still put on the spread's straight top and bottom sides. Where the two pages meet in a "V" (book 18: the spine's top lies 6% of the height below the line from one outer corner to the other), each page's crop takes in a sliver above the spine. Marking the spine's own ends needs the model (phase 3). A divider the user can drag on the crop screen is not built yet.
 
 **Tests.** `test/spine_line_test.dart`: a spine that is only a step, one that leans, one that is only a dark gutter, a blank spread (splits in the middle), a picture beside the spine (does not win), and the eight marked spreads (mean under 2.2%, none over 4%).
+
+## Phase 2: a learned map of the page
+
+Dropbox, Adobe and Apple do not ask a network for corners. They ask it for a picture: which pixels are page, or which are page edge. Geometry on that picture then gives the outline. The picture can be checked against itself in a way four numbers cannot.
+
+### What changed
+
+**The model draws the page as well as its corners.** The last layer of the corner model was widened from four output maps to six: the four corner heatmaps as before, the page's **area** (1 inside the page, 0 outside) and the page's **outline** (a line along its four sides). Everything before the last layer is shared, so the model is no larger to speak of (4.78 MB) and no slower. The two new maps start from nothing and learn from the same hand marks (`MAPS=corners+page` in `train.py`, the default). Only five maps are shipped: the outline map helps in training, but nothing in the app reads it (see "Tried and dropped").
+
+**The app checks the corners against the area** (`pageOutline`, `lib/imaging/corner_model.dart`). For an outline read from the corners, its *agreement* is its overlap with the area map, 0 to 1. It is used three ways:
+
+1. **An unsure corner no longer throws the outline away.** Before, any corner peak under 0.5 sent the photo to the hand-made detector. Now the outline is still used when agreement is 0.87 or more: the corner is under a thumb or off the frame, but the page is plain to see (book 12: weakest corner 0.49, agreement 0.89, crop 0.85 to 0.91).
+2. **Corners with no page between them are dropped.** Under 0.5 agreement the outline is not used however sure the corners are.
+3. **It chooses between readings** when a corner shows in two places (phase 3).
+
+### Result
+
+The fair test: 22 held-back photos, models trained without them.
+
+| | Books | Colour book | Made pages | Notebook | Odds book | All |
+| --- | --- | --- | --- | --- | --- | --- |
+| Baseline | 0.760 | 0.873 | 0.972 | 0.787 | 0.857 | 0.862 |
+| Model with page maps, old rule (every corner at least 0.5) | 0.804 | 0.893 | 0.966 | 0.759 | 0.902 | 0.886 |
+| **Model with page maps, corners checked against the area** | 0.854 | 0.894 | 0.966 | 0.800 | 0.924 | **0.905** |
+
+The model in these two rows is kept outside the repository (its maps are in the project files under `edge_detection_research/phase2_3_model/`); the tests run on phase 3's model, which replaced it. The last row also has phase 3's way of reading the corners in it; the two were built together because rule 3 needs both. Taken one at a time the steps are each about the size of the noise (0.02). Together, 0.862 to 0.905 is twice the noise, and it comes from the photos that were wrong: book 04 0.60 to 0.82, book 20 0.63 to 0.88, odds 01 0.64 to 0.88. No photo got worse by more than 0.03.
+
+**Frames with no page.** 74 frames with no page in them (34 crops of the sample photos' backgrounds, 30 plain gradients, 10 noise): the new rule gives an outline on 4 and the old rule on 5. Three of the four are crops that hold the unmarked facing page of a book, where an outline is right. One is a pencil box on a desk, which both rules take for a page.
+
+### Tried and dropped
+
+- **An outline from the area map alone** (the largest four-sided shape round the area, the way Dropbox reads its edge map): 0.882 on the fair test, below the corners (0.893 with the same model) on every set but books. The area map's rim is soft where the corner peaks are sharp. It is not used as a fallback either: where the corners fail, it fails too (odds 01: 0.67, the hand-made detector 0.88).
+- **The outline map.** Reading sides off it would be phase 1's side snapping with a learned edge map. Phase 1 showed the corners are already as exact as the hand marks, so there is nothing for it to add on these photos. It stays in training only.
+
+## Phase 3: corner regression
+
+The corner model is this approach already: four heatmaps, one per corner. Two things were wrong with how it was trained and read, both on open books.
+
+### What changed
+
+**A corner in two places is read as two** (`readCornerPeaks`, `readPageOutlines`). With both pages of a book in view, the top right corner of "the page" is at the spine if the left page is meant and at the far edge if the spread is meant, and the heatmap shows both. The old reading took the centre of everything above half the peak, which is a point between the two, on neither (book 20: 0.63). Now each blob of a heatmap is a *place* (up to three per corner), every choice of one place per corner that makes a sound four-sided shape is a *reading*, and the readings are ranked by how strongly their corners stand out times their agreement with the area map (or, for a model without one, how nearly parallel their opposite sides are). On the old model alone this takes the fair score from 0.862 to 0.873, books from 0.760 to 0.809.
+
+**The model is trained to show every marked corner** (`PLACES=every`, the default). Where a photo lists more than one right outline (either page, or the spread), training used only the first, so the model learned to hide the other page's corners, and Book mode could not get at them. Now the corner heatmaps are taught the corners of every marked outline, while the area map still shows the first, the page a user would most likely want.
+
+**Book mode asks for both pages** (`CornerModel.find(image, spread: true)`, used by `splitSpread` and by the camera preview in Book mode). It takes the reading that reaches across the middle of the frame and is at least one and a half times the size of the first choice, when each of its corners stands out by 0.4 or more. Otherwise it gets the usual outline. Before, the model in Book mode marked one page of a real open book, so the app took the book for a single page and did not split it.
+
+### Result
+
+Usual crop, fair test (22 held-back photos):
+
+| | Books | Colour book | Made pages | Notebook | Odds book | All |
+| --- | --- | --- | --- | --- | --- | --- |
+| Phase 2 model (first marked outline only) | 0.854 | 0.894 | 0.966 | 0.800 | 0.924 | 0.905 |
+| **Trained on every marked corner (the recipe that ships)** | 0.815 | 0.898 | 0.972 | 0.792 | 0.939 | **0.902** |
+
+The same, within the noise: teaching the model the other page's corners costs the usual crop nothing.
+
+Book mode, on the eight sample photos of an open book with both pages marked. Overlap of the outline with the whole spread:
+
+| Photo | Asked the usual way | Book mode |
+| --- | --- | --- |
+| Book 15 | 0.479 | 0.863 |
+| Book 18 | 0.513 | 0.964 |
+| Book 19 | 0.536 | 0.929 |
+| Book 20 (held back) | 0.647 | 0.924 |
+| Made spreads k01, k02, k05 | 0.997, 0.987, 0.989 | the same |
+| Odds 06 (held back) | 0.616 | 0.616 |
+| **Mean** | **0.720** | **0.909** |
+
+A real open book is now found whole on four of five photos, where it was found whole on none. Only two of the eight were held back from training, so this is weaker evidence than the fair test: book 20 shows it carries over to an unseen photo of the same book, odds 06 (another book, its far page's corners at 0.34 to 0.36) shows it does not yet carry over to a book the model has never seen. More open-book photos from other books are what this needs.
+
+On the 64 photos of a single page, Book mode gives the same outline as the usual way on 63. The one that changes is book 12, an open book with only its right page marked, where Book mode takes both pages, as it should.
+
+**Tests.** `test/corner_model_test.dart`: a corner in two places, the area map choosing the page, Book mode taking both pages and keeping a single page, and the rules of `pageOutline`. `test/edge_model_benchmark_test.dart`: the fair score of the whole crop for the old and the new model (at least 0.86 and 0.89), Book mode on the eight spreads (at least 0.88), and Book mode leaving single pages alone.
 
 ## Phase 4: dense warp (flattening the page)
 

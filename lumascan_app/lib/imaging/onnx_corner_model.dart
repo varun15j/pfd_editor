@@ -25,7 +25,7 @@ class OnnxCornerModel implements CornerModel {
   late final OrtSession _session;
 
   @override
-  CropQuad? find(RgbImage image) {
+  CropQuad? find(RgbImage image, {bool spread = false}) {
     const n = cornerModelInputSize;
     final input = OrtValueTensor.createTensorWithDataList(cornerModelInput(image), [1, 3, n, n]);
     final runOptions = OrtRunOptions();
@@ -33,7 +33,7 @@ class OnnxCornerModel implements CornerModel {
     input.release();
     runOptions.release();
     try {
-      // [1][4][size][size]
+      // [1][maps][size][size]
       final heat = (outputs.first!.value as List)[0] as List;
       final size = (heat[0] as List).length;
       final maps = [
@@ -43,8 +43,7 @@ class OnnxCornerModel implements CornerModel {
               for (final v in row as List) (v as num).toDouble(),
           ]),
       ];
-      final found = readCornerHeatmaps(maps, size);
-      return found != null && found.$2 >= minCornerConfidence ? found.$1 : null;
+      return pageOutline(maps, size, spread: spread);
     } finally {
       for (final o in outputs) {
         o?.release();

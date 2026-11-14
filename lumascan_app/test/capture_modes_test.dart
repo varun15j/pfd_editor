@@ -348,7 +348,9 @@ void main() {
           overrides: [
             batchCameraProvider.overrideWithValue(() => camera),
             photoAnalyzerProvider.overrideWithValue(photos ?? FakePhotoAnalyzer()),
-            frameAnalyzerProvider.overrideWithValue(analyzer ?? (frame) async => const FrameAnalysis(quad: _page)),
+            frameAnalyzerProvider.overrideWithValue(
+              analyzer ?? (frame, {spread = false}) async => const FrameAnalysis(quad: _page),
+            ),
             spreadSplitterProvider.overrideWithValue((path) async => (_left, _right)),
             // The harness gives a settings store kept in memory.
             planProvider.overrideWithValue(plan),
@@ -401,7 +403,9 @@ void main() {
           overrides: [
             batchCameraProvider.overrideWithValue(() => camera),
             photoAnalyzerProvider.overrideWithValue(FakePhotoAnalyzer()),
-            frameAnalyzerProvider.overrideWithValue((frame) async => const FrameAnalysis(quad: _page)),
+            frameAnalyzerProvider.overrideWithValue(
+              (frame, {spread = false}) async => const FrameAnalysis(quad: _page),
+            ),
           ],
         ),
       );
@@ -444,7 +448,10 @@ void main() {
         for (var i = 0; i < 7; i++) FrameAnalysis(quad: _page, signature: _signature(3)),
       ];
       var next = 0;
-      await open(tester, analyzer: (frame) async => seen[next < seen.length ? next++ : seen.length - 1]);
+      await open(
+        tester,
+        analyzer: (frame, {spread = false}) async => seen[next < seen.length ? next++ : seen.length - 1],
+      );
 
       await frames(tester, 20);
       expect(camera.shots, 1, reason: 'one lost frame and one dark frame are still the same page');
@@ -466,7 +473,7 @@ void main() {
       var next = 0;
       await open(
         tester,
-        analyzer: (frame) async => seen[next < seen.length ? next++ : seen.length - 1],
+        analyzer: (frame, {spread = false}) async => seen[next < seen.length ? next++ : seen.length - 1],
         overrides: [ocrEngineProvider.overrideWithValue(_FakeOcr(photoText: pageText))],
       );
 
@@ -487,7 +494,7 @@ void main() {
       final ocr = _FakeOcr(photoText: pageText);
       await open(
         tester,
-        analyzer: (frame) async => seen[next < seen.length ? next++ : seen.length - 1],
+        analyzer: (frame, {spread = false}) async => seen[next < seen.length ? next++ : seen.length - 1],
         overrides: [
           ocrEngineProvider.overrideWithValue(ocr),
           deviceLoadProbeProvider.overrideWithValue(
@@ -522,7 +529,10 @@ void main() {
     testWidgets('the outline stays drawn when the page is lost for a frame', (tester) async {
       final seen = [for (var i = 0; i < 3; i++) const FrameAnalysis(quad: _page), const FrameAnalysis()];
       var next = 0;
-      await open(tester, analyzer: (frame) async => seen[next < seen.length ? next++ : seen.length - 1]);
+      await open(
+        tester,
+        analyzer: (frame, {spread = false}) async => seen[next < seen.length ? next++ : seen.length - 1],
+      );
       await tester.tap(find.bySemanticsLabel('Auto On'));
       await tester.pump();
       await frames(tester, 4);
@@ -541,7 +551,7 @@ void main() {
         await open(
           tester,
           plan: AppPlan.basic,
-          analyzer: (frame) async => seen[next < seen.length ? next++ : seen.length - 1],
+          analyzer: (frame, {spread = false}) async => seen[next < seen.length ? next++ : seen.length - 1],
           overrides: [ocrEngineProvider.overrideWithValue(ocr)],
         );
 
@@ -566,7 +576,7 @@ void main() {
         await open(
           tester,
           plan: AppPlan.basic,
-          analyzer: (frame) async => seen[next < seen.length ? next++ : seen.length - 1],
+          analyzer: (frame, {spread = false}) async => seen[next < seen.length ? next++ : seen.length - 1],
         );
         await tester.tap(find.bySemanticsLabel('Auto On'));
         await tester.pump();
@@ -600,7 +610,7 @@ void main() {
       // The left page alone: the right one is cut off, so the outline was
       // trimmed to the left page and does not reach across the middle.
       const onePage = CropQuad(NormPoint(0.05, 0.1), NormPoint(0.55, 0.1), NormPoint(0.55, 0.9), NormPoint(0.05, 0.9));
-      await open(tester, analyzer: (frame) async => const FrameAnalysis(quad: onePage));
+      await open(tester, analyzer: (frame, {spread = false}) async => const FrameAnalysis(quad: onePage));
       await tester.tap(find.bySemanticsLabel('Auto On'));
       await tester.pump();
       await mode(tester, 'Book');

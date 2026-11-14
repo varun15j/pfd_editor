@@ -353,7 +353,7 @@ class _BatchCaptureScreenState extends ConsumerState<BatchCaptureScreen> with Wi
         if (mounted && _mode == mode) _seeQr(code);
         return;
       }
-      final analysis = await ref.read(frameAnalyzerProvider)(frame);
+      final analysis = await ref.read(frameAnalyzerProvider)(frame, spread: mode == CameraMode.book);
       if (!mounted || _mode != mode) return;
       final dark = analysis.tooDark;
       _tracker.smart = _smart;

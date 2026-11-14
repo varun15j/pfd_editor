@@ -31,7 +31,13 @@ def all_samples():
         s.append((R+'sample_photos/edge/'+e['file'],[np.array(p) for p in e['pages']],'edge'))
     for f,q in NOTEBOOK.items(): s.append((R+'sample_photos/'+f,[np.array(q,float)],'notebook'))
     return s
-def is_val(i): return i%4==3
+HOLD=os.environ.get('HOLD','')   # a set's name (such as notebook): that whole set is kept back instead of every 4th photo
+_groups=[]
+def is_val(i):
+    """Whether marked photo i is kept back from training, to score on."""
+    if not HOLD: return i%4==3
+    if not _groups: _groups.extend(g for _,_,g in all_samples())
+    return _groups[i]==HOLD
 def quad_iou(a,b,n=400):
     A=np.zeros((n,n),np.uint8);B=A.copy()
     cv2.fillPoly(A,[np.round(np.clip(a,0,1)*(n-1)).astype(np.int32)],1)

@@ -3,17 +3,30 @@
 Usage: python3 train.py ALL STEPS OUT.pt
   ALL 0 keeps every 4th photo back to score on; 1 trains on all of them.
 Start from base.pt (see README.md). CPU only is fine: about 1.6 s a step.
+
+Set MAPS=corners to train the four corner heatmaps alone, as the first
+LumaScan model (v1) was. By default the model also learns two maps of the
+page itself (docs/edge-model.md, phase 2): its area and its outline.
+For a photo with more than one marked outline (an open book: either page,
+or the spread) the corner maps then show the corners of each (PLACES=every;
+PLACES=first trains on the first outline alone, as v1 did), and the area
+and outline maps show the first, the page meant.
+SEED fixes the random samples, so two runs can be compared.
 """
 import os,sys,time,random,torch,cv2,numpy as np
 from data import *
 torch.set_num_threads(4)
 CARDS=os.environ.get('CARDS','/mnt/project-files/id_mask_test')  # made ID card photos, optional
 ALL=int(sys.argv[1]); STEPS=int(sys.argv[2]); OUT=sys.argv[3]
+EXTRA=os.environ.get('MAPS','corners+page')!='corners'   # also learn the page's area and outline
+EVERY=os.environ.get('PLACES','every' if EXTRA else 'first')=='every'   # corner maps show every marked outline's corners
+if 'SEED' in os.environ: random.seed(int(os.environ['SEED'])); np.random.seed(int(os.environ['SEED'])); torch.manual_seed(int(os.environ['SEED']))
 S=all_samples()
 def load(f):
     im=cv2.cvtColor(cv2.imread(f),cv2.COLOR_BGR2RGB); h,w=im.shape[:2]; s=720/max(h,w)
     return cv2.resize(im,(round(w*s),round(h*s)),interpolation=cv2.INTER_AREA)
 data=[(load(f),qs[0],g) for i,(f,qs,g) in enumerate(S) if ALL or not is_val(i)]
+others=[qs[1:] for i,(f,qs,g) in enumerate(S) if ALL or not is_val(i)]   # the other outlines that count as the page, same order as data
 val=[(load(f),qs,g) for i,(f,qs,g) in enumerate(S) if is_val(i)]
 print(len(data),len(val),flush=True)
 N=256;H=128;SIG=2.8
@@ -21,7 +34,7 @@ yy,xx=np.mgrid[0:H,0:H]
 def canon(p):
     c=p.mean(0);p=p[np.argsort(np.arctan2(p[:,1]-c[1],p[:,0]-c[0]))];return np.roll(p,-np.argmin(p.sum(1)),0)
 def sample_real():
-    im,q,g=random.choice(data); h,w=im.shape[:2]
+    k=random.randrange(len(data)); im,q,g=data[k]; h,w=im.shape[:2]
     # source frame in normalised coords -> output 0..1 with random perspective/zoom/rotation
     s=random.uniform(0.75,1.25) if random.random()<0.7 else 1.0
     ang=np.deg2rad(random.uniform(-12,12)) if random.random()<0.6 else 0
@@ -39,23 +52,16 @@ def sample_real():
     mask=cv2.warpPerspective(np.ones((h,w),np.uint8),Mp,(N,N),flags=cv2.INTER_NEAREST)
     if random.random()<0.5: out=np.where(mask[...,None]>0,out,bg)
     else: out=np.where(mask[...,None]>0,out,cv2.warpPerspective(im,Mp,(N,N),borderMode=cv2.BORDER_REFLECT))
-    p=cv2.perspectiveTransform(q.reshape(1,4,2).astype(np.float32),M)[0]
-    p=canon(np.clip(p,0,1))
-    o=out.astype(np.float32)
-    if random.random()<0.8:
-        o=o*random.uniform(.6,1.3)+random.uniform(-30,30); o=o*np.random.uniform(.85,1.15,3)
-        if random.random()<0.2: o=np.repeat(o.mean(2,keepdims=True),3,2)
-    if random.random()<0.3: o=cv2.GaussianBlur(o,(0,0),random.uniform(.5,1.8))
-    if random.random()<0.3: o=o+np.random.normal(0,random.uniform(2,10),o.shape)
-    o=np.clip(o,0,255)/255
-    t=np.stack([np.exp(-((xx-x*(H-1))**2+(yy-y*(H-1))**2)/(2*SIG*SIG)) for x,y in p]).astype(np.float32)
-    return o.transpose(2,0,1).astype(np.float32),t
+    p=canon(cv2.perspectiveTransform(q.reshape(1,4,2).astype(np.float32),M)[0])
+    more=[canon(cv2.perspectiveTransform(o.reshape(1,4,2).astype(np.float32),M)[0]) for o in others[k]] if EVERY else []
+    return finish(out),targets(p,more)
 
 def rand_bg():
     r=random.random()
     if r<0.6:
-        im,q,g=random.choice(data); h,w=im.shape[:2]
-        m=np.zeros((h,w),np.uint8); cv2.fillPoly(m,[np.round(q*[w-1,h-1]).astype(np.int32)],1)
+        k=random.randrange(len(data)); im,q,g=data[k]; h,w=im.shape[:2]
+        m=np.zeros((h,w),np.uint8)
+        for o in [q]+(others[k] if EVERY else []): cv2.fillPoly(m,[np.round(o*[w-1,h-1]).astype(np.int32)],1)
         for _ in range(20):
             cw=random.randint(w//5,w//2); ch=random.randint(h//6,h//2); x=random.randint(0,w-cw); y=random.randint(0,h-ch)
             if m[y:y+ch,x:x+cw].mean()<0.02: return cv2.resize(im[y:y+ch,x:x+cw],(N,N))
@@ -96,7 +102,24 @@ def synth():
         bg=(bg*(1-0.4*sh[...,None])).astype(np.uint8)
     out=np.where(m[...,None]>127,o,bg)
     return out,canon(d)
-def heat(p): return np.stack([np.exp(-((xx-x*(H-1))**2+(yy-y*(H-1))**2)/(2*SIG*SIG)) for x,y in p]).astype(np.float32)
+def heat(p): return np.stack([np.exp(-((xx-x*(H-1))**2+(yy-y*(H-1))**2)/(2*SIG*SIG)) for x,y in np.clip(p,0,1)]).astype(np.float32)
+CH=6 if EXTRA else 4
+def targets(p,more=()):
+    """What the model should answer for a page with corners p (TL, TR, BR, BL, 0..1; a corner may
+    lie off the frame): a peak at each corner (put on the frame edge when off it), then the page's
+    area filled in, then its outline as a soft line about 3 cells wide. `more` are other outlines
+    that would count as the page too (the other page of an open book, the whole spread): their
+    corners get peaks as well, so every place a corner may be shows, while the area and the
+    outline stay those of p, the page meant."""
+    if p is None: return np.zeros((CH,H,H),np.float32)
+    t=heat(p)
+    for o in more: t=np.maximum(t,heat(o))
+    if not EXTRA: return t
+    px=np.round(p*(H-1)*16).astype(np.int32)   # 4 fractional bits
+    area=np.zeros((H,H),np.uint8); cv2.fillPoly(area,[px],255,lineType=cv2.LINE_AA,shift=4)
+    edge=np.zeros((H,H),np.uint8); cv2.polylines(edge,[px],True,255,1,lineType=cv2.LINE_AA,shift=4)
+    edge=cv2.GaussianBlur(edge.astype(np.float32)/255,(0,0),1.0); edge=np.minimum(1,edge/0.4)
+    return np.concatenate([t,area[None].astype(np.float32)/255,edge[None]]).astype(np.float32)
 def finish(o):
     o=o.astype(np.float32)
     if random.random()<0.8:
@@ -107,16 +130,17 @@ def finish(o):
     return (np.clip(o,0,255)/255).transpose(2,0,1).astype(np.float32)
 def sample():
     r=random.random()
-    if r<0.12: return finish(rand_bg()),np.zeros((4,H,H),np.float32)
+    if r<0.12: return finish(rand_bg()),targets(None)
     if r<0.35:
-        o,p=synth(); return finish(o),heat(p)
+        o,p=synth(); return finish(o),targets(p)
     return sample_real()
 def evaluate(net):
-    net.eval(); r=[]
+    net.eval(); r=[]; areas=[]
     with torch.no_grad():
         for im,qs,g in val:
             h=net(torch.from_numpy(prep(im))[None])[0].numpy(); q,c=read_heat(h)
             r.append((0 if q is None else max(quad_iou(q,t) for t in qs),c,g))
+            if EXTRA: areas.append(max(mask_iou(h[4],t) for t in qs))
     random.seed(7); negs=[rand_bg() for _ in range(20)]; random.seed()
     with torch.no_grad():
         neg=net(torch.from_numpy(np.stack([prep(n) for n in negs])))
@@ -128,17 +152,42 @@ def evaluate(net):
             q,c=read_heat(net(torch.from_numpy(prep(im))[None])[0].numpy()); ci.append(0 if q is None else quad_iou(q,cq))
     net.train()
     extra=(('cards',round(float(np.mean(ci)),3) if ci else None,'neg_minpeak_max',round(float(negpk.max()),2),'neg>=0.6',int((negpk>=0.6).sum())))
+    if EXTRA: extra+=('area',round(float(np.mean(areas)),3),'neg_area_max',round(float(neg[:,4].flatten(1).mean(1).max()),3))
     return extra,np.mean([a for a,_,_ in r]),sum(c>=0.8 for _,c,_ in r),{g:round(float(np.mean([a for a,_,gg in r if gg==g])),3) for g in set(x[2] for x in r)}
-net=torch.load('base.pt',weights_only=False); net.train()
+def mask_iou(m,q,n=H):
+    """Overlap of the area map (0.5 and up) with a marked page."""
+    A=m>=0.5; B=np.zeros((n,n),np.uint8); cv2.fillPoly(B,[np.round(np.clip(q,0,1)*(n-1)).astype(np.int32)],1); B=B>0
+    u=(A|B).sum(); return (A&B).sum()/u if u else 0
+def widen(net,n):
+    """Gives the last layer n output maps: the four corner maps keep their weights, the new ones start near zero."""
+    name,old=[(k,m) for k,m in net.named_modules() if isinstance(m,torch.nn.Conv2d) and m.out_channels==4][-1]
+    new=torch.nn.Conv2d(old.in_channels,n,old.kernel_size,old.stride,old.padding)
+    with torch.no_grad():
+        new.weight.normal_(0,0.01); new.bias.fill_(-2.0)
+        new.weight[:4]=old.weight; new.bias[:4]=old.bias
+    parent=net
+    for part in name.split('.')[:-1]: parent=getattr(parent,part)
+    setattr(parent,name.split('.')[-1],new)
+net=torch.load('base.pt',weights_only=False)
+if EXTRA: widen(net,CH)
+RESUME=OUT+'.resume'   # written every 250 steps, so a run that was cut off carries on where it stopped
+state=torch.load(RESUME,weights_only=False) if os.path.exists(RESUME) else None
+if state: net=state['net']
+net.train()
 opt=torch.optim.AdamW(net.parameters(),3e-4,weight_decay=1e-4)
 sched=torch.optim.lr_scheduler.OneCycleLR(opt,3e-4,total_steps=STEPS,pct_start=0.05)
-print('base',evaluate(net),flush=True)
+first=1
+if state: opt.load_state_dict(state['opt']); sched.load_state_dict(state['sched']); first=state['step']+1; print('carrying on from step',first,flush=True)
+else: print('base',evaluate(net),flush=True)
 B=8;t0=time.time();run=0
-for step in range(1,STEPS+1):
+for step in range(first,STEPS+1):
     xs,ts=zip(*[sample() for _ in range(B)])
     x=torch.from_numpy(np.stack(xs));t=torch.from_numpy(np.stack(ts))
     y=net(x); w=1+9*(t>0.05).float()
+    if EXTRA: w[:,4]=0.5   # the area map is dense: no extra weight for its filled cells
     loss=(w*(y-t)**2).mean()
     opt.zero_grad();loss.backward();opt.step();sched.step(); run=0.98*run+0.02*loss.item()
     if step%250==0 or step==STEPS:
         print(step,'%.0fs'%(time.time()-t0),'loss %.4f'%run,evaluate(net),flush=True); torch.save(net,OUT)
+        torch.save({'step':step,'net':net,'opt':opt.state_dict(),'sched':sched.state_dict()},RESUME)
+if os.path.exists(RESUME): os.remove(RESUME)
