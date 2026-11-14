@@ -206,7 +206,20 @@ The odds book, which no model was trained on, goes from 0.854 to 0.941. The hand
 
 ## Handwritten notebook pages
 
-There are five handwritten notebook photos in the repository, and the fair test above holds back only one of them (0.787 before, 0.792 after: no change). A fairer reading, with all five held back from training, is being run and will be added here.
+There are five handwritten notebook photos in the repository, and the fair test above holds back only one of them. So two more models were trained with all five held back (`HOLD=notebook`), one with the old recipe and one with the new, and the whole crop was scored on the five:
+
+| Photo | Hand-made detector alone | Old recipe (v1) | New recipe (v2) |
+| --- | --- | --- | --- |
+| 01 palindrome, lengths | 0.919 | 0.942 | 0.935 |
+| 02 multiplication | 0.937 | 0.937 | 0.937 |
+| 03 conversions, shapes | 0.760 | 0.784 | 0.772 |
+| 04 lengths | 0.854 | 0.944 | 0.802 |
+| 05 grocery table | 0.922 | 0.898 | 0.925 |
+| **Mean** | 0.878 | 0.901 | 0.874 |
+
+**This work did not improve handwritten pages.** All three columns are within the noise of each other on four of the five photos. Photo 04 is worse with the new recipe (0.94 to 0.80); with five photos and one training run each, that cannot be told apart from run-to-run difference, but it is not a gain either. Photo 02 goes to the hand-made detector both times (a corner under 0.5). A model that has never seen a handwritten page does about as well on one as the hand-made detector does, which says the five photos teach the model most of what it knows about notebooks. In the model that ships, all five are in training.
+
+What these pages need is not a different way of reading the model but more photos: 20 or more handwritten pages, on different desks and in different light, would let notebooks be both trained on and fairly tested.
 
 ## Phase 4: dense warp (flattening the page)
 
