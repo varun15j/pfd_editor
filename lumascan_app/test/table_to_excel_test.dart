@@ -171,7 +171,7 @@ void main() {
       expect(sheet, contains('state="frozen"'));
     });
 
-    test('a save never replaces an earlier file', () async {
+    test('each save is its own file in the Outbox, under the name given', () async {
       final tmp = await Directory.systemTemp.createTemp('lumascan_xlsx');
       addTearDown(() => tmp.delete(recursive: true));
       final store = PageStore(rootDir: () async => tmp);
@@ -181,7 +181,10 @@ void main() {
       final first = await saveTableAsExcel(store, table, name: 'Table.xlsx');
       final second = await saveTableAsExcel(store, table, name: 'Table.xlsx');
       expect(first.path.endsWith('Table.xlsx'), isTrue);
-      expect(second.path.endsWith('Table (2).xlsx'), isTrue);
+      expect(second.path.endsWith('Table.xlsx'), isTrue);
+      expect(first.path, isNot(second.path));
+      expect(first.existsSync(), isTrue);
+      expect(first.path, contains(PageStore.outboxFolder));
     });
 
     test('file names carry the date and time', () {
@@ -264,14 +267,14 @@ void main() {
 
       await tester.tap(find.text('Save as Excel'));
       // The file is written with real IO, a step at a time.
-      for (var i = 0; i < 30 && find.text('Excel file saved').evaluate().isEmpty; i++) {
+      for (var i = 0; i < 30 && find.text('Excel file ready').evaluate().isEmpty; i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
         await tester.pump();
       }
       await tester.pumpAndSettle();
-      expect(find.text('Excel file saved'), findsOneWidget);
+      expect(find.text('Excel file ready'), findsOneWidget);
 
-      final saved = Directory('${tmp.path}/exports').listSync().whereType<File>().single;
+      final saved = Directory('${tmp.path}/exports/Outbox').listSync(recursive: true).whereType<File>().single;
       expect(saved.path, endsWith('.xlsx'));
       final sheet = utf8.decode(
         ZipDecoder().decodeBytes(saved.readAsBytesSync()).findFile('xl/worksheets/sheet1.xml')!.content as List<int>,

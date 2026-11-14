@@ -1,35 +1,28 @@
-import 'dart:io';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 
 import '../../export/word/word_service.dart';
+import '../export/export_delivery.dart';
 import '../share/docx_sharer.dart';
 import '../share/pdf_sharer.dart';
 import '../../ui/luma_icons.dart';
 
-/// Asks what to do with a Word file once it is made: open it in Word or
-/// another app, share it, or save it to the Documents folder. The Word file
-/// stays in the app's exports folder either way; the Library holds PDFs.
-///
-/// [reused] says the scan had no changes since this file was made, so it
-/// was not made again.
-Future<void> showWordSavedSheet(BuildContext context, WordFile word, {bool reused = false}) =>
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => WordSavedSheet(word: word, reused: reused),
-    );
+/// Asks where a Word file goes once it is made: saved where the user picks
+/// (Documents, an SD card, Drive) or shared. It can also be opened in Word.
+/// The app keeps no copy: the file waits in the Outbox only until then.
+Future<void> showWordSavedSheet(BuildContext context, WordFile word) => showModalBottomSheet<void>(
+  context: context,
+  isScrollControlled: true,
+  showDragHandle: true,
+  builder: (_) => WordSavedSheet(word: word),
+);
 
 class WordSavedSheet extends ConsumerWidget {
-  const WordSavedSheet({super.key, required this.word, this.reused = false});
+  const WordSavedSheet({super.key, required this.word});
 
   final WordFile word;
-  final bool reused;
 
   /// "2 pages of editable text, 1 picture page".
   static String summary(WordFile word) {
@@ -51,15 +44,11 @@ class WordSavedSheet extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(reused ? 'No changes since your last export' : 'Word file saved', style: textTheme.headlineSmall),
+            Text('Word file ready', style: textTheme.headlineSmall),
             const SizedBox(height: 4),
             Text(p.basename(path), style: textTheme.bodyMedium),
             const SizedBox(height: 2),
             Text(summary(word), style: textTheme.bodySmall),
-            if (reused) ...[
-              const SizedBox(height: 4),
-              Text('Your saved Word file is used, so nothing was made again.', style: textTheme.bodySmall),
-            ],
             if (word.textPages == 0) ...[
               const SizedBox(height: 4),
               Text(
@@ -68,19 +57,11 @@ class WordSavedSheet extends ConsumerWidget {
                 style: textTheme.bodySmall,
               ),
             ],
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
+            Text(exportNotKeptNote, style: textTheme.bodySmall),
+            const SizedBox(height: 16),
+            ExportDeliveryButtons(paths: [path], onShare: (button) => _share(context, ref, button)),
             _Option(icon: LumaIcons.openExternal, title: 'Open in Word', onTap: () => _open(context)),
-            Builder(
-              builder: (tileContext) =>
-                  _Option(icon: LumaIcons.share, title: 'Share', onTap: () => _share(context, ref, tileContext)),
-            ),
-            _Option(
-              icon: LumaIcons.folder,
-              title: 'Save to Documents folder',
-              subtitle: 'Choose Documents in the save dialog',
-              onTap: () => _saveToDocuments(context),
-            ),
-            const SizedBox(height: 8),
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
           ],
         ),
@@ -116,40 +97,19 @@ class WordSavedSheet extends ConsumerWidget {
     final origin = box == null ? null : box.localToGlobal(Offset.zero) & box.size;
     try {
       final outcome = await ref.read(docxSharerProvider).send(word.file.path, origin: origin);
-      if (outcome == SendOutcome.sent) navigator.pop();
+      if (outcome == SendOutcome.sent && navigator.mounted) navigator.pop();
     } on Object catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('Could not open the share sheet. $e')));
     }
   }
 
-  Future<void> _saveToDocuments(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    try {
-      final saved = await FilePicker.saveFile(
-        dialogTitle: 'Save Word file to Documents',
-        fileName: p.basename(word.file.path),
-        bytes: await File(word.file.path).readAsBytes(),
-        mimeType: SharePlusDocxSharer.mimeType,
-        type: FileType.custom,
-        allowedExtensions: const ['docx'],
-      );
-      // Cancelling the dialog keeps the sheet open, so another option can be picked.
-      if (saved == null) return;
-      navigator.pop();
-      messenger.showSnackBar(const SnackBar(content: Text('Saved to Documents')));
-    } on Object catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not save the Word file. $e')));
-    }
-  }
 }
 
 class _Option extends StatelessWidget {
-  const _Option({required this.icon, required this.title, required this.onTap, this.subtitle});
+  const _Option({required this.icon, required this.title, required this.onTap});
 
   final IconData icon;
   final String title;
-  final String? subtitle;
   final VoidCallback onTap;
 
   @override
@@ -157,7 +117,6 @@ class _Option extends StatelessWidget {
     contentPadding: EdgeInsets.zero,
     leading: Icon(icon),
     title: Text(title),
-    subtitle: subtitle == null ? null : Text(subtitle!),
     onTap: onTap,
   );
 }

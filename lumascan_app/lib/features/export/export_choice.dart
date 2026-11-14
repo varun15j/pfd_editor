@@ -6,11 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/preferences.dart';
 import '../../app/providers.dart';
 import '../../domain/plan.dart';
-import '../../domain/saved_export.dart';
 import '../../ui/state_views.dart';
 import '../pages/scan_controller.dart';
 import '../share/image_sharer.dart';
 import '../word/word_actions.dart';
+import 'export_delivery.dart';
 import 'export_sheet.dart';
 import '../../ui/luma_icons.dart';
 
@@ -25,13 +25,7 @@ Future<void> showExportChoice(BuildContext context, WidgetRef ref) async {
     case _ExportKind.word:
       final scan = ref.read(scanControllerProvider);
       final info = scan.info;
-      await exportScanAsWord(
-        context,
-        ref,
-        scan.pages,
-        name: info?.name ?? 'Scan',
-        docKey: info == null ? null : scanDocKey(info),
-      );
+      await exportScanAsWord(context, ref, scan.pages, name: info?.name ?? 'Scan');
     case _ExportKind.jpg:
       await showModalBottomSheet<void>(
         context: context,
@@ -62,7 +56,7 @@ class _ExportChoiceSheet extends StatelessWidget {
           ListTile(
             leading: const Icon(LumaIcons.pdf),
             title: const Text('Export as PDF'),
-            subtitle: const Text('All pages in one file, kept in Saved'),
+            subtitle: const Text('All pages in one file. Save it where you pick, or share it'),
             onTap: () => Navigator.pop(context, _ExportKind.pdf),
           ),
           ListTile(
@@ -72,13 +66,13 @@ class _ExportChoiceSheet extends StatelessWidget {
             trailing: ProviderScope.containerOf(context).read(planIncludesProvider(PlanFeature.word))
                 ? null
                 : const PremiumBadge(label: 'Pro'),
-            subtitle: const Text('A .docx file, kept in Saved. Pages read with OCR become text you can edit'),
+            subtitle: const Text('A .docx file to save or share. Pages read with OCR become text you can edit'),
             onTap: () => Navigator.pop(context, _ExportKind.word),
           ),
           ListTile(
             leading: const Icon(LumaIcons.image),
             title: const Text('JPG images'),
-            subtitle: const Text('One photo per page, to save to the gallery or send'),
+            subtitle: const Text('One photo per page, to save in a folder or send'),
             onTap: () => Navigator.pop(context, _ExportKind.jpg),
           ),
         ],
@@ -111,24 +105,27 @@ class _JpgExportSheetState extends ConsumerState<JpgExportSheet> {
     final scan = ref.read(scanControllerProvider);
     final pages = scan.pages;
     final exporter = ref.read(jpgExporterProvider);
+    final store = ref.read(pageStoreProvider);
     _hasMarks = pages.any((p) => p.annotations.isNotEmpty);
     try {
+      // Made in the Outbox: the app keeps no copy once they are saved or sent.
+      await store.clearOutbox();
       final files = await exporter.export(
         pages,
         scan.info?.name ?? 'Scan',
+        into: await store.newOutboxFolder(),
         onProgress: (done, total) {
           if (mounted) setState(() => _progress = done / total);
         },
       );
       if (mounted) setState(() => _files = files);
     } on Object catch (e) {
-      if (mounted) setState(() => _error = 'The JPGs could not be saved. Your pages are unchanged. ($e)');
+      if (mounted) setState(() => _error = 'The JPGs could not be made. Your pages are unchanged. ($e)');
     }
   }
 
-  Future<void> _send() async {
-    final box = context.findRenderObject() as RenderBox?;
-    final origin = box == null ? null : box.localToGlobal(Offset.zero) & box.size;
+  Future<void> _send(BuildContext button) async {
+    final origin = shareOriginOf(button);
     try {
       await ref.read(imageSharerProvider).send([for (final f in _files!) f.path], origin: origin);
     } on Object catch (e) {
@@ -151,12 +148,12 @@ class _JpgExportSheetState extends ConsumerState<JpgExportSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(files == null ? 'Saving JPGs' : 'JPGs saved', style: text.headlineSmall),
+              Text(files == null ? 'Making JPGs' : 'JPGs ready', style: text.headlineSmall),
               const SizedBox(height: 8),
               if (files == null && error == null) ...[
                 LinearProgressIndicator(value: _progress),
                 const SizedBox(height: 8),
-                Text('Saving… ${(_progress * 100).round()}%', style: text.bodySmall, textAlign: TextAlign.center),
+                Text('Making… ${(_progress * 100).round()}%', style: text.bodySmall, textAlign: TextAlign.center),
               ],
               if (files != null) ...[
                 Text('${files.length} JPG${files.length == 1 ? '' : 's'}, one per page'),
@@ -164,8 +161,10 @@ class _JpgExportSheetState extends ConsumerState<JpgExportSheet> {
                   const SizedBox(height: 4),
                   Text('Markup is kept only in PDFs.', style: text.bodySmall),
                 ],
+                const SizedBox(height: 4),
+                Text(exportNotKeptNote, style: text.bodySmall),
                 const SizedBox(height: 16),
-                FilledButton.icon(onPressed: _send, icon: const Icon(LumaIcons.share), label: const Text('Send')),
+                ExportDeliveryButtons(paths: [for (final f in files) f.path], onShare: _send, shareLabel: 'Send'),
               ],
               if (error != null) ...[
                 const SizedBox(height: 8),

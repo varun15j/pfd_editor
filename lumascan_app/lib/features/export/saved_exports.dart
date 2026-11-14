@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import '../../app/providers.dart';
 import '../../data/page_store.dart';
 import '../../domain/saved_export.dart';
+import '../library/library_actions.dart';
 
 /// What to do for an export: reuse the saved file because nothing changed,
 /// or write a new one under [ExportNew.fileName].
@@ -31,7 +32,10 @@ class ExportNew extends ExportPlan {
 }
 
 /// Exports in the Saved folder whose files are still on the device, newest
-/// first. Read from the export state database.
+/// first. Read from the export state database. Since exports are no longer
+/// kept (each one is saved where the user picks, or shared), this lists only
+/// files exported before that; [plan] and [record] are no longer used for
+/// new exports, and the database is kept so these files stay listed.
 final savedExportsProvider = AsyncNotifierProvider<SavedExportsController, List<SavedExport>>(
   SavedExportsController.new,
 );
@@ -43,6 +47,15 @@ final savedWordFilesProvider = Provider<List<SavedExport>>(
     for (final e in ref.watch(savedExportsProvider).value ?? const <SavedExport>[])
       if (e.format == ExportFormat.word || e.format == ExportFormat.ocrWord) e,
   ],
+);
+
+/// Whether any file exported before exports stopped being kept is still on
+/// the phone: PDFs in the Library made from scans, or Word files. Only then
+/// do Home and Library show the Saved and All chips, so these files can still
+/// be opened, saved elsewhere or deleted. New exports are never kept.
+final hasOldExportsProvider = Provider<bool>(
+  (ref) =>
+      ref.watch(visibleDocumentsProvider).any((d) => d.isScanExport) || ref.watch(savedWordFilesProvider).isNotEmpty,
 );
 
 class SavedExportsController extends AsyncNotifier<List<SavedExport>> {

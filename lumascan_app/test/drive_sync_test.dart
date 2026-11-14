@@ -136,6 +136,7 @@ void main() {
         overrides: [
           networkStatusProvider.overrideWithValue(network),
           driveBackupProvider.overrideWithValue(backup),
+          driveSyncQueueProvider.overrideWithValue(InPlaceSyncQueue()),
           appSettingsStoreProvider.overrideWithValue(MemoryAppSettingsStore(settings)),
         ],
       );

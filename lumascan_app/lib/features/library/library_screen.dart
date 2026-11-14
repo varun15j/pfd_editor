@@ -125,8 +125,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           ),
           AsyncValue(hasValue: true) when all.isEmpty && !anyWords => EmptyState(
             icon: LumaIcons.folderOpen,
-            title: 'No saved documents yet',
-            message: 'PDFs you save will appear here, ready to find and share.',
+            title: 'No documents yet',
+            message: 'PDFs you open or import will appear here, ready to find and share.',
             actionLabel: 'Scan a document',
             actionIcon: LumaIcons.scan,
             onAction: () => scanThenReview(context, ref, ScanSource.camera),
@@ -285,8 +285,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   Widget _scopeEmpty(DocScope scope) => switch (scope) {
     DocScope.saved => EmptyState(
       icon: LumaIcons.save,
-      title: 'Nothing saved yet',
-      message: 'PDF and Word files you export from a scan are kept here, one of each per scan. Exporting again replaces it.',
+      title: 'No older exports left',
+      message: 'Exports are now saved where you pick, or shared, and not kept in the app.',
       actionLabel: 'Show all documents',
       actionIcon: LumaIcons.allFolders,
       onAction: () => ref.read(libraryQueryProvider.notifier).showScope(DocScope.all),
@@ -294,10 +294,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     _ => EmptyState(
       icon: LumaIcons.folderOpen,
       title: 'No documents here',
-      message: 'PDFs exported from your scans are in Saved.',
-      actionLabel: 'Open Saved',
-      actionIcon: LumaIcons.save,
-      onAction: () => ref.read(libraryQueryProvider.notifier).showScope(DocScope.saved),
+      message: 'PDFs you open or import are listed here. Exports are saved where you pick, not in the app.',
     ),
   };
 
@@ -350,12 +347,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final index = ref.watch(libraryProvider).value ?? const LibraryIndex();
     final current = index.folderById(query.folderId)?.id;
     final q = ref.read(libraryQueryProvider.notifier);
+    // Saved and All only while older exports are on the phone: new exports
+    // are saved where the user picks and are not kept here.
+    final scopes = ref.watch(hasOldExportsProvider) ? DocScope.values : const [DocScope.docs];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: Space.page),
       child: Row(
         children: [
-          for (final scope in DocScope.values) ...[
+          for (final scope in scopes) ...[
             if (scope != DocScope.docs) const SizedBox(width: Space.sm),
             ChoiceChip(
               // A selected chip draws its checkmark over the avatar, so the

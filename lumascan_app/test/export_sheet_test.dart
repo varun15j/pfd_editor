@@ -18,6 +18,7 @@ import 'package:lumascan/domain/scanner_service.dart';
 import 'package:lumascan/export/ocr_pdf_builder.dart';
 import 'package:lumascan/export/pdf_exporter.dart';
 import 'package:lumascan/export/text_pdf_service.dart';
+import 'package:lumascan/features/export/export_saver.dart';
 import 'package:lumascan/features/export/export_sheet.dart';
 import 'package:lumascan/features/library/library_controller.dart';
 import 'package:lumascan/features/pages/scan_controller.dart';
@@ -87,6 +88,24 @@ class _FakeTextPdf implements TextPdfService {
   }) => throw UnimplementedError();
 }
 
+/// The system save screen: notes each file and answers with [answer].
+class _FakeSaver implements ExportSaver {
+  final saved = <String>[];
+  String? answer = 'Lease.pdf';
+
+  @override
+  bool get canSaveToFolder => true;
+
+  @override
+  Future<String?> saveFile(String path, {required String mimeType, String? name}) async {
+    saved.add(path);
+    return answer;
+  }
+
+  @override
+  Future<String?> saveToFolder(List<String> paths, {required String mimeType}) async => 'Documents';
+}
+
 /// Suggests [name] for any pages, noting each call.
 class _FakeNamer implements SmartNamer {
   _FakeNamer(this.name);
@@ -109,6 +128,7 @@ void main() {
   late _FakeTextPdf textPdf;
   late Directory tmp;
   late _FakeExporter exporter;
+  late _FakeSaver saver;
   late ProviderContainer container;
 
   setUp(() async {
@@ -121,6 +141,7 @@ void main() {
     namer = _FakeNamer('Invoice INV-7 2026-10-26');
     textPdf = _FakeTextPdf(File('${tmp.path}/text.pdf')..writeAsBytesSync(List.filled(4096, 0)));
     exporter = _FakeExporter(File('${tmp.path}/out.pdf')..writeAsBytesSync(List.filled(2048, 0)));
+    saver = _FakeSaver();
     container = ProviderContainer(
       overrides: [
         scannerServiceProvider.overrideWithValue(_FakeScanner(paths)),
@@ -131,6 +152,7 @@ void main() {
         libraryStoreProvider.overrideWithValue(MemoryLibraryStore()),
         smartNamerProvider.overrideWithValue(namer),
         exportStateStoreProvider.overrideWithValue(MemoryExportStateStore()),
+        exportSaverProvider.overrideWithValue(saver),
       ],
     );
     await container.read(scanControllerProvider.notifier).scan(ScanSource.camera);
@@ -167,7 +189,7 @@ void main() {
     await tester.tap(find.text('Save PDF'));
     await tester.pump();
     // Each file-system step resumes in fake time, so give every one a pump.
-    for (var i = 0; i < 6; i++) {
+    for (var i = 0; i < 14; i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
       await tester.pump();
     }
@@ -257,14 +279,14 @@ void main() {
       await tester.enterText(find.byType(TextField), 'Lease');
       await tester.tap(find.text('Save text PDF'));
       await tester.pump();
-      for (var i = 0; i < 6; i++) {
+      for (var i = 0; i < 14; i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
         await tester.pump();
       }
 
-      expect(textPdf.names, ['Saved/Lease (text).pdf']);
+      expect(textPdf.names.single, matches(RegExp(r'^Outbox/[^/]+/Lease \(text\)\.pdf$')));
       expect(exporter.calls, isEmpty);
-      expect(find.text('Text PDF saved'), findsOneWidget);
+      expect(find.text('Text PDF ready'), findsOneWidget);
       expect(find.textContaining('7 pages'), findsOneWidget);
     });
   }
@@ -285,11 +307,11 @@ void main() {
     await tapSave(tester);
 
     expect(exporter.calls, hasLength(1));
-    expect(exporter.calls.single.fileName, 'Saved/Lease_ 2026_10.pdf');
+    expect(exporter.calls.single.fileName, matches(RegExp(r'^Outbox/[^/]+/Lease_ 2026_10\.pdf$')));
     expect(exporter.calls.single.quality, ExportQuality.small);
 
     // Still writing: no success yet, and the button cannot be pressed again.
-    expect(find.text('PDF saved'), findsNothing);
+    expect(find.text('PDF ready'), findsNothing);
     expect(find.textContaining('Saving'), findsWidgets);
     expect(saveButton(tester).onPressed, isNull);
     await tester.tap(find.text('Saving…'), warnIfMissed: false);
@@ -301,8 +323,10 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
     await tester.pumpAndSettle();
-    expect(find.text('PDF saved'), findsOneWidget);
+    expect(find.text('PDF ready'), findsOneWidget);
     expect(find.textContaining('out.pdf'), findsOneWidget);
+    expect(find.text('Save to device'), findsOneWidget);
+    expect(find.text('Share'), findsOneWidget);
     expect(exporter.calls, hasLength(1));
   });
 
@@ -343,7 +367,7 @@ void main() {
     });
   }
 
-  group('Saved folder', () {
+  group('exports are not kept', () {
     /// Opens the sheet (pumping the app the first time), saves as "Lease"
     /// and waits for the result.
     Future<void> exportOnce(WidgetTester tester, {bool first = false}) async {
@@ -355,7 +379,6 @@ void main() {
       }
       await tester.enterText(find.byType(TextField), 'Lease');
       await tapSave(tester);
-      // Planning, writing and filing each wait on the file system.
       for (var i = 0; i < 10; i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
         await tester.pump();
@@ -363,47 +386,48 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    Future<void> done(WidgetTester tester) async {
-      await tester.tap(find.text('Done'));
-      await tester.pumpAndSettle();
-    }
-
-    testWidgets('an unchanged scan reuses its saved PDF; a changed one is made again', (tester) async {
+    testWidgets('the PDF is not added to the Library; the user saves it where they pick', (tester) async {
       exporter.finish();
       await exportOnce(tester, first: true);
-      expect(exporter.calls, hasLength(1));
-      expect(exporter.calls.single.fileName, 'Saved/Lease.pdf');
-      expect(find.text('PDF saved'), findsOneWidget);
-      expect(find.text('Share'), findsOneWidget);
-      await done(tester);
-
-      await exportOnce(tester);
-      expect(exporter.calls, hasLength(1), reason: 'nothing changed, so nothing is made again');
-      expect(find.text('No changes since your last export'), findsOneWidget);
-      expect(find.text('Share'), findsOneWidget);
-      await done(tester);
-
-      final pages = container.read(scanControllerProvider).pages;
-      container.read(scanControllerProvider.notifier).rotate(pages.first.id);
-      await exportOnce(tester);
-      expect(exporter.calls, hasLength(2));
-      expect(exporter.calls.last.fileName, 'Saved/Lease.pdf', reason: 'the new file replaces the old one');
+      expect(find.text('PDF ready'), findsOneWidget);
+      expect(find.textContaining('does not keep a copy'), findsOneWidget);
       final docs = (await tester.runAsync(() => container.read(libraryProvider.future)))!.documents;
-      expect(docs, hasLength(1), reason: 'exporting again does not add a second entry');
-      expect(docs.single.isScanExport, isTrue);
-    });
-  });
+      expect(docs, isEmpty, reason: 'exports are not filed in the app');
 
-  testWidgets('a name that is already taken is saved with a number', (tester) async {
-    final store = container.read(pageStoreProvider);
-    await tester.runAsync(() async {
-      await store.savedDir;
-      await store.writeExportAtomically('Saved/Receipt.pdf', [1]);
+      await tester.tap(find.text('Save to device'));
+      await tester.pumpAndSettle();
+      expect(saver.saved, [exporter.output.path]);
+      expect(find.text('Saved as Lease.pdf'), findsOneWidget);
     });
-    await pumpSheet(tester);
-    await tester.enterText(find.byType(TextField), 'Receipt');
-    await tapSave(tester);
-    expect(exporter.calls.single.fileName, 'Saved/Receipt (2).pdf');
+
+    testWidgets('exporting again makes the PDF again under the same name', (tester) async {
+      exporter.finish();
+      await exportOnce(tester, first: true);
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      await exportOnce(tester);
+
+      expect(exporter.calls, hasLength(2));
+      final names = [for (final c in exporter.calls) c.fileName!];
+      expect(names.map((n) => n.split('/').last), ['Lease.pdf', 'Lease.pdf']);
+      expect(names.toSet(), hasLength(2), reason: 'each export has its own Outbox folder');
+    });
+
+    testWidgets('page images go only once the PDF is saved, when Settings says not to keep them', (tester) async {
+      container.read(appSettingsProvider.notifier).setKeepOriginals(false);
+      exporter.finish();
+      await exportOnce(tester, first: true);
+      expect(container.read(scanControllerProvider).pages, isNotEmpty, reason: 'nothing is saved yet');
+
+      await tester.tap(find.text('Save to device'));
+      for (var i = 0; i < 14; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+      expect(container.read(scanControllerProvider).pages, isEmpty);
+      expect(find.textContaining('page images were removed'), findsOneWidget);
+    });
   });
 
   testWidgets('the sheet cannot be dismissed while saving', (tester) async {
@@ -436,7 +460,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Export failed'), findsOneWidget);
-    expect(find.text('PDF saved'), findsNothing);
+    expect(find.text('PDF ready'), findsNothing);
     expect(nameField(tester), 'Receipt');
     expect(saveButton(tester).onPressed, isNotNull);
   });

@@ -7,7 +7,6 @@ import '../../domain/ocr.dart';
 import '../../domain/plan.dart';
 import '../../ui/upgrade_dialog.dart';
 import '../../export/ocr_pdf_builder.dart';
-import '../library/library_controller.dart';
 import '../share/text_pdf_next_sheet.dart';
 import '../pages/scan_controller.dart';
 import 'batch_ocr_job.dart';
@@ -100,16 +99,15 @@ class _BatchOcrScreenState extends ConsumerState<BatchOcrScreen> {
     } finally {
       if (mounted) setState(() => _building = false);
     }
-    final file = made;
-    if (file == null || !mounted) return;
-    await showTextPdfNextSheet(
-      context,
-      pdfPath: file.file.path,
-      pageCount: file.pageCount,
-      saveToLibrary: () async {
-        await ref.read(libraryProvider.notifier).addPdf(file.file, pageCount: file.pageCount);
-      },
-    );
+    final built = made;
+    if (built == null || !mounted) return;
+    // The app keeps no copy of exports: the PDF waits in the Outbox until
+    // it is saved where the user picks, or shared.
+    final store = ref.read(pageStoreProvider);
+    await store.clearOutbox();
+    final file = OcrPdfFile(await store.moveToOutbox(built.file), built.pageCount);
+    if (!mounted) return;
+    await showTextPdfNextSheet(context, pdfPath: file.file.path, pageCount: file.pageCount);
   }
 
   /// Builds an editable Word file from the pages that were read (Pro and Gold).

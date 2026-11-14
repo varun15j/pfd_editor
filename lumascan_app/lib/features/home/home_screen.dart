@@ -38,7 +38,11 @@ class HomeScreen extends ConsumerWidget {
     final text = Theme.of(context).textTheme;
     final busy = state.busy;
     // Every scan is kept as page images, so it is listed with the saved PDFs.
-    final scope = ref.watch(libraryQueryProvider.select((q) => q.scope));
+    // Saved and All are shown only while files exported before exports
+    // stopped being kept are still on the phone.
+    final oldExports = ref.watch(hasOldExportsProvider);
+    final picked = ref.watch(libraryQueryProvider.select((q) => q.scope));
+    final scope = oldExports ? picked : DocScope.docs;
     final pdfs = ref.watch(visibleDocumentsProvider);
     final words = ref.watch(savedWordFilesProvider);
     int count(DocScope s) => homeDocuments(state, pdfs, scope: s, words: words).length;
@@ -137,6 +141,7 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
           _ScopeChips(
+            scopes: oldExports ? DocScope.values : const [DocScope.docs],
             scope: scope,
             count: count,
             onSelected: (s) => ref.read(libraryQueryProvider.notifier).showScope(s),
@@ -163,10 +168,10 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   Icon(LumaIcons.save, size: 48, color: c.muted),
                   const SizedBox(height: Space.md),
-                  Text('Nothing saved yet.', style: text.bodyLarge?.copyWith(color: c.muted)),
+                  Text('No older exports left.', style: text.bodyLarge?.copyWith(color: c.muted)),
                   const SizedBox(height: Space.xs),
                   Text(
-                    'PDF and Word files you export from a scan are kept here.',
+                    'New exports are saved where you pick, or shared, and not kept in the app.',
                     textAlign: TextAlign.center,
                     style: text.bodyMedium?.copyWith(color: c.muted),
                   ),
@@ -196,10 +201,12 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-/// Docs, Saved and All, each with its count. Docs is picked at start.
+/// Docs, Saved and All, each with its count. Docs is picked at start. Saved
+/// and All only while older exports are on the phone ([hasOldExportsProvider]).
 class _ScopeChips extends StatelessWidget {
-  const _ScopeChips({required this.scope, required this.count, required this.onSelected});
+  const _ScopeChips({required this.scopes, required this.scope, required this.count, required this.onSelected});
 
+  final List<DocScope> scopes;
   final DocScope scope;
   final int Function(DocScope) count;
   final ValueChanged<DocScope> onSelected;
@@ -209,7 +216,7 @@ class _ScopeChips extends StatelessWidget {
     scrollDirection: Axis.horizontal,
     child: Row(
       children: [
-        for (final s in DocScope.values) ...[
+        for (final s in scopes) ...[
           if (s != DocScope.docs) const SizedBox(width: Space.sm),
           ChoiceChip(
             // A selected chip draws its checkmark over the avatar, so the

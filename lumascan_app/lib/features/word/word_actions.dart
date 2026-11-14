@@ -11,10 +11,8 @@ import '../../app/providers.dart';
 import '../../domain/library.dart';
 import '../../domain/models.dart';
 import '../../domain/plan.dart';
-import '../../domain/saved_export.dart';
 import '../../ui/upgrade_dialog.dart';
 import '../../export/word/word_service.dart';
-import '../export/saved_exports.dart';
 import '../library/library_controller.dart';
 import '../merge/pdf_inspector.dart';
 import '../merge/pdf_picker.dart';
@@ -38,6 +36,7 @@ Future<void> convertToWord(BuildContext context, WidgetRef ref, SavedDocument do
   final service = ref.read(wordServiceProvider);
   await _convert(
     context,
+    ref,
     title: 'Converting to Word',
     name: doc.name,
     run: (onProgress) => service.pdfToWord(
@@ -123,6 +122,7 @@ Future<void> pickPdfToWord(BuildContext context, WidgetRef ref) async {
     final service = ref.read(wordServiceProvider);
     await _convert(
       context,
+      ref,
       title: 'Converting to Word',
       name: pdf.name,
       run: (onProgress) =>
@@ -134,69 +134,27 @@ Future<void> pickPdfToWord(BuildContext context, WidgetRef ref) async {
 }
 
 /// Export > Word from the pages screen: the scan's pages become a Word
-/// file in the Saved folder. A page already read with OCR becomes its text;
-/// the others are pictures. Nothing is read again here. When the scan
-/// ([docKey]) is unchanged since its last Word export, that file is reused;
-/// otherwise the new file replaces it.
+/// file, which the user saves where they pick or shares; the app keeps no
+/// copy. A page already read with OCR becomes its text; the others are
+/// pictures. Nothing is read again here.
 Future<void> exportScanAsWord(
   BuildContext context,
   WidgetRef ref,
   List<ScanPage> pages, {
   required String name,
-  String? docKey,
 }) async {
   if (!await _ensureWordPlan(context, ref) || !context.mounted || pages.isEmpty) return;
   final service = ref.read(wordServiceProvider);
-  final savedExports = ref.read(savedExportsProvider.notifier);
-  final fileName = WordService.wordFileName(name);
-  final fingerprint = exportFingerprint(pages, fileName: fileName);
-  final plan = docKey == null
-      ? null
-      : await savedExports.plan(
-          docKey: docKey,
-          format: ExportFormat.word,
-          fingerprint: fingerprint,
-          fileName: fileName,
-        );
+  final store = ref.read(pageStoreProvider);
+  await store.clearOutbox();
+  final fileName = await store.outboxName(WordService.wordFileName(name));
   if (!context.mounted) return;
-  if (plan is ExportReuse) {
-    final text = pages.where(WordService.isTextPage).length;
-    await showWordSavedSheet(
-      context,
-      WordFile(File(plan.saved.path), textPages: text, picturePages: pages.length - text),
-      reused: true,
-    );
-    return;
-  }
-  final previous = plan is ExportNew ? plan.previous : null;
   await _convert(
     context,
+    ref,
     title: 'Saving as Word',
     name: name,
-    run: (onProgress) async {
-      final word = await service.pagesToWord(
-        pages,
-        name: name,
-        fileName: plan is ExportNew ? plan.fileName : null,
-        onProgress: onProgress,
-      );
-      if (docKey != null) {
-        await savedExports.record(
-          SavedExport(
-            docKey: docKey,
-            format: ExportFormat.word,
-            path: word.file.path,
-            fingerprint: fingerprint,
-            name: name,
-            pageCount: pages.length,
-            sizeBytes: word.file.lengthSync(),
-            exportedAt: DateTime.now(),
-          ),
-          previous: previous,
-        );
-      }
-      return word;
-    },
+    run: (onProgress) => service.pagesToWord(pages, name: name, fileName: fileName, onProgress: onProgress),
   );
 }
 
@@ -205,9 +163,11 @@ Future<void> exportScanAsWord(
 Future<bool> _ensureWordPlan(BuildContext context, WidgetRef ref) =>
     ensurePlan(context, ref, PlanFeature.word, what: 'Convert to Word');
 
-/// Shows progress while [run] makes the Word file, then the saved sheet.
+/// Shows progress while [run] makes the Word file, then the sheet that asks
+/// where it goes. The file is kept only in the Outbox until then.
 Future<void> _convert(
-  BuildContext context, {
+  BuildContext context,
+  WidgetRef ref, {
   required String title,
   required String name,
   required Future<WordFile> Function(void Function(double) onProgress) run,
@@ -225,13 +185,15 @@ Future<void> _convert(
       ),
     ),
   );
+  final store = ref.read(pageStoreProvider);
   try {
-    final word = await run((f) => progress.value = f);
+    final made = await run((f) => progress.value = f);
+    final word = WordFile(await store.moveToOutbox(made.file), textPages: made.textPages, picturePages: made.picturePages);
     navigator.pop();
     if (context.mounted) {
       await showWordSavedSheet(context, word);
     } else {
-      messenger.showSnackBar(SnackBar(content: Text('Saved ${p.basename(word.file.path)}')));
+      messenger.showSnackBar(SnackBar(content: Text('${p.basename(word.file.path)} is ready. Export again to save it.')));
     }
   } on Object catch (e) {
     navigator.pop();

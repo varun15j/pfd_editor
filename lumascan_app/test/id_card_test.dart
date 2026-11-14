@@ -10,7 +10,6 @@ import 'package:image/image.dart' as img;
 import 'package:lumascan/app/providers.dart';
 import 'package:lumascan/data/page_store.dart';
 import 'package:lumascan/domain/id_copy.dart';
-import 'package:lumascan/domain/library.dart';
 import 'package:lumascan/domain/models.dart';
 import 'package:lumascan/domain/photo_import.dart';
 import 'package:lumascan/domain/scan_document.dart';
@@ -57,7 +56,8 @@ class _FakeExporter implements PdfExporter {
     void Function(int done, int total)? onProgress,
   }) async {
     calls.add((pages, options));
-    return File('${dir.path}/${options.fileName}')..writeAsBytesSync([37, 80, 68, 70]);
+    final file = File('${dir.path}/${options.fileName}')..parent.createSync(recursive: true);
+    return file..writeAsBytesSync([37, 80, 68, 70]);
   }
 }
 
@@ -334,7 +334,7 @@ void main() {
       expect(tester.getTopLeft(find.text('Make it now')), make);
     });
 
-    testWidgets('front, then back, then the review; the watermark; then the saved grid in the Library', (tester) async {
+    testWidgets('front, then back, then the review; the watermark; then the saved grid', (tester) async {
       await open(tester);
       await tap(tester, find.text('Make it now'));
       expect(find.text('Front page'), findsOneWidget);
@@ -381,9 +381,10 @@ void main() {
         expect(find.text(n), findsOneWidget);
       }
       expect(find.text('Tap to add new pages'), findsOneWidget);
-      expect(exporter.calls.single.$2.fitImageDpi, composeDpi);
-      final docs = harness.container.read(libraryProvider).value!.documents;
-      expect(docs.single.type, ScanType.idCard);
+      // The copy stays as page images: no PDF is made or filed in the app
+      // until it is shared or saved.
+      expect(exporter.calls, isEmpty);
+      expect(harness.container.read(libraryProvider).value?.documents ?? const [], isEmpty);
     });
 
     testWidgets('a side retaken after saving goes on the copy page, and undo puts the old one back', (tester) async {
@@ -507,6 +508,21 @@ void main() {
       return [for (final p in harness.pages) p.id];
     }
 
+    testWidgets('Share makes the PDF then and asks where it goes; nothing is filed in the app', (tester) async {
+      await open(tester);
+      await saveCopy(tester);
+
+      await tap(tester, find.text('Share'));
+      await tap(tester, find.text('ID copy page'));
+      await until(tester, find.text('PDF ready'));
+
+      expect(exporter.calls.single.$1, hasLength(1), reason: 'only the copy page');
+      expect(exporter.calls.single.$2.fitImageDpi, composeDpi);
+      expect(exporter.calls.single.$2.fileName, startsWith('Outbox/'));
+      expect(find.text('Save to device'), findsOneWidget);
+      expect(harness.container.read(libraryProvider).value?.documents ?? const [], isEmpty);
+    });
+
     testWidgets('Retake on the front in the saved grid opens the ID camera and remakes the copy', (tester) async {
       await open(tester);
       final [copy, front, back] = await saveCopy(tester);
@@ -525,9 +541,8 @@ void main() {
       expect(pages.first.id, isNot(copy));
       expect(pages.first.id, draft.compositeId);
       expect(composed.last.imagePaths, [pages[1].originalPath, pages[2].originalPath]);
-      // The PDF in Documents is saved again with the new copy page.
-      expect(exporter.calls, hasLength(2));
-      expect(exporter.calls.last.$1.first.id, draft.compositeId);
+      // No PDF is kept, so none is made again.
+      expect(exporter.calls, isEmpty);
     });
 
     testWidgets('the review has a Retake button on each side, and the copy shows the new front', (tester) async {
