@@ -251,8 +251,19 @@ So the existing flattening was already doing its job on the book pages: it takes
 - **A second pass over the flattened page.** No gain (books 0.122%, 1.06°). What is left after one pass is at the floor of the measure.
 - **Using one band of text for the whole page.** Picture pages with text only at the top or bottom (four of the six odds book pages) are skipped, because the bend must be followed in at least two bands. Letting one band stand for the whole page lowered their slope from 2.15° to 1.68° but left the bow as it was and tilted pictures elsewhere on the page. Not worth the risk.
 
-### Not done: a dewarping network
+### Tried and not taken: a dewarping network (UVDoc)
 
-The research report names UVDoc (MIT licence, 32 MB of weights) as the open model nearest to what CamScanner does. Its code and weights were downloaded for a comparison on the same 48 pages, but running downloaded third-party code was stopped by the safety rules of the cloud machine this work ran on, and needs Varun's say-so. Until it is measured, nothing can be said about whether it would beat 0.118% on these pages, which are only mildly curved; it would add 32 MB to the app and about a second a page.
+The research report names UVDoc (MIT licence, 32 MB of weights) as the open model nearest to what CamScanner does: a network that looks at the photo and gives a grid saying where every part of the page should go. It was run on the same 48 pages on 2026-11-15 with its published weights, two ways: on the page already cropped at its corners, as `flattenBookPage` gets it, and on the whole photo, as UVDoc is meant to be used.
+
+| | Books | Colour book | Odds book |
+| --- | --- | --- | --- |
+| Cropped only | bow 0.185%, slope 3.05° | 0.093%, 0.82° | 0.244%, 2.59° |
+| **LumaScan's flattening, now** | **0.118%, 0.67°** | **0.092%, 0.63°** | 0.174%, 2.15° |
+| UVDoc on the cropped page | 0.170%, 1.45° | 0.129%, 0.86° | 0.173%, **1.22°** |
+| UVDoc on the whole photo | 0.215%, 2.45° | 0.134%, 1.98° | 0.204%, 2.37° |
+
+UVDoc does not beat the hand-made flattening on these pages. On the books its lines are left with more bow and twice the slope, and it makes the flat colour book pages a little worse than leaving them alone. Given a page that is already cropped it also zooms in and cuts off the page's outer edge, text included (book 14 loses the ends of its lines). Its one gain is on the odds book's picture pages, which have too little text for the hand-made method to follow: their slope falls from 2.15° to 1.22°.
+
+It is not added to the app: 32 MB and a second network for a gain on six picture pages and a loss on the rest. It took 0.15 seconds a page on four CPU cores. UVDoc was trained on loose sheets of paper that are creased and curled, not on book pages held open, which is the likely reason. A network trained on book pages could do better; that would need a few hundred book photos with their flat pages, which the repository does not have.
 
 **Tests.** `test/book_fix_test.dart`: "a page curling up strongly is flattened too" (a bend of an eighth of the page height, which the old limit refused).
