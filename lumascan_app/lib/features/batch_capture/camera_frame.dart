@@ -154,12 +154,15 @@ class FrameAnalysis {
 /// [model] (every plan), the model's outline is tried first, and the
 /// hand-made detector ([smart] picks the Pro one) is asked only when the
 /// model is not sure of every corner.
-FrameAnalysis analyzeFrame(CameraFrame frame, {bool smart = true, CornerModel? model}) {
+///
+/// With [spread] (Book mode) the model is asked for both pages of an open
+/// book, so the preview shows what the photo will be split into.
+FrameAnalysis analyzeFrame(CameraFrame frame, {bool smart = true, CornerModel? model, bool spread = false}) {
   final gray = frame.uprightGray();
   // Outlines are found in colour where the frame has it: a coloured page on
   // a surface of the same brightness only stands out by its colour.
   final picture = frame.hasColour ? frame.uprightColour() : gray;
-  final fromModel = model?.find(picture);
+  final fromModel = model?.find(picture, spread: spread);
   final quad = fromModel ?? detectPageQuad(picture, workSize: 160, minArea: 0.2, smart: smart);
   return FrameAnalysis(
     quad: quad,
@@ -169,19 +172,22 @@ FrameAnalysis analyzeFrame(CameraFrame frame, {bool smart = true, CornerModel? m
   );
 }
 
-typedef FrameAnalyzer = Future<FrameAnalysis> Function(CameraFrame frame);
+typedef FrameAnalyzer = Future<FrameAnalysis> Function(CameraFrame frame, {bool spread});
 
 /// One preview frame for the [CornerWorker].
 class FrameCornerJob extends CornerJob<FrameAnalysis> {
-  const FrameCornerJob(this.frame, {this.smart = true});
+  const FrameCornerJob(this.frame, {this.smart = true, this.spread = false});
 
   final CameraFrame frame;
 
   /// Which hand-made detector steps in when the model is not sure.
   final bool smart;
 
+  /// Book mode: both pages of an open book are wanted.
+  final bool spread;
+
   @override
-  FrameAnalysis run(CornerModel? model) => analyzeFrame(frame, smart: smart, model: model);
+  FrameAnalysis run(CornerModel? model) => analyzeFrame(frame, smart: smart, model: model, spread: spread);
 }
 
 /// Analyses preview frames off the UI thread. Tests swap in a direct call.
@@ -192,9 +198,9 @@ final frameAnalyzerProvider = Provider<FrameAnalyzer>((ref) {
   final smart = ref.watch(planIncludesProvider(PlanFeature.smartScan));
   FrameAnalysis plain(CameraFrame frame) => analyzeFrame(frame, smart: smart);
   final worker = ref.watch(cornerWorkerProvider);
-  return (frame) async {
+  return (frame, {spread = false}) async {
     final w = await worker();
-    return w == null ? Isolate.run(() => plain(frame)) : w.run(FrameCornerJob(frame, smart: smart));
+    return w == null ? Isolate.run(() => plain(frame)) : w.run(FrameCornerJob(frame, smart: smart, spread: spread));
   };
 });
 

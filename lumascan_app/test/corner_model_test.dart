@@ -23,15 +23,35 @@ Float32List _peak(double x, double y, double height, {int size = 128}) {
   return map;
 }
 
+/// Two heatmaps as one: a corner that may be in either place.
+Float32List _either(Float32List a, Float32List b) =>
+    Float32List.fromList([for (var i = 0; i < a.length; i++) math.max(a[i], b[i])]);
+
+/// An area map: 1 inside the upright box, 0 outside.
+Float32List _box(double left, double top, double right, double bottom, {int size = 128}) {
+  final map = Float32List(size * size);
+  for (var j = 0; j < size; j++) {
+    for (var i = 0; i < size; i++) {
+      final x = i / (size - 1), y = j / (size - 1);
+      if (x >= left && x <= right && y >= top && y <= bottom) map[j * size + i] = 1;
+    }
+  }
+  return map;
+}
+
 class _FakeModel implements CornerModel {
   _FakeModel(this.quad);
 
   final CropQuad? quad;
   var calls = 0;
 
+  /// Whether the last call asked for a whole spread.
+  bool? spread;
+
   @override
-  CropQuad? find(RgbImage image) {
+  CropQuad? find(RgbImage image, {bool spread = false}) {
     calls++;
+    this.spread = spread;
     return quad;
   }
 }
@@ -84,6 +104,89 @@ void main() {
     expect(input[0], closeTo(1, 1e-6));
     expect(input[n * n + 1000], 0);
     expect(input[2 * n * n + 5000], closeTo(0.2, 1e-6));
+  });
+
+  group('a corner seen in two places (an open book)', () {
+    // The left page of a spread: its right corners are at the spine (0.5)
+    // or, if the whole spread is meant, at the far edge (0.9).
+    final top = _either(_peak(0.5, 0.1, 0.7), _peak(0.9, 0.1, 0.8));
+    final bottom = _either(_peak(0.5, 0.9, 0.7), _peak(0.9, 0.9, 0.8));
+    final maps = [_peak(0.1, 0.1, 0.9), top, bottom, _peak(0.1, 0.9, 0.9)];
+
+    test('each place is read by itself, the stronger first', () {
+      final places = readCornerPeaks(top, 128);
+      expect(places, hasLength(2));
+      expect(places[0].point.x, closeTo(0.9, 0.01));
+      expect(places[0].height, closeTo(0.8, 0.03));
+      expect(places[1].point.x, closeTo(0.5, 0.01));
+    });
+
+    test('a faint second bump or the skirt of the first is not a place', () {
+      expect(readCornerPeaks(_either(_peak(0.5, 0.5, 0.9), _peak(0.8, 0.5, 0.2)), 128), hasLength(1));
+      expect(readCornerPeaks(_either(_peak(0.5, 0.5, 0.9), _peak(0.53, 0.5, 0.6)), 128), hasLength(1));
+    });
+
+    test('no corner lands between the two places', () {
+      for (final reading in readPageOutlines(maps, 128)) {
+        expect((reading.quad.tr.x - 0.7).abs(), greaterThan(0.15));
+        expect((reading.quad.br.x - 0.7).abs(), greaterThan(0.15));
+      }
+    });
+
+    test('the area map says which page is meant', () {
+      final leftPage = readPageOutlines([...maps, _box(0.1, 0.1, 0.5, 0.9)], 128).first;
+      expect(leftPage.quad.tr.x, closeTo(0.5, 0.01));
+      expect(leftPage.quad.br.x, closeTo(0.5, 0.01));
+      expect(leftPage.agreement, greaterThan(0.9));
+      final spread = readPageOutlines([...maps, _box(0.1, 0.1, 0.9, 0.9)], 128).first;
+      expect(spread.quad.tr.x, closeTo(0.9, 0.01));
+      expect(spread.quad.br.x, closeTo(0.9, 0.01));
+    });
+
+    test('Book mode takes both pages, the usual way one', () {
+      final withArea = [...maps, _box(0.1, 0.1, 0.5, 0.9)];
+      expect(pageOutline(withArea, 128)!.tr.x, closeTo(0.5, 0.01));
+      expect(pageOutline(withArea, 128, spread: true)!.tr.x, closeTo(0.9, 0.01));
+    });
+
+    test('Book mode over a single page keeps that page', () {
+      final page = [_peak(0.2, 0.1, 0.9), _peak(0.8, 0.1, 0.9), _peak(0.8, 0.9, 0.9), _peak(0.2, 0.9, 0.9)];
+      expect(pageOutline(page, 128, spread: true)!.tr.x, closeTo(0.8, 0.01));
+    });
+
+    test('without an area map the stronger corners with even sides win', () {
+      final best = readPageOutlines(maps, 128).first;
+      expect(best.quad.tr.x, closeTo(0.9, 0.01));
+      expect(best.quad.br.x, closeTo(0.9, 0.01));
+    });
+  });
+
+  group('whether the model outline is used (pageOutline)', () {
+    List<Float32List> corners(double weakest) => [
+      _peak(0.1, 0.1, 0.9),
+      _peak(0.9, 0.1, 0.9),
+      _peak(0.9, 0.9, 0.9),
+      _peak(0.1, 0.9, weakest),
+    ];
+    final page = _box(0.1, 0.1, 0.9, 0.9);
+
+    test('corners only: every corner must stand out', () {
+      expect(pageOutline(corners(0.8), 128), isNotNull);
+      expect(pageOutline(corners(0.4), 128), isNull);
+    });
+
+    test('a weak corner is accepted when the area map shows the same page', () {
+      expect(pageOutline([...corners(0.4), page], 128), isNotNull);
+    });
+
+    test('a weak corner is not accepted when the area map shows a different page', () {
+      expect(pageOutline([...corners(0.4), _box(0.1, 0.1, 0.7, 0.9)], 128), isNull);
+    });
+
+    test('sure corners with no page between them are dropped', () {
+      expect(pageOutline([...corners(0.8), Float32List(128 * 128)], 128), isNull);
+      expect(pageOutline([...corners(0.8), _box(0.1, 0.1, 0.4, 0.5)], 128), isNull);
+    });
   });
 
   group('analyzeFrame with the corner model', () {
@@ -164,6 +267,7 @@ void main() {
       final model = _FakeModel(spread);
       final (left, right) = splitSpread(RgbImage.decode(File(photo).readAsBytesSync()), model: model);
       expect(model.calls, 1);
+      expect(model.spread, isTrue, reason: 'Book mode asks for both pages');
       expect(left.tl.x, closeTo(0.05, 0.001));
       expect(right.tr.x, closeTo(0.95, 0.001));
       expect(left.tr.x, right.tl.x, reason: 'the two pages meet at the spine');

@@ -2,6 +2,8 @@
 
 Covers US-03.12 and requirement CAP-12 (see `epics-user-stories.md` and `requirements.md`). Added 2026-10-07.
 
+The corner model's later history (2026-11-14: page area map, corners read place by place, Book mode spreads, the spine as a leaning line, flattening of curled pages) is in `edge-model.md`.
+
 ## Problem
 
 On the 20 book photos in `sample_photos/book` (cream paper, an open book held on the lap, light blue jeans and a beige chair behind it) the detector found the right page in only 2 of 20 photos at 85% overlap or better, and none at all in 4. It looked only for bright, nearly colourless paper, so cream pages lost to the bright jeans; it kept the largest region wherever it was; and it trimmed the facing page only when one side of the book ran off the frame. On the camera the outline then flickered out, and a photo with no page found was kept uncropped.
